@@ -1,0 +1,11 @@
+/* Loaded only when scripting is off.
+ *
+ * Everything on these pages is written into the HTML at build time, so the
+ * only work left here is to hide the controls that would do nothing and to
+ * explain why the live view is absent. Nothing is revealed that the base
+ * stylesheet hides for a visual reason.
+ */
+.js-only { display: none !important; }
+.reveal, .reveal.pending { opacity: 1 !important; transform: none !important; }
+.arch-cue { display: none !important; }
+.arch-open { cursor: default; }

@@ -1,4 +1,8 @@
-// Navigation: the small-screen disclosure and the current-section marker.
+// The small-screen navigation disclosure.
+//
+// The current page is marked with aria-current in the generated HTML, so
+// there is no scroll-spy here and nothing to keep in sync: three documents,
+// three static markers.
 
 export function initNav(root = document) {
   const toggle = root.querySelector("#nav-toggle");
@@ -14,8 +18,9 @@ export function initNav(root = document) {
     setOpen(toggle.getAttribute("aria-expanded") !== "true");
   });
 
-  // Choosing a destination on a phone should close the menu, and Escape
-  // should return focus to the control that opened it.
+  // Choosing a destination closes the menu; Escape closes it and returns
+  // focus to the control that opened it, so keyboard users are never left
+  // pointing at something that is no longer on screen.
   nav.addEventListener("click", (e) => {
     if (e.target.closest("a")) setOpen(false);
   });
@@ -26,36 +31,11 @@ export function initNav(root = document) {
     }
   });
 
-  // Reopening at a wider width must not leave the disclosure state stale.
+  // Widening the window must not leave a stale open state behind.
   const wide = window.matchMedia("(min-width: 60rem)");
   const sync = () => { if (wide.matches) setOpen(false); };
-  wide.addEventListener ? wide.addEventListener("change", sync) : wide.addListener(sync);
+  if (wide.addEventListener) wide.addEventListener("change", sync);
+  else wide.addListener(sync);
 
-  const links = [...nav.querySelectorAll('a[href^="#"]')];
-  const sections = links
-    .map(a => root.getElementById(a.getAttribute("href").slice(1)))
-    .filter(Boolean);
-
-  function mark(id) {
-    for (const a of links) {
-      const isCurrent = a.getAttribute("href") === `#${id}`;
-      if (isCurrent) a.setAttribute("aria-current", "true");
-      else a.removeAttribute("aria-current");
-    }
-  }
-
-  if ("IntersectionObserver" in window && sections.length) {
-    const seen = new Map();
-    const io = new IntersectionObserver((entries) => {
-      for (const e of entries) seen.set(e.target.id, e.intersectionRatio);
-      let best = null, bestRatio = 0;
-      for (const [id, ratio] of seen) {
-        if (ratio > bestRatio) { best = id; bestRatio = ratio; }
-      }
-      if (best) mark(best);
-    }, { rootMargin: "-20% 0px -70% 0px", threshold: [0, 0.25, 0.5, 1] });
-    for (const s of sections) io.observe(s);
-  }
-
-  return { setOpen, mark };
+  return { setOpen };
 }

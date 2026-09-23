@@ -41,6 +41,12 @@ PLAT = ROOT / "aml-platform"
 ARCHIVE = PLAT / "results_archive"
 OUT = ROOT / "site" / "data" / "site-data.json"
 
+# THE ROWS LIVE IN THEIR OWN FILE. They are 90% of the payload and only the
+# explorer needs them; the homepage and the engineering page would otherwise
+# pay for 450 rows to render nine numbers. Both files are generated here, in
+# the same pass, from the same archive read -- so they cannot disagree.
+RESULTS_OUT = ROOT / "site" / "data" / "results.json"
+
 # Budgets the run manifests carry. Read from the artifact, not assumed: a
 # manifest that stops emitting one simply contributes fewer rows.
 BUDGETS = (10, 25, 50, 100, 200, 500, 1000)
@@ -56,30 +62,30 @@ BUDGETS = (10, 25, 50, 100, 200, 500, 1000)
 #            accounting; None where no bundle covers the run
 #   rung     the budget_null rung whose random-ranker band applies, or None
 RUNS = (
-    dict(id="large-lgbm-s0", rung="HI-Large", model="LightGBM", seed=0, variant=None,
+    dict(id="large-lgbm-s0", experiment="large-cloud", rung="HI-Large", model="LightGBM", seed=0, variant="cloud",
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s0/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s0", null_rung=None),
-    dict(id="large-lgbm-s1", rung="HI-Large", model="LightGBM", seed=1, variant=None,
+    dict(id="large-lgbm-s1", experiment="large-cloud", rung="HI-Large", model="LightGBM", seed=1, variant="cloud",
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s1/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s1", null_rung=None),
-    dict(id="large-lgbm-s2", rung="HI-Large", model="LightGBM", seed=2, variant=None,
+    dict(id="large-lgbm-s2", experiment="large-cloud", rung="HI-Large", model="LightGBM", seed=2, variant="cloud",
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s2/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s2", null_rung=None),
-    dict(id="medium-gbdt-canonical", rung="HI-Medium", model="GBDT", seed=0, variant="canonical",
+    dict(id="medium-gbdt-canonical", experiment="medium-canonical", rung="HI-Medium", model="GBDT", seed=0, variant="canonical",
          lineage="canonical_Medium_gbdt", artifact="gold/canonical_Medium_gbdt/manifest.json",
          metrics="metrics", bundle="medium_gbdt_s0", null_rung="Medium"),
-    dict(id="medium-gbdt-replica", rung="HI-Medium", model="GBDT", seed=0, variant="replica",
+    dict(id="medium-gbdt-replica", experiment="medium-canonical", rung="HI-Medium", model="GBDT", seed=0, variant="replica",
          lineage="canonical_Medium_gbdt_replica",
          artifact="gold/canonical_Medium_gbdt_replica/manifest.json",
          metrics="metrics", bundle="medium_gbdt_s0", null_rung="Medium"),
-    dict(id="medium-baseline", rung="HI-Medium", model="Logistic baseline", seed=0, variant=None,
+    dict(id="medium-baseline", experiment="medium-baseline", rung="HI-Medium", model="Logistic baseline", seed=0, variant=None,
          lineage="eval_Medium", artifact="gold/eval_Medium/baseline/baseline_metrics.json",
          metrics=None, bundle="medium_baseline_s0", null_rung="Medium"),
-    dict(id="medium-gbdt-pooled", rung="HI-Medium", model="GBDT", seed=None, variant="pooled",
+    dict(id="medium-gbdt-pooled", experiment="medium-sweep", rung="HI-Medium", model="GBDT", seed=None, variant="pooled",
          lineage="eval_Medium", artifact="gold/eval_Medium/gbdt/gbdt_metrics.json",
          metrics=None, bundle="medium_gbdt_s0", null_rung="Medium"),
 ) + tuple(
-    dict(id=f"medium-gbdt-seed{s}", rung="HI-Medium", model="GBDT", seed=s, variant="sweep",
+    dict(id=f"medium-gbdt-seed{s}", experiment="medium-sweep", rung="HI-Medium", model="GBDT", seed=s, variant="sweep",
          lineage="eval_Medium", artifact=f"gold/eval_Medium/seed{s}/gbdt_metrics.json",
          metrics=None, bundle="medium_gbdt_s0", null_rung="Medium")
     for s in range(8)
@@ -96,6 +102,73 @@ METRICS = (
          blurb="recall@k divided by the attainable ceiling at the same budget."),
     dict(key="ring_recall", label="ring_recall@k", unit="ring",
          blurb="A ring counts as caught if ANY of its account-days reaches the top k that day."),
+)
+
+# THE SEED SWEEPS, which are not run manifests.
+#
+# `stability.json` holds one dict per seed rather than a full budget ladder,
+# so these runs contribute a handful of (metric, budget) pairs and not the
+# whole grid. That asymmetry is real and is why the explorer's budget list
+# has to be derived per experiment rather than assumed: HI-Small carries
+# precision, recall and efficiency at k=50 and ring_recall at k=200, and
+# nothing else.
+SWEEPS = (
+    dict(id="small-gbdt", experiment="small-sweep", rung="HI-Small", model="GBDT",
+         variant="sweep", lineage="stability_Small",
+         artifact="gold/stability_Small/stability.json", section="current",
+         bundle="small_gbdt_s0", null_rung="Small"),
+)
+
+
+# THE EXPERIMENTS THE EXPLORER OFFERS, and why each exists.
+#
+# The archive is NOT a Cartesian benchmark. Independent dropdowns implied it
+# was: choosing HI-Large left only LightGBM responsive with nothing to say
+# why, which reads as "the others did worse" when in fact they were not all
+# run at that scale. Selection starts from the experiment, and every other
+# control is derived from the rows that experiment actually produced.
+EXPERIMENTS = (
+    dict(id="large-cloud",
+         title="HI-Large · LightGBM · cloud-scale run",
+         summary="Three seeds on 179.7M transactions, fitted on an Azure VM with a "
+                 "deterministic training row order.",
+         detail="The only model family represented at this rung. On the 31 GB machine the "
+                "training matrix measured 14.9 GB under LightGBM and 33.5 GB under "
+                "scikit-learn, so only LightGBM completed. That is a memory measurement, "
+                "not a quality comparison: the other families were not run to completion "
+                "here, and nothing about their detection performance follows from it.",
+         report="aml-platform/paper/RESULTS_hi_large.md"),
+    dict(id="medium-canonical",
+         title="HI-Medium · GBDT · canonical and independent rerun",
+         summary="The canonical HI-Medium result and a separate rerun of the same command.",
+         detail="The rerun reproduces the canonical run's training-matrix hash, prediction "
+                "hash and every metric, which is what makes the result reproducible rather "
+                "than merely recorded.",
+         report="aml-platform/docs/RESULT_LINEAGE.md"),
+    dict(id="medium-sweep",
+         title="HI-Medium · GBDT · seed-stability sweep",
+         summary="Eight fits differing in nothing but the random seed, plus the pooled run.",
+         detail="The seeds vary one thing: the 200,000-row subsample used to estimate "
+                "histogram bin edges. The spread is a property of this benchmark and "
+                "configuration, not of gradient boosting in general.",
+         report="aml-platform/paper/RESULTS_metric_stability.md"),
+    dict(id="medium-baseline",
+         title="HI-Medium · logistic baseline",
+         summary="A deterministic convex fit, reported beside every model score.",
+         detail="It has no seed to vary, so no range is published for it. Its pooled level "
+                "is only interpretable beside the random-ranker band, which is why the "
+                "band is always shown with it.",
+         report="aml-platform/paper/RESULTS_metric_stability.md"),
+    dict(id="small-sweep",
+         title="HI-Small · GBDT · seed-stability sweep",
+         summary="Eight seeds at a single budget per metric, from the archived sweep.",
+         detail="The HI-Small artifact is a stability sweep rather than a full evaluation, "
+                "so it carries precision, recall and efficiency at k=50 and ring recall at "
+                "k=200, and no other budget. HI-Small's other artifacts are diagnostics — "
+                "leak sweeps, split sensitivity, per-typology and graph-feature arms — and "
+                "the graph-feature arms cannot be told apart by their provenance record, "
+                "so none of them is presented as a current model result.",
+         report="aml-platform/paper/RESULTS_graph_features.md"),
 )
 
 # Paths that must never reach the site data, checked against every string the
@@ -132,6 +205,15 @@ def registry() -> dict:
     }
 
 
+VARIANT_WORDS = {
+    "canonical": "canonical",
+    "replica": "independent rerun",
+    "sweep": "stability sweep",
+    "pooled": "pooled",
+    "cloud": "cloud run",
+}
+
+
 def run_label(run: dict) -> str:
     """The name a chart row shows. EMITTED HERE, NOT INFERRED IN THE BROWSER.
 
@@ -145,7 +227,7 @@ def run_label(run: dict) -> str:
     """
     parts = [run["model"]]
     if run["variant"]:
-        parts.append(run["variant"])
+        parts.append(VARIANT_WORDS.get(run["variant"], run["variant"]))
     if run["seed"] is not None:
         parts.append(f"seed {run['seed']}")
     return " · ".join(parts)
@@ -219,7 +301,9 @@ def build() -> dict:
                 # quantities.
                 if spec["key"] == "recall":
                     ceiling = m.get(f"recall_ceiling@{k}")
-                    ceiling_kind = "recall_ceiling@k, read from the artifact"
+                    ceiling_kind = ("recall_ceiling@k, read from the artifact"
+                                    if ceiling is not None else
+                                    "no recall ceiling is published in this artifact")
                 elif spec["key"] == "recall_efficiency":
                     ceiling = 1.0
                     ceiling_kind = ("1.0 by construction: efficiency is recall "
@@ -247,6 +331,7 @@ def build() -> dict:
                     "id": f"{run['id']}::{spec['key']}::{k}",
                     "run": run["id"],
                     "run_label": run_label(run),
+                    "experiment": run["experiment"],
                     "variant": run["variant"],
                     "rung": run["rung"],
                     "model": run["model"],
@@ -276,9 +361,93 @@ def build() -> dict:
                     "nonbinding_days": nonbinding,
                     "nonbinding_day_share": rnd(nonbinding_share, 5),
                     "source": src,
+                    # Where inside the artifact the value lives. A manifest
+                    # keeps its metrics under one key and a sweep keeps them
+                    # per seed, and a checker should not have to know which
+                    # file it is reading.
+                    "source_pointer": run["metrics"] or "",
                     "null_source": (
                         "aml-platform/results_archive/derived/budget_null.json"
                         if (null_lo is not None or nonbinding is not None) else None),
+                })
+
+    # ---- the seed sweeps ------------------------------------------------
+    for sw in SWEEPS:
+        lin = sw["lineage"]
+        if lin in superseded:
+            die(f"{sw['id']}: lineage {lin!r} is SUPERSEDED and may not be shown")
+        if lin not in known:
+            die(f"{sw['id']}: lineage {lin!r} is in no registry section")
+        doc = load(sw["artifact"])[sw["section"]]
+        src = f"aml-platform/results_archive/{sw['artifact']}"
+        nullrung = bn["rungs"].get(sw["null_rung"]) if sw["null_rung"] else None
+        bundle = bn["nonbinding_by_bundle"].get(sw["bundle"]) if sw["bundle"] else None
+
+        for seed, per in enumerate(doc["per_seed"]):
+            run = dict(sw, seed=seed)
+            for key, value in sorted(per.items()):
+                if "@" not in str(key):
+                    continue
+                base, _, kk = str(key).partition("@")
+                if not kk.isdigit():
+                    continue
+                spec = next((m for m in METRICS if m["key"] == base), None)
+                if spec is None:
+                    continue
+                k = int(kk)
+                observed = float(value)
+
+                null_lo = null_hi = None
+                if nullrung and base == "precision":
+                    null_lo = nullrung.get(f"null_precision_low@{k}")
+                    null_hi = nullrung.get(f"null_precision_high@{k}")
+                lift = observed / float(null_hi) if null_hi else None
+
+                if base == "recall_efficiency":
+                    ceiling, ceiling_kind = 1.0, ("1.0 by construction: efficiency is "
+                                                 "recall over its own attainable ceiling")
+                else:
+                    ceiling, ceiling_kind = None, ("no attainable ceiling is published for "
+                                                   "this metric in the sweep artifact")
+
+                nonbinding = nonbinding_share = None
+                if bundle and f"nonbinding_days@{k}" in bundle:
+                    nonbinding = bundle[f"nonbinding_days@{k}"]
+                    nonbinding_share = bundle.get(f"nonbinding_day_share@{k}")
+                elif nullrung and f"nonbinding_days@{k}" in nullrung:
+                    nonbinding = nullrung[f"nonbinding_days@{k}"]
+
+                rows.append({
+                    "id": f"{sw['id']}-s{seed}::{base}::{k}",
+                    "run": f"{sw['id']}-s{seed}",
+                    "run_label": run_label(run),
+                    "experiment": sw["experiment"],
+                    "variant": sw["variant"],
+                    "rung": sw["rung"],
+                    "model": sw["model"],
+                    "seed": seed,
+                    "lineage": lin,
+                    "lineage_status": "canonical" if lin in reg["canonical"] else "supporting",
+                    "segment": "pooled",
+                    "metric": base,
+                    "metric_label": spec["label"],
+                    "unit": spec["unit"],
+                    "budget": k,
+                    "observed": rnd(observed),
+                    "null_low": rnd(null_lo),
+                    "null_high": rnd(null_hi),
+                    "lift_vs_null": rnd(lift, 4),
+                    "ceiling": rnd(ceiling),
+                    "ceiling_kind": ceiling_kind,
+                    "efficiency": None,
+                    "nonbinding_days": nonbinding,
+                    "nonbinding_day_share": rnd(nonbinding_share, 5),
+                    "null_status": ("published" if null_hi is not None else
+                                    "no random-ranker band is published for this metric"),
+                    "source": src,
+                    "source_pointer": f"{sw['section']}/per_seed/{seed}",
+                    "null_source": ("aml-platform/results_archive/derived/budget_null.json"
+                                    if (null_lo is not None or nonbinding is not None) else None),
                 })
 
     rows.sort(key=lambda r: r["id"])
@@ -418,8 +587,308 @@ def build() -> dict:
         },
     }
 
+    # ---- one band and one ceiling per selectable group ------------------
+    #
+    # The explorer draws the random-ranker band and the attainable ceiling
+    # once per view, behind every bar, because both are properties of the
+    # split and the budget rather than of a run. That is only honest if the
+    # rows agree, so the agreement is checked here instead of assumed there.
+    for key in sorted({(r["experiment"], r["metric"], r["budget"]) for r in rows}):
+        grp = [r for r in rows if (r["experiment"], r["metric"], r["budget"]) == key]
+        for field in ("ceiling", "null_low", "null_high"):
+            vals = {r[field] for r in grp}
+            if len(vals) > 1:
+                die(f"{key} carries {len(vals)} different {field} values ({sorted(vals, key=str)}); "
+                    f"the explorer draws one per view and may not average them")
+
+    # ---- one label may name only one run --------------------------------
+    #
+    # Two seed sweeps exist, one per rung, and both would otherwise render as
+    # "GBDT · stability sweep · seed 0". The explorer shows one experiment at
+    # a time, so on screen the two never meet -- which is precisely why the
+    # collision has to be caught here and not in the view. Where a label is
+    # ambiguous it gains its rung; where it is already unique it is left
+    # alone, because "HI-Medium · " on every label helps no one.
+    runs_by_label = {}
+    for r in rows:
+        runs_by_label.setdefault(r["run_label"], set()).add(r["run"])
+    ambiguous = {lab for lab, runs in runs_by_label.items() if len(runs) > 1}
+    for r in rows:
+        if r["run_label"] in ambiguous:
+            r["run_label"] = f"{r['rung']} · {r['run_label']}"
+    runs_by_label = {}
+    for r in rows:
+        runs_by_label.setdefault(r["run_label"], set()).add(r["run"])
+    still = {lab: sorted(v) for lab, v in runs_by_label.items() if len(v) > 1}
+    if still:
+        die(f"run labels still collide after disambiguation: {still}")
+
+    # ---- experiment facets, DERIVED FROM THE ROWS ------------------------
+    #
+    # Every control the explorer offers is computed from the rows that exist,
+    # so a combination the archive does not contain cannot be selected. The
+    # per-metric budget map is what makes HI-Small work: its sweep carries
+    # k=50 for three metrics and k=200 for one, and a single flat budget list
+    # would offer the other six combinations and return nothing.
+    experiments = []
+    for spec in EXPERIMENTS:
+        mine = [r for r in rows if r["experiment"] == spec["id"]]
+        if not mine:
+            die(f"experiment {spec['id']!r} has no rows; every option must be "
+                f"backed by at least one canonical or supporting artifact")
+        by_metric = {}
+        for r in mine:
+            by_metric.setdefault(r["metric"], set()).add(r["budget"])
+        seeds_by = {}
+        for r in mine:
+            seeds_by.setdefault((r["metric"], r["budget"]), set()).add(r["seed"])
+        experiments.append({
+            **{k: spec[k] for k in ("id", "title", "summary", "detail", "report")},
+            "rung": sorted({r["rung"] for r in mine})[0],
+            "models": sorted({r["model"] for r in mine}),
+            "lineages": sorted({r["lineage"] for r in mine}),
+            "lineage_status": sorted({r["lineage_status"] for r in mine}),
+            "n_rows": len(mine),
+            "n_runs": len({r["run"] for r in mine}),
+            "metrics": sorted(by_metric),
+            "budgets_by_metric": {m: sorted(b) for m, b in sorted(by_metric.items())},
+            "seeds_by_metric_budget": {
+                f"{m}@{b}": sorted(s, key=lambda v: (v is None, v))
+                for (m, b), s in sorted(seeds_by.items(), key=lambda kv: (kv[0][0], kv[0][1]))},
+            "sources": sorted({r["source"] for r in mine}),
+        })
+
+    # ---- the coverage matrix --------------------------------------------
+    #
+    # Each cell is either backed by rows in this file or carries a factual
+    # reason and a link. "not run" never means "performed worse".
+    families = [
+        ("logistic", "Logistic baseline"),
+        ("gbdt-canonical", "GBDT · canonical + rerun"),
+        ("gbdt-sweep", "GBDT · seed sweep"),
+        ("lightgbm-cloud", "LightGBM · cloud run"),
+        ("diagnostics", "Window / null diagnostics"),
+    ]
+    fam_of = {"medium-baseline": "logistic", "medium-canonical": "gbdt-canonical",
+              "medium-sweep": "gbdt-sweep", "small-sweep": "gbdt-sweep",
+              "large-cloud": "lightgbm-cloud"}
+    measured = {}
+    for e in experiments:
+        measured.setdefault((e["rung"], fam_of[e["id"]]), []).append(e["id"])
+    diag_rungs = {f"HI-{n}" for n in bn["rungs"]}
+
+    NOT_RUN = {
+        ("HI-Small", "logistic"): (
+            "No logistic evaluation was run at this rung.",
+            "Not run at this rung. The archived HI-Small work is diagnostic — leak "
+            "sweeps, split sensitivity, per-typology and graph-feature arms — and no "
+            "logistic evaluation was executed there.",
+            "aml-platform/results_archive/CANONICAL.json"),
+        ("HI-Small", "gbdt-canonical"): (
+            "The graph-feature arms share one config hash, so no canonical result exists.",
+            "No canonical HI-Small evaluation exists. The graph-feature arms share one "
+            "config hash and record no feature set, so which treatment produced which "
+            "numbers cannot be established from the archive.",
+            "aml-platform/paper/RESULTS_graph_features.md"),
+        ("HI-Small", "lightgbm-cloud"): (
+            "The cloud rung was HI-Large.",
+            "Not run. The cloud rung was HI-Large; HI-Small fits locally in seconds and "
+            "needed no LightGBM path.",
+            "aml-platform/docs/RUNBOOK_cloud.md"),
+        ("HI-Medium", "lightgbm-cloud"): (
+            "LightGBM is the HI-Large learner; not run here as a canonical result.",
+            "Not run as a canonical result. LightGBM is the HI-Large rung's learner; the "
+            "HI-Medium canonical lineage is scikit-learn gradient boosting, and the two "
+            "bin differently, so they are not like for like.",
+            "aml-platform/paper/RESULTS_hi_large.md"),
+        ("HI-Large", "logistic"): (
+            "Not run at this scale; absence of a run is not a result.",
+            "Not run at this scale. Absence of a run is not a result: nothing here says "
+            "how a logistic baseline would have scored on HI-Large.",
+            "aml-platform/paper/RESULTS_hi_large.md"),
+        ("HI-Large", "gbdt-canonical"): (
+            "33.5 GB training matrix against LightGBM's 14.9 GB on a 31 GB machine.",
+            "scikit-learn gradient boosting does not fit this data on the 31 GB machine: "
+            "the 125M x 32 training matrix measured 33.5 GB against LightGBM's 14.9 GB. "
+            "That is a memory measurement; no detection-quality comparison follows from "
+            "it, and the run did not complete.",
+            "aml-platform/paper/RESULTS_hi_large.md"),
+        ("HI-Large", "gbdt-sweep"): (
+            "About 26 minutes and 30 of 31 GB per fit; three seeds were affordable.",
+            "No seed sweep at this rung. Each HI-Large fit costs about 26 minutes and 30 "
+            "of 31 GB on a 4-vCPU quota that could not be raised, so three seeds were "
+            "bought and the range is published instead of a distribution.",
+            "aml-platform/paper/RESULTS_metric_stability.md"),
+    }
+
+    coverage = {"families": [{"id": f, "label": lab} for f, lab in families], "rungs": [], }
+    for rung in ("HI-Small", "HI-Medium", "HI-Large"):
+        cells = []
+        for fam, _lab in families:
+            if fam == "diagnostics":
+                if rung in diag_rungs:
+                    cells.append({"family": fam, "state": "diagnostic",
+                                  "short": "A published random-ranker band and "
+                                           "non-binding-day accounting.",
+                                  "note": "A published random-ranker band and non-binding-day "
+                                          "accounting for this rung's evaluated split.",
+                                  "link": "aml-platform/results_archive/derived/budget_null.json",
+                                  "experiments": []})
+                else:
+                    cells.append({"family": fam, "state": "not-run",
+                                  "short": "No random-ranker band is published for "
+                                           "this rung.",
+                                  "note": "No random-ranker band is published for this rung. "
+                                          "Computing one needs the per-day account-day "
+                                          "population, which the released artifacts do not "
+                                          "carry.",
+                                  "link": "aml-platform/results_archive/derived/budget_null.json",
+                                  "experiments": []})
+                continue
+            ids = measured.get((rung, fam))
+            if ids:
+                cells.append({"family": fam, "state": "measured",
+                              "short": "Backed by archived artifacts.",
+                              "note": "Backed by archived artifacts; open it in the explorer.",
+                              "link": None, "experiments": sorted(ids)})
+            else:
+                short, note, link = NOT_RUN[(rung, fam)]
+                cells.append({"family": fam, "state": "not-run", "short": short,
+                              "note": note, "link": link, "experiments": []})
+        coverage["rungs"].append({"rung": rung, "cells": cells})
+
+    # ---- the three result stories ---------------------------------------
+    #
+    # A visitor gets three pictures before any table. Each one is assembled
+    # here, from the same rows the explorer shows, so the homepage cannot
+    # drift from the explorer and neither can drift from the archive. Every
+    # story carries what it does NOT license as well as what it shows.
+    def story_row(run_id: str, metric: str, budget: int) -> dict:
+        hits = [r for r in rows if r["run"] == run_id and r["metric"] == metric
+                and r["budget"] == budget]
+        if len(hits) != 1:
+            die(f"story needs exactly one {metric}@{budget} row for {run_id}; "
+                f"found {len(hits)}")
+        return hits[0]
+
+    med_window = next(w for w in windows if w["rung"] == "HI-Medium")
+    band_budgets = sorted(b["budget"] for b in med_window["bands"])
+
+    null_series = []
+    for run_id in ("medium-gbdt-canonical", "medium-baseline"):
+        for b in band_budgets:
+            r = story_row(run_id, "precision", b)
+            if r["null_low"] is None:
+                die(f"story null-band: {run_id} precision@{b} carries no band, "
+                    f"but budget_null publishes one for HI-Medium")
+            null_series.append({
+                "run": r["run"], "label": r["run_label"], "budget": b,
+                "observed": r["observed"], "null_low": r["null_low"],
+                "null_high": r["null_high"], "lift": r["lift_vs_null"],
+                "lineage": r["lineage"], "source": r["source"],
+                "null_source": r["null_source"],
+            })
+
+    stab_p50 = next(m for m in stability["metrics"] if m["metric"] == "precision@50")
+    seed_series = [{"seed": s["seed"], "value": s["precision@50"]}
+                   for s in stability["per_seed"]]
+
+    med_scale = story_row("medium-gbdt-canonical", "recall", 200)
+    scale_series = [
+        {"group": med_scale["rung"], "label": med_scale["run_label"],
+         "model": med_scale["model"], "seed": med_scale["seed"],
+         "value": med_scale["observed"], "source": med_scale["source"]},
+    ] + [
+        {"group": "HI-Large", "label": f"LightGBM · cloud run · seed {s['seed']}",
+         "model": "LightGBM", "seed": s["seed"], "value": s["value"],
+         "source": s["source"]}
+        for s in large_seeds
+    ]
+
+    stories = [
+        {
+            "id": "null-band",
+            "chart": "null-band",
+            "eyebrow": "Finding 1",
+            "title": "The same ranker is strong or ordinary depending on the day it is scored on",
+            "lede": (f"On the evaluated HI-Medium split a uniformly random ranker already "
+                     f"attains precision@50 of {med_window['bands'][0]['pooled_low']}"
+                     f"-{med_window['bands'][0]['pooled_high']} pooled, because the window "
+                     f"has {med_window['tail_days']} thin days from {med_window['thin_from']} "
+                     f"on which almost every account-day is a positive. A level quoted "
+                     f"without that band is unreadable."),
+            "shows": ("Each observed precision@k next to the random-ranker band for the same "
+                      "budget on the same split. The gap, not the level, is the result."),
+            "cannot": ("The band is a property of the SPLIT, not of any model, so it does not "
+                       "transfer to another window, another rung or a production portfolio. "
+                       "The logistic level shown here is a withdrawn figure that the registry "
+                       "permits only in this qualified form: beside its null."),
+            "rung": "HI-Medium",
+            "budgets": band_budgets,
+            "series": null_series,
+            "window": med_window,
+            "links": [
+                {"label": "budget_null.json", "path": med_window["source"]},
+                {"label": "RESULTS_budget_null.md",
+                 "path": "aml-platform/paper/RESULTS_budget_null.md"},
+            ],
+        },
+        {
+            "id": "seed-spread",
+            "chart": "seed-spread",
+            "eyebrow": "Finding 2",
+            "title": f"One seed is not a result: precision@50 spans {stab_p50['spread_pct']}% of its own mean",
+            "lede": (f"{stability['n_seeds']} seeds of the same {stability['model']} "
+                     f"configuration on {stability['rung']}, changing nothing but the seed. "
+                     f"precision@50 runs from {stab_p50['min']} to {stab_p50['max']} around a "
+                     f"mean of {stab_p50['mean']}."),
+            "shows": ("Every seed as its own point, with the mean and the full observed range. "
+                      "A single-seed headline could have landed anywhere in this span."),
+            "cannot": ("Eight seeds bound what was observed; they are not a confidence "
+                       "interval, and the range is not an error bar. Nothing here separates "
+                       "seed sensitivity from the split's own thin-day structure."),
+            "rung": stability["rung"],
+            "metric": "precision@50",
+            "mean": stab_p50["mean"], "min": stab_p50["min"], "max": stab_p50["max"],
+            "spread_pct": stab_p50["spread_pct"], "n_seeds": stability["n_seeds"],
+            "series": seed_series,
+            "links": [
+                {"label": "stability.json", "path": stability["source"]},
+                {"label": "RESULTS_metric_stability.md",
+                 "path": "aml-platform/paper/RESULTS_metric_stability.md"},
+            ],
+        },
+        {
+            "id": "scaling",
+            "chart": "scaling",
+            "eyebrow": "Finding 3",
+            "title": "Scale changes what the metric can reach, and this is not a model comparison",
+            "lede": ("recall@200 on the canonical HI-Medium run against the three HI-Large "
+                     "cloud seeds. The rungs differ in learner, in split, in window and in "
+                     "the number of account-days competing for the same 200 daily slots."),
+            "shows": ("Two rungs side by side at one budget, each point linked to the manifest "
+                      "it was read from."),
+            "cannot": ("NOT a comparison of GBDT against LightGBM. Only LightGBM was run at "
+                       "HI-Large: scikit-learn gradient boosting needed a 33.5 GB training "
+                       "matrix against LightGBM's 14.9 GB on a roughly 31 GB machine, so it "
+                       "did not complete. That is a memory measurement. It says nothing about "
+                       "how either learner would have scored."),
+            "metric": "recall@200",
+            "series": scale_series,
+            "links": [
+                {"label": "RESULTS_hi_large.md",
+                 "path": "aml-platform/paper/RESULTS_hi_large.md"},
+                {"label": "CANONICAL.json",
+                 "path": "aml-platform/results_archive/CANONICAL.json"},
+            ],
+        },
+    ]
+
     data = {
-        "schema": 1,
+        "schema": 2,
+        "experiments": experiments,
+        "coverage": coverage,
+        "stories": stories,
         "generator": "site/build_site_data.py",
         "note": ("Every number here is read from a committed artifact under "
                  "aml-platform/results_archive/. Nothing is typed in by hand, "
@@ -442,7 +911,8 @@ def build() -> dict:
         },
         "metrics": list(METRICS),
         "budgets": list(BUDGETS),
-        "results": rows,
+        "results_file": "results.json",
+        "n_results": len(rows),
         "stability": stability,
         "large_seed_spread": {
             "metric": "recall@200",
@@ -453,11 +923,24 @@ def build() -> dict:
         "windows": windows,
     }
 
-    blob = json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
-    for bad in DENIED_SUBSTRINGS:
-        if bad in blob:
-            die(f"refusing to write: the output contains a denied path fragment {bad!r}")
-    return blob
+    results_doc = {
+        "schema": 2,
+        "generator": "site/build_site_data.py",
+        "note": data["note"],
+        "results": rows,
+    }
+
+    out = {
+        OUT: json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
+        RESULTS_OUT: json.dumps(results_doc, indent=2, sort_keys=True,
+                                ensure_ascii=False) + "\n",
+    }
+    for path, blob in out.items():
+        for bad in DENIED_SUBSTRINGS:
+            if bad in blob:
+                die(f"refusing to write {path.name}: it contains a denied path "
+                    f"fragment {bad!r}")
+    return out
 
 
 def main(argv=None) -> int:
@@ -467,24 +950,30 @@ def main(argv=None) -> int:
                          "fresh build, instead of rewriting it")
     a = ap.parse_args(argv)
 
-    blob = build()
+    out = build()
     if a.check:
-        if not OUT.is_file():
-            print(f"{OUT.relative_to(ROOT)} does not exist", file=sys.stderr)
+        stale = []
+        for path, blob in out.items():
+            if not path.is_file():
+                print(f"{path.relative_to(ROOT)} does not exist", file=sys.stderr)
+                return 1
+            if path.read_text(encoding="utf-8") != blob:
+                stale.append(path)
+        if stale:
+            for path in stale:
+                print(f"{path.relative_to(ROOT)} is stale", file=sys.stderr)
+            print("run `python site/build_site_data.py`", file=sys.stderr)
             return 1
-        if OUT.read_text(encoding="utf-8") != blob:
-            print(f"{OUT.relative_to(ROOT)} is stale; run "
-                  f"`python site/build_site_data.py`", file=sys.stderr)
-            return 1
-        print(f"{OUT.relative_to(ROOT)} matches a fresh build")
+        print(f"{len(out)} data file(s) match a fresh build")
         return 0
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(blob, encoding="utf-8")
-    data = json.loads(blob)
-    print(f"wrote {OUT.relative_to(ROOT)}: {len(data['results'])} result rows, "
-          f"{len(data['windows'])} window(s), "
-          f"{len(data['stability']['metrics'])} stability metric(s), "
+    for path, blob in out.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(blob, encoding="utf-8")
+    data = json.loads(out[OUT])
+    print(f"wrote {OUT.relative_to(ROOT)} and {RESULTS_OUT.relative_to(ROOT)}: "
+          f"{data['n_results']} result rows, {len(data['experiments'])} experiment(s), "
+          f"{len(data['stories'])} stor(ies), {len(data['windows'])} window(s), "
           f"{data['withdrawn']['count']} withdrawn entr(ies)")
     return 0
 

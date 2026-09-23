@@ -60,38 +60,52 @@ function bar(x, y, w, h, cls, title) {
 
 function drawChart(svg, s) {
   clear(svg);
-  const W = 640, rowH = 34, padL = 172, padR = 58, padT = 14;
+  const W = 760, rowH = 44, padL = 0, padR = 70, padT = 8;
   // An undefined quantity gets no bar. A zero-length bar would read as
   // "measured, and it is zero".
   const rows = [
-    ["Random-ranker precision@k", s.randomPrecision, "bar-null"],
-    ["Attainable precision ceiling", s.precisionCeiling, "bar-observed"],
-    ["Random-ranker recall@k", s.randomRecall, "bar-null"],
-    ["Attainable recall ceiling", s.recallCeiling, "bar-observed"],
+    ["Random-ranker precision@k", s.randomPrecision, "bar bar-1"],
+    ["Attainable precision ceiling", s.precisionCeiling, "bar"],
+    ["Random-ranker recall@k", s.randomRecall, "bar bar-1"],
+    ["Attainable recall ceiling", s.recallCeiling, "bar"],
   ].filter(([, v]) => v !== null && v !== undefined);
 
-  const H = padT * 2 + rows.length * rowH;
+  // The label sits above its own bar rather than in a left-hand column:
+  // four long labels in a gutter would either wrap or force the plot into a
+  // sliver on a phone.
+  const H = padT + rows.length * rowH + 34;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
-  svg.setAttribute("width", W);
-  svg.setAttribute("height", H);
 
   const plotW = W - padL - padR;
+  const axisY = padT + rows.length * rowH;
+  svg.append(svgEl("line", { x1: padL, y1: axisY, x2: padL + plotW, y2: axisY,
+                             class: "ax" }));
   for (const t of [0, 0.25, 0.5, 0.75, 1]) {
     const x = padL + t * plotW;
-    svg.append(svgEl("line", { x1: x, y1: padT, x2: x, y2: H - padT, class: "tick-line" }));
-    svg.append(svgEl("text", { x, y: H - 2, class: "tick-text", "text-anchor": "middle",
-                               text: t.toFixed(2) }));
+    svg.append(svgEl("line", { x1: x, y1: axisY, x2: x, y2: axisY + 5, class: "tick" }));
+    svg.append(svgEl("text", { x, y: axisY + 17, class: "tick-label",
+                               "text-anchor": "middle", text: t.toFixed(2) }));
   }
 
   rows.forEach(([label, value, cls], i) => {
-    const y = padT + i * rowH + 5;
-    const h = rowH - 16;
-    svg.append(svgEl("text", { x: padL - 10, y: y + h - 2, class: "axis-text",
-                               "text-anchor": "end", text: label }));
+    const y = padT + i * rowH + 18;
+    const h = 16;
+    svg.append(svgEl("text", { x: padL, y: y - 5, class: "bar-label", text: label }));
     svg.append(bar(padL, y, value * plotW, h, cls, `${label}: ${fmt(value, 4)}`));
-    svg.append(svgEl("text", { x: padL + value * plotW + 6, y: y + h - 2,
-                               class: "bar-label", text: fmt(value, 4) }));
+    svg.append(svgEl("text", { x: padL + value * plotW + 8, y: y + h - 3,
+                               class: "bar-value", text: fmt(value, 4) }));
   });
+}
+
+/** An undefined quantity is written out, not printed as a number. */
+function setValue(node, value, undefinedText) {
+  if (value === null || value === undefined) {
+    node.textContent = undefinedText;
+    node.classList.add("undefined");
+  } else {
+    node.textContent = fmt(value, 6);
+    node.classList.remove("undefined");
+  }
 }
 
 export function initBudgetSimulator(root = document) {
@@ -117,7 +131,10 @@ export function initBudgetSimulator(root = document) {
     const problem = validate(N, P, k);
     if (problem) {
       err.textContent = problem;
-      for (const n of Object.values(out)) n.textContent = "—";
+      for (const n of Object.values(out)) {
+        n.textContent = "—";
+        n.classList.remove("undefined");
+      }
       clear(svg);
       desc.textContent = "";
       return;
@@ -127,13 +144,13 @@ export function initBudgetSimulator(root = document) {
     const undef = "undefined — no positive account-days";
     out.prev.textContent = fmt(s.prevalence, 6);
     out.rprec.textContent = fmt(s.randomPrecision, 6);
-    out.rrec.textContent = s.randomRecall === null ? undef : fmt(s.randomRecall, 6);
-    out.ceil.textContent = s.recallCeiling === null ? undef : fmt(s.recallCeiling, 6);
+    setValue(out.rrec, s.randomRecall, undef);
+    setValue(out.ceil, s.recallCeiling, undef);
     out.pceil.textContent = fmt(s.precisionCeiling, 6);
 
     clear(out.binds);
     out.binds.append(el("span", {
-      class: `pill ${s.binds ? "pill-yes" : "pill-no"}`,
+      class: `chip ${s.binds ? "chip-measured" : "chip-not-run"}`,
       text: s.binds ? "yes" : "no — every candidate is alerted",
     }));
 

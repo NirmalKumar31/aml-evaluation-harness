@@ -45,3 +45,9 @@ htmlcov/
 
 # The Pages upload directory, assembled by site/assemble_site.py.
 site/_build/
+
+# The browser-test dependency tree. package.json and package-lock.json are
+# committed; what npm installs from them is not.
+site/tests/node_modules/
+site/tests/test-results/
+site/tests/playwright-report/

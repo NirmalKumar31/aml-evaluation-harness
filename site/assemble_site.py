@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """Assemble the directory GitHub Pages uploads.
 
-The architecture diagrams live once, in `aml-platform/docs/architecture/`.
+    python site/assemble_site.py --dest site/_build
+
+THE DIAGRAMS AND ICONS LIVE ONCE, in `aml-platform/docs/architecture/`.
 Committing a second copy under `site/` would create exactly the drift this
 project spends its time preventing: two files, one of them quietly stale. So
 they are copied at build time into a destination the repository ignores, and
-the workflow uploads that.
+the workflow uploads that. The list of what to copy is `site/assets.py`, the
+same table the page builder writes its `<img>` paths from.
 
-    python site/assemble_site.py --dest site/_build
-
-The output is deterministic: a fixed file list, sorted, with bytes copied
+The output is deterministic: a fixed file list, sorted, bytes copied
 verbatim. Run it twice and diff to confirm.
 """
 from __future__ import annotations
@@ -20,30 +21,32 @@ import shutil
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from assets import copy_plan
+
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
-DIAGRAMS = ROOT / "aml-platform" / "docs" / "architecture"
 
 # Copied verbatim from site/. Enumerated rather than globbed so a stray file
 # in the working tree cannot be published by accident.
 SITE_FILES = (
     "index.html",
+    "explorer/index.html",
+    "engineering/index.html",
     "styles.css",
-    "js/main.js",
-    "js/nav.js",
+    "noscript.css",
+    "js/page-home.js",
+    "js/page-explorer.js",
+    "js/page-engineering.js",
     "js/explorer.js",
     "js/budget.js",
-    "js/sections.js",
+    "js/nav.js",
+    "js/hero.js",
+    "js/reveal.js",
+    "js/lightbox.js",
     "js/util.js",
     "data/site-data.json",
-)
-
-# The three diagrams, and the notice recording where their icons came from.
-ASSETS = (
-    ("01-evaluation-pipeline.svg", "assets/01-evaluation-pipeline.svg"),
-    ("02-azure-execution.svg", "assets/02-azure-execution.svg"),
-    ("03-ci-release.svg", "assets/03-ci-release.svg"),
-    ("icons/NOTICES.txt", "assets/icon-notices.txt"),
+    "data/results.json",
 )
 
 
@@ -62,22 +65,22 @@ def main(argv=None) -> int:
         src = SITE / rel
         if not src.is_file():
             print(f"assemble_site: missing {src.relative_to(ROOT)}; run "
-                  f"`python site/build_site_data.py` first", file=sys.stderr)
+                  f"`python site/build_site_data.py` and "
+                  f"`python site/build_pages.py` first", file=sys.stderr)
             return 1
         out = dest / rel
         out.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, out)
         written.append(rel)
 
-    for src_rel, dest_rel in ASSETS:
-        src = DIAGRAMS / src_rel
+    for src, rel in copy_plan():
         if not src.is_file():
-            print(f"assemble_site: missing diagram {src.relative_to(ROOT)}", file=sys.stderr)
+            print(f"assemble_site: missing asset {src}", file=sys.stderr)
             return 1
-        out = dest / dest_rel
+        out = dest / rel
         out.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(src, out)
-        written.append(dest_rel)
+        written.append(rel)
 
     # Pages serves the artifact through Jekyll unless told not to. The site is
     # already static, and Jekyll would drop anything beginning with an

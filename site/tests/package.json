@@ -1,0 +1,13 @@
+{
+  "name": "aml-evaluation-harness-site-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser tests for the project website. Pinned, with a committed lockfile; runs against the browser already on the machine.",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  }
+}

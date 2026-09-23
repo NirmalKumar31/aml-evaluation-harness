@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Results explorer · AML evaluation harness</title>
+<meta name="description" content="Browse every archived evaluation by experiment: available metrics, budgets and seeds only, each value linked to the artifact it was read from.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0b1b2b">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Results explorer · AML evaluation harness">
+<meta property="og:description" content="Browse every archived evaluation by experiment: available metrics, budgets and seeds only, each value linked to the artifact it was read from.">
+<meta property="og:url" content="https://nirmalkumar31.github.io/aml-evaluation-harness/explorer/">
+<link rel="canonical" href="https://nirmalkumar31.github.io/aml-evaluation-harness/explorer/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 32 32&#x27;%3E%3Crect width=&#x27;32&#x27; height=&#x27;32&#x27; rx=&#x27;7&#x27; fill=&#x27;%230b1b2b&#x27;/%3E%3Ccircle cx=&#x27;10&#x27; cy=&#x27;11&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Ccircle cx=&#x27;22&#x27; cy=&#x27;9&#x27; r=&#x27;2.2&#x27; fill=&#x27;%23e2e8f0&#x27;/%3E%3Ccircle cx=&#x27;21&#x27; cy=&#x27;22&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Cpath d=&#x27;M10 11 L22 9 M10 11 L21 22&#x27; stroke=&#x27;%23e2e8f0&#x27; stroke-width=&#x27;1.4&#x27; fill=&#x27;none&#x27;/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../styles.css">
+<noscript><link rel="stylesheet" href="../noscript.css"></noscript>
+</head>
+<body class="route-explorer" data-route="explorer">
+
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../">
+      <img class="brand-mark" src="../assets/icons/github.svg" alt="" width="22" height="22">
+      <span class="brand-text"><strong>AML evaluation harness</strong>
+      <span class="brand-sub">alert-budget evaluation methodology</span></span>
+    </a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false"
+            aria-controls="site-nav">
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Primary">
+      <ul><li><a href="../">Home</a></li><li><a href="../explorer/" aria-current="page">Results explorer</a></li><li><a href="../engineering/">Engineering &amp; MLOps</a></li>
+        <li class="nav-sep"><a class="nav-repo" href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">
+          Repository<span class="sr-only"> on GitHub</span></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">
+
+<section class="page-head band band-dark" aria-labelledby="ex-h">
+  <div class="wrap">
+    <p class="eyebrow">Results explorer</p>
+    <h1 id="ex-h">Every archived evaluation, by experiment</h1>
+    <p class="hero-lede">Pick an experiment first. The metric, budget and seed
+      choices that follow are built from what that experiment actually
+      contains, so there is no combination to select that returns nothing.
+      452 rows across 5 experiments, each one linked
+      to the manifest it was read from.</p>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="pick-h">
+  <div class="wrap">
+    <h2 id="pick-h">Choose an experiment</h2>
+    
+<noscript>
+  <p class="callout callout-note"><strong>JavaScript is switched off.</strong>
+     Every figure, table and number on this page was written into the HTML when
+     the site was built, so all of it is readable as it stands. The experiment descriptions below switch without JavaScript. The live chart and the row table need it, and the same values are in the linked artifacts.</p>
+</noscript>
+    <form class="explorer" id="explorer-controls" aria-label="Choose an experiment and a view of it">
+      <fieldset class="exp-picker">
+        <legend class="sr-only">Experiment</legend>
+        
+<input class="vis-radio exp-radio" type="radio" name="experiment"
+       id="exp-large-cloud" value="large-cloud" checked>
+<input class="vis-radio exp-radio" type="radio" name="experiment"
+       id="exp-medium-canonical" value="medium-canonical">
+<input class="vis-radio exp-radio" type="radio" name="experiment"
+       id="exp-medium-sweep" value="medium-sweep">
+<input class="vis-radio exp-radio" type="radio" name="experiment"
+       id="exp-medium-baseline" value="medium-baseline">
+<input class="vis-radio exp-radio" type="radio" name="experiment"
+       id="exp-small-sweep" value="small-sweep">
+        <div class="exp-grid">
+<label class="exp-card" for="exp-large-cloud">
+  <span class="exp-rung">HI-Large</span>
+  <span class="exp-title">HI-Large · LightGBM · cloud-scale run</span>
+  <span class="exp-sum">Three seeds on 179.7M transactions, fitted on an Azure VM with a deterministic training row order.</span>
+  <span class="exp-meta">LightGBM · 3 seeds ·
+    84 rows</span>
+</label>
+<label class="exp-card" for="exp-medium-canonical">
+  <span class="exp-rung">HI-Medium</span>
+  <span class="exp-title">HI-Medium · GBDT · canonical and independent rerun</span>
+  <span class="exp-sum">The canonical HI-Medium result and a separate rerun of the same command.</span>
+  <span class="exp-meta">GBDT · 1 seed ·
+    56 rows</span>
+</label>
+<label class="exp-card" for="exp-medium-sweep">
+  <span class="exp-rung">HI-Medium</span>
+  <span class="exp-title">HI-Medium · GBDT · seed-stability sweep</span>
+  <span class="exp-sum">Eight fits differing in nothing but the random seed, plus the pooled run.</span>
+  <span class="exp-meta">GBDT · 8 seeds ·
+    252 rows</span>
+</label>
+<label class="exp-card" for="exp-medium-baseline">
+  <span class="exp-rung">HI-Medium</span>
+  <span class="exp-title">HI-Medium · logistic baseline</span>
+  <span class="exp-sum">A deterministic convex fit, reported beside every model score.</span>
+  <span class="exp-meta">Logistic baseline · 1 seed ·
+    28 rows</span>
+</label>
+<label class="exp-card" for="exp-small-sweep">
+  <span class="exp-rung">HI-Small</span>
+  <span class="exp-title">HI-Small · GBDT · seed-stability sweep</span>
+  <span class="exp-sum">Eight seeds at a single budget per metric, from the archived sweep.</span>
+  <span class="exp-meta">GBDT · 8 seeds ·
+    32 rows</span>
+</label></div>
+        <div class="exp-details">
+<div class="exp-detail" data-for="exp-large-cloud">
+  <h3>HI-Large · LightGBM · cloud-scale run</h3>
+  <p>The only model family represented at this rung. On the 31 GB machine the training matrix measured 14.9 GB under LightGBM and 33.5 GB under scikit-learn, so only LightGBM completed. That is a memory measurement, not a quality comparison: the other families were not run to completion here, and nothing about their detection performance follows from it.</p>
+  <p class="exp-lineage"><strong>Lineage:</strong>
+     <code>large_sorted_lgbm</code>
+     <span class="chip chip-canonical">canonical</span></p>
+  <div class="prov"><h4 class="prov-h">Read from</h4>
+    <ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s0/manifest.json" rel="noopener"><code>large_sorted_lgbm_s0/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s1/manifest.json" rel="noopener"><code>large_sorted_lgbm_s1/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s2/manifest.json" rel="noopener"><code>large_sorted_lgbm_s2/manifest.json</code></a></li>
+      <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></li></ul></div>
+</div>
+<div class="exp-detail" data-for="exp-medium-canonical">
+  <h3>HI-Medium · GBDT · canonical and independent rerun</h3>
+  <p>The rerun reproduces the canonical run&#x27;s training-matrix hash, prediction hash and every metric, which is what makes the result reproducible rather than merely recorded.</p>
+  <p class="exp-lineage"><strong>Lineage:</strong>
+     <code>canonical_Medium_gbdt</code> <code>canonical_Medium_gbdt_replica</code>
+     <span class="chip chip-canonical">canonical</span></p>
+  <div class="prov"><h4 class="prov-h">Read from</h4>
+    <ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/canonical_Medium_gbdt/manifest.json" rel="noopener"><code>canonical_Medium_gbdt/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/canonical_Medium_gbdt_replica/manifest.json" rel="noopener"><code>canonical_Medium_gbdt_replica/manifest.json</code></a></li>
+      <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/docs/RESULT_LINEAGE.md" rel="noopener"><code>RESULT_LINEAGE.md</code></a></li></ul></div>
+</div>
+<div class="exp-detail" data-for="exp-medium-sweep">
+  <h3>HI-Medium · GBDT · seed-stability sweep</h3>
+  <p>The seeds vary one thing: the 200,000-row subsample used to estimate histogram bin edges. The spread is a property of this benchmark and configuration, not of gradient boosting in general.</p>
+  <p class="exp-lineage"><strong>Lineage:</strong>
+     <code>eval_Medium</code>
+     <span class="chip chip-supporting">supporting</span></p>
+  <div class="prov"><h4 class="prov-h">Read from</h4>
+    <ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/eval_Medium/gbdt/gbdt_metrics.json" rel="noopener"><code>gbdt/gbdt_metrics.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/eval_Medium/seed0/gbdt_metrics.json" rel="noopener"><code>seed0/gbdt_metrics.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/eval_Medium/seed1/gbdt_metrics.json" rel="noopener"><code>seed1/gbdt_metrics.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/eval_Medium/seed2/gbdt_metrics.json" rel="noopener"><code>seed2/gbdt_metrics.json</code></a></li><li class="muted">and 5 more manifests</li>
+      <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_metric_stability.md" rel="noopener"><code>RESULTS_metric_stability.md</code></a></li></ul></div>
+</div>
+<div class="exp-detail" data-for="exp-medium-baseline">
+  <h3>HI-Medium · logistic baseline</h3>
+  <p>It has no seed to vary, so no range is published for it. Its pooled level is only interpretable beside the random-ranker band, which is why the band is always shown with it.</p>
+  <p class="exp-lineage"><strong>Lineage:</strong>
+     <code>eval_Medium</code>
+     <span class="chip chip-supporting">supporting</span></p>
+  <div class="prov"><h4 class="prov-h">Read from</h4>
+    <ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/eval_Medium/baseline/baseline_metrics.json" rel="noopener"><code>baseline/baseline_metrics.json</code></a></li>
+      <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_metric_stability.md" rel="noopener"><code>RESULTS_metric_stability.md</code></a></li></ul></div>
+</div>
+<div class="exp-detail" data-for="exp-small-sweep">
+  <h3>HI-Small · GBDT · seed-stability sweep</h3>
+  <p>The HI-Small artifact is a stability sweep rather than a full evaluation, so it carries precision, recall and efficiency at k=50 and ring recall at k=200, and no other budget. HI-Small&#x27;s other artifacts are diagnostics — leak sweeps, split sensitivity, per-typology and graph-feature arms — and the graph-feature arms cannot be told apart by their provenance record, so none of them is presented as a current model result.</p>
+  <p class="exp-lineage"><strong>Lineage:</strong>
+     <code>stability_Small</code>
+     <span class="chip chip-supporting">supporting</span></p>
+  <div class="prov"><h4 class="prov-h">Read from</h4>
+    <ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/stability_Small/stability.json" rel="noopener"><code>stability_Small/stability.json</code></a></li>
+      <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_graph_features.md" rel="noopener"><code>RESULTS_graph_features.md</code></a></li></ul></div>
+</div></div>
+      </fieldset>
+      <div class="js-only">
+        <div class="controls">
+          <p class="controls-h" id="controls-h">View</p>
+          <div class="field">
+            <label for="f-metric">Metric</label>
+            <select id="f-metric" name="metric"></select>
+          </div>
+          <div class="field">
+            <label for="f-budget">Daily review budget <span class="muted">k</span></label>
+            <select id="f-budget" name="budget"></select>
+          </div>
+          <div class="field">
+            <label for="f-seed">Seed</label>
+            <select id="f-seed" name="seed"></select>
+          </div>
+          <button type="button" id="f-reset" class="btn btn-quiet">Reset view</button>
+        </div>
+        <p class="hint">Changing an experiment keeps your metric and budget
+          where that experiment offers them, and moves to its nearest available
+          choice where it does not. Nothing offered here is empty.</p>
+        <p class="status" id="explorer-status" role="status" aria-live="polite"></p>
+      </div>
+    </form>
+  </div>
+</section>
+
+<section class="band band-tint js-only" aria-labelledby="exchart-h">
+  <div class="wrap">
+    <h2 id="exchart-h">The selected view</h2>
+    <figure class="chart chart-live" id="result-chart">
+      <h3 class="chart-title" id="rc-title">Select an experiment</h3>
+      <p class="chart-desc" id="rc-desc"></p>
+      <div class="chart-surface">
+        <svg id="rc-svg" viewBox="0 0 760 320" role="img" aria-labelledby="rc-title"
+             aria-describedby="rc-desc" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <figcaption id="rc-caption"></figcaption>
+    </figure>
+    <div class="read-grid">
+      <div class="reads" id="rc-reads"></div>
+      <div class="prov" id="rc-prov"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band band-light js-only" aria-labelledby="rows-h">
+  <div class="wrap">
+    <h2 id="rows-h">The rows behind the chart</h2>
+    <p class="lede">Collapsed by default, because a table of hundreds of rows
+      is a poorer way to read a result than a picture of it.</p>
+    <details class="rows-block" id="rows-block">
+      <summary>Show the selected rows</summary>
+      <div class="rows-body">
+        <div class="scroller" role="region" aria-labelledby="rows-cap" tabindex="0">
+          <table class="data-table" id="rows-table">
+            <caption id="rows-cap">The rows currently selected, with the
+              artifact each value was read from.</caption>
+            <thead><tr>
+              <th scope="col">Run</th><th scope="col">Metric</th>
+              <th scope="col">k</th><th scope="col">Observed</th>
+              <th scope="col">Random-ranker null</th>
+              <th scope="col">Attainable ceiling</th>
+              <th scope="col">Lineage</th><th scope="col">Source</th>
+            </tr></thead>
+            <tbody id="rows-body"></tbody>
+          </table>
+        </div>
+        <nav class="pager" id="rows-pager" aria-label="Table pages">
+          <button type="button" class="btn btn-quiet" id="rows-prev">Previous</button>
+          <p class="pager-state" id="rows-state" role="status" aria-live="polite"></p>
+          <button type="button" class="btn btn-quiet" id="rows-next">Next</button>
+        </nav>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="band band-tint" aria-labelledby="cov2-h">
+  <div class="wrap">
+    <h2 id="cov2-h">Why the choices differ between rungs</h2>
+    
+<h3 id="coverage">Experiment coverage</h3>
+<p class="lede">The archive is not a full grid of every model against every
+   dataset rung, and this table does not pretend otherwise. Where a cell is
+   empty it says why, and the reason links to the record. A missing run is
+   never evidence that a model performed badly.</p>
+<div class="scroller" role="region" aria-labelledby="coverage-cap" tabindex="0">
+  <table class="matrix">
+    <caption id="coverage-cap">Coverage by dataset rung and experiment family.
+      States are written out, never signalled by colour alone.</caption>
+    <thead><tr><th scope="col">Dataset rung</th><th scope="col">Logistic baseline</th><th scope="col">GBDT · canonical + rerun</th><th scope="col">GBDT · seed sweep</th><th scope="col">LightGBM · cloud run</th><th scope="col">Window / null diagnostics</th></tr></thead>
+    <tbody><tr><th scope="row">HI-Small</th><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">No logistic evaluation was run at this rung. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">The graph-feature arms share one config hash, so no canonical result exists. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_graph_features.md" rel="noopener"><code>RESULTS_graph_features.md</code></a></span></td><td class="cell cell-measured"><span class="chip chip-measured">measured</span><span class="cell-note">Backed by archived artifacts.</span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">The cloud rung was HI-Large. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/docs/RUNBOOK_cloud.md" rel="noopener"><code>RUNBOOK_cloud.md</code></a></span></td><td class="cell cell-diagnostic"><span class="chip chip-diagnostic">diagnostic only</span><span class="cell-note">A published random-ranker band and non-binding-day accounting. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></span></td></tr><tr><th scope="row">HI-Medium</th><td class="cell cell-measured"><span class="chip chip-measured">measured</span><span class="cell-note">Backed by archived artifacts.</span></td><td class="cell cell-measured"><span class="chip chip-measured">measured</span><span class="cell-note">Backed by archived artifacts.</span></td><td class="cell cell-measured"><span class="chip chip-measured">measured</span><span class="cell-note">Backed by archived artifacts.</span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">LightGBM is the HI-Large learner; not run here as a canonical result. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></span></td><td class="cell cell-diagnostic"><span class="chip chip-diagnostic">diagnostic only</span><span class="cell-note">A published random-ranker band and non-binding-day accounting. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></span></td></tr><tr><th scope="row">HI-Large</th><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">Not run at this scale; absence of a run is not a result. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">33.5 GB training matrix against LightGBM&#x27;s 14.9 GB on a 31 GB machine. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">About 26 minutes and 30 of 31 GB per fit; three seeds were affordable. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_metric_stability.md" rel="noopener"><code>RESULTS_metric_stability.md</code></a></span></td><td class="cell cell-measured"><span class="chip chip-measured">measured</span><span class="cell-note">Backed by archived artifacts.</span></td><td class="cell cell-not-run"><span class="chip chip-not-run">not run</span><span class="cell-note">No random-ranker band is published for this rung. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></span></td></tr></tbody>
+  </table>
+</div>
+<details class="notes-block">
+  <summary>Why coverage differs by rung</summary>
+  <div class="notes-body"><h4>HI-Small</h4><ul class="notes"><li><strong>Logistic baseline — not run.</strong> Not run at this rung. The archived HI-Small work is diagnostic — leak sweeps, split sensitivity, per-typology and graph-feature arms — and no logistic evaluation was executed there. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></li><li><strong>GBDT · canonical + rerun — not run.</strong> No canonical HI-Small evaluation exists. The graph-feature arms share one config hash and record no feature set, so which treatment produced which numbers cannot be established from the archive. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_graph_features.md" rel="noopener"><code>RESULTS_graph_features.md</code></a></li><li><strong>GBDT · seed sweep — measured.</strong> Backed by archived artifacts; open it in the explorer.</li><li><strong>LightGBM · cloud run — not run.</strong> Not run. The cloud rung was HI-Large; HI-Small fits locally in seconds and needed no LightGBM path. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/docs/RUNBOOK_cloud.md" rel="noopener"><code>RUNBOOK_cloud.md</code></a></li><li><strong>Window / null diagnostics — diagnostic only.</strong> A published random-ranker band and non-binding-day accounting for this rung&#x27;s evaluated split. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></li></ul><h4>HI-Medium</h4><ul class="notes"><li><strong>Logistic baseline — measured.</strong> Backed by archived artifacts; open it in the explorer.</li><li><strong>GBDT · canonical + rerun — measured.</strong> Backed by archived artifacts; open it in the explorer.</li><li><strong>GBDT · seed sweep — measured.</strong> Backed by archived artifacts; open it in the explorer.</li><li><strong>LightGBM · cloud run — not run.</strong> Not run as a canonical result. LightGBM is the HI-Large rung&#x27;s learner; the HI-Medium canonical lineage is scikit-learn gradient boosting, and the two bin differently, so they are not like for like. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></li><li><strong>Window / null diagnostics — diagnostic only.</strong> A published random-ranker band and non-binding-day accounting for this rung&#x27;s evaluated split. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></li></ul><h4>HI-Large</h4><ul class="notes"><li><strong>Logistic baseline — not run.</strong> Not run at this scale. Absence of a run is not a result: nothing here says how a logistic baseline would have scored on HI-Large. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></li><li><strong>GBDT · canonical + rerun — not run.</strong> scikit-learn gradient boosting does not fit this data on the 31 GB machine: the 125M x 32 training matrix measured 33.5 GB against LightGBM&#x27;s 14.9 GB. That is a memory measurement; no detection-quality comparison follows from it, and the run did not complete. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></li><li><strong>GBDT · seed sweep — not run.</strong> No seed sweep at this rung. Each HI-Large fit costs about 26 minutes and 30 of 31 GB on a 4-vCPU quota that could not be raised, so three seeds were bought and the range is published instead of a distribution. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_metric_stability.md" rel="noopener"><code>RESULTS_metric_stability.md</code></a></li><li><strong>LightGBM · cloud run — measured.</strong> Backed by archived artifacts; open it in the explorer.</li><li><strong>Window / null diagnostics — not run.</strong> No random-ranker band is published for this rung. Computing one needs the per-day account-day population, which the released artifacts do not carry. <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a></li></ul></div>
+</details>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="stab-h">
+  <div class="wrap">
+    <h2 id="stab-h">Seed stability</h2>
+    <p class="lede">8 seeds of one GBDT
+      configuration on HI-Medium, changing nothing but the seed. The
+      bars below are each metric’s observed range expressed as a percentage of
+      its own mean, which is the only form in which metrics on different
+      scales can be compared at all.</p>
+    
+<figure class="chart" id="stability">
+  <h3 class="chart-title" id="stability-t">Observed spread across seeds, by metric</h3>
+  <p class="chart-desc" id="stability-d">One bar per metric. Bar length is the observed range divided by that metric’s mean; the exact minimum, maximum and percentage are printed beside each bar.</p>
+  
+  <div class="chart-surface">
+    <svg id="stability-svg" viewBox="0 0 760 320" role="img"
+         aria-labelledby="stability-t" aria-describedby="stability-d"
+         preserveAspectRatio="xMidYMid meet"><text class="bar-label" x="20" y="28">precision@50</text><rect class="bar bar-spread" x="20.0" y="34" width="502.07" height="16" rx="3"><title>precision@50: observed range 0.30671, which is 37.19% of its mean 0.8248</title></rect><text class="bar-value" x="530.07" y="47">37.19% · 0.59144 to 0.89815</text><text class="bar-label" x="20" y="78">recall@50</text><rect class="bar bar-spread" x="20.0" y="84" width="502.07" height="16" rx="3"><title>recall@50: observed range 0.01462, which is 37.19% of its mean 0.03931</title></rect><text class="bar-value" x="530.07" y="97">37.19% · 0.02819 to 0.0428</text><text class="bar-label" x="20" y="128">recall_efficiency@50</text><rect class="bar bar-spread" x="20.0" y="134" width="502.07" height="16" rx="3"><title>recall_efficiency@50: observed range 0.30886, which is 37.19% of its mean 0.83057</title></rect><text class="bar-value" x="530.07" y="147">37.19% · 0.59557 to 0.90443</text><text class="bar-label" x="20" y="178">average_precision</text><rect class="bar bar-spread" x="20.0" y="184" width="228.56" height="16" rx="3"><title>average_precision: observed range 0.04919, which is 16.93% of its mean 0.29062</title></rect><text class="bar-value" x="256.56" y="197">16.93% · 0.25467 to 0.30386</text><text class="bar-label" x="20" y="228">ring_recall@200</text><rect class="bar bar-spread" x="20.0" y="234" width="209.66" height="16" rx="3"><title>ring_recall@200: observed range 0.10586, which is 15.53% of its mean 0.68147</title></rect><text class="bar-value" x="237.66" y="247">15.53% · 0.60302 to 0.70888</text><line class="ax" x1="20.0" y1="284" x2="560.0" y2="284"/><line class="tick" x1="20.0" y1="284" x2="20.0" y2="289"/><text class="tick-label" x="20.0" y="301" text-anchor="middle">0</text><line class="tick" x1="155.0" y1="284" x2="155.0" y2="289"/><text class="tick-label" x="155.0" y="301" text-anchor="middle">10</text><line class="tick" x1="290.0" y1="284" x2="290.0" y2="289"/><text class="tick-label" x="290.0" y="301" text-anchor="middle">20</text><line class="tick" x1="425.0" y1="284" x2="425.0" y2="289"/><text class="tick-label" x="425.0" y="301" text-anchor="middle">30</text><line class="tick" x1="560.0" y1="284" x2="560.0" y2="289"/><text class="tick-label" x="560.0" y="301" text-anchor="middle">40</text><text class="axis-title" x="290.0" y="324" text-anchor="middle">observed range as a percentage of the metric’s own mean</text></svg>
+  </div>
+  <figcaption>Read from <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/stability_Medium/stability.json" rel="noopener"><code>stability.json</code></a>. Eight seeds bound what was observed. They are not a confidence interval, and the range is not an error bar.</figcaption>
+</figure>
+    <div class="callout callout-note">
+      <h3 class="callout-h">What this does and does not say</h3>
+      <p>It says that a single-seed headline from this configuration could have
+        landed anywhere in the printed range. It does not separate seed
+        sensitivity from the window’s own thin-day structure, and it says
+        nothing about any other rung: HI-Large has three seeds, not eight,
+        because each fit took about 26 minutes and 30 of 31 GB on a quota that
+        could not be raised.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band band-tint" aria-labelledby="sim-h">
+  <div class="wrap narrow">
+    <h2 id="sim-h">Why a budget changes what a metric means</h2>
+    <div class="callout callout-warn">
+      <h3 class="callout-h">A single-day illustration with made-up inputs</h3>
+      <p>Nothing in this simulator reads the project’s data. It demonstrates
+        five identities on <em>one</em> day. The project’s own evaluation is
+        slot-weighted across days of very different size, so feeding totals
+        from a whole window in here does not reproduce any published number —
+        that pooling error is precisely what the harness exists to expose.</p>
+    </div>
+    <form class="sim" id="sim-form" aria-label="Alert budget simulator inputs">
+      <div class="field">
+        <label for="sim-n">Candidate account-days <span class="muted">N</span></label>
+        <input type="number" id="sim-n" min="1" max="1000000" step="1" value="5000"
+               inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="sim-p">Positive account-days <span class="muted">P</span></label>
+        <input type="number" id="sim-p" min="0" max="1000000" step="1" value="40"
+               inputmode="numeric">
+      </div>
+      <div class="field">
+        <label for="sim-k">Daily review budget <span class="muted">k</span></label>
+        <input type="number" id="sim-k" min="1" max="1000000" step="1" value="50"
+               inputmode="numeric">
+      </div>
+      <p class="sim-error" id="sim-error" role="alert"></p>
+    </form>
+    <div class="sim-out" id="sim-out" role="status" aria-live="polite">
+      <dl class="sim-grid">
+        <div><dt>Prevalence <code>P/N</code></dt><dd id="sim-prev">—</dd></div>
+        <div><dt>Random-ranker precision@k</dt><dd id="sim-rprec">—</dd></div>
+        <div><dt>Random-ranker recall@k</dt><dd id="sim-rrec">—</dd></div>
+        <div><dt>Attainable recall ceiling</dt><dd id="sim-ceil">—</dd></div>
+        <div><dt>Attainable precision ceiling</dt><dd id="sim-pceil">—</dd></div>
+        <div><dt>Does the budget bind?</dt><dd id="sim-binds">—</dd></div>
+      </dl>
+      <figure class="chart">
+        <h3 class="chart-title" id="sim-chart-h">The four quantities, to scale</h3>
+        <p class="chart-desc" id="sim-chart-desc"></p>
+        <div class="chart-surface">
+          <svg id="sim-chart" viewBox="0 0 760 210" role="img"
+               aria-labelledby="sim-chart-h" aria-describedby="sim-chart-desc"
+               preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption>With no positives at all, recall and its ceiling are
+          undefined rather than zero, and no bar is drawn for them.</figcaption>
+      </figure>
+    </div>
+    <details class="notes-block">
+      <summary>The five identities</summary>
+      <div class="notes-body">
+        <ul class="notes">
+          <li><strong>Prevalence</strong> is <code>P / N</code>.</li>
+          <li><strong>Random-ranker precision@k</strong> equals prevalence: a
+            uniform ranker fills its k slots with the base rate.</li>
+          <li><strong>Random-ranker recall@k</strong> is <code>min(k, N) / N</code>,
+            the share of the population it manages to review.</li>
+          <li><strong>The attainable recall ceiling</strong> is
+            <code>min(P, k) / P</code>: no ranker can recall what it has no slot
+            for.</li>
+          <li><strong>The attainable precision ceiling</strong> is
+            <code>min(P, k) / min(k, N)</code>: a perfect ranker still has to
+            fill every slot it is given.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div>
+      <h2 class="footer-h">This site</h2>
+      <p>Static files only. No backend, no database, no cookies, no analytics,
+         no third-party scripts, and no request to any service at runtime.</p>
+      <p>Every figure is generated from committed artifacts by
+         <code>site/build_site_data.py</code> and rendered by
+         <code>site/build_pages.py</code>. Nothing on these pages is typed in
+         by hand.</p>
+    </div>
+    <div>
+      <h2 class="footer-h">Go deeper</h2>
+      <ul class="plain">
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">Repository</a></li>
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/tree/v0.2.1/aml-platform/paper" rel="noopener">Result reports</a></li>
+        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></li>
+        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/RETRACTED.json" rel="noopener"><code>RETRACTED.json</code></a></li>
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/pkgs/container/aml-evaluation-harness" rel="noopener">Container package</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="footer-h">Provenance</h2>
+      <p>Latest signed software release <strong>v0.2.1</strong>.
+         Result-artifact links point at that tag.</p>
+      <p>Source data: the synthetic IBM AMLworld benchmark. No raw data, no
+         replay bundle and no private material is published here.</p>
+      <p><a href="../assets/icon-notices.txt">Technology icon licences and notices</a></p>
+    </div>
+  </div>
+  <div class="wrap footer-base">
+    <p>Nirmal Kumar Thirupallikrishnan Kesavan · code under the repository’s
+       licence · technology names and logos remain the property of their
+       owners.</p>
+  </div>
+</footer>
+<script type="module" src="../js/page-explorer.js"></script>
+</body>
+</html>
