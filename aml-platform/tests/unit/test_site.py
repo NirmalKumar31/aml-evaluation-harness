@@ -402,7 +402,10 @@ def test_no_inline_script_and_no_dangerous_sink():
     away."""
     _need_site()
     for rel, html in _pages().items():
-        for m in re.finditer(r"<script\b([^>]*)>(.*?)</script\s*>", html, re.S | re.I):
+        # `</script foo>` closes a script element as surely as `</script>`
+        # does, so an end-tag pattern that only accepts the tidy form stops
+        # applying to exactly the markup the guard exists for.
+        for m in re.finditer(r"<script\b([^>]*)>(.*?)</script[^>]*>", html, re.S | re.I):
             assert "src=" in m.group(1).lower() and not m.group(2).strip(), (
                 f"{rel} carries an inline script, which the policy forbids")
         assert not re.search(r"\son[a-z]+\s*=", html, re.I), (
