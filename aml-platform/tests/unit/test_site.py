@@ -142,7 +142,7 @@ def test_every_observed_value_matches_its_source_artifact():
         if doc is None:
             doc = json.loads((ROOT / r["source"]).read_text(encoding="utf-8"))
             cache[r["source"]] = doc
-        m = doc["metrics"] if "metrics" in doc else doc
+        m = doc.get("metrics", doc)
         key = f"{r['metric']}@{r['budget']}"
         assert key in m, f"{r['id']}: {key} is not in {r['source']}"
         assert abs(float(m[key]) - r["observed"]) < 5e-6, (
@@ -169,7 +169,7 @@ def test_the_lift_is_derived_at_full_precision_not_from_the_display_value():
         if doc is None:
             doc = json.loads((ROOT / r["source"]).read_text(encoding="utf-8"))
             cache[r["source"]] = doc
-        m = doc["metrics"] if "metrics" in doc else doc
+        m = doc.get("metrics", doc)
         full = float(m[f"{r['metric']}@{r['budget']}"])
         expect = round(full / r["null_high"], 4)
         assert expect == r["lift_vs_null"], (
