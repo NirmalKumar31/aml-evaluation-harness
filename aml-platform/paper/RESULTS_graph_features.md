@@ -171,9 +171,9 @@ paired result stands on its own or not at all.
 | "Adding near-collinear redundant features degraded ring-level recall" | **not claimable from the archived provenance.** Arm identity is not established (§2); §1 is an archival indication only. 0 better / 8 worse, p = 0.0078, with a measured r = 0.977–1.000 mechanism <!-- derived: 0.0078 = the smallest two-sided sign-test p-value attainable on 8 paired observations, 2/2**8. A property of the DESIGN, not a measurement, so it is in no artifact --> |
 | "Volume-normalised variants did not rescue it" | **not claimable from the archived provenance.** Same arm-identity defect. 0 better / 7 worse / 1 tied, p = 0.0156 <!-- derived: 0.0156 = the smallest two-sided sign-test p-value attainable on 7 paired observations, 2/2**7. A property of the DESIGN, not a measurement, so it is in no artifact --> |
 | "The failure is explained, not just observed" | **consistent, not identified.** Both mechanisms are measured, but with no control arm neither is separable from "adding any two columns costs something". §3's own argument that four columns cost more than two makes feature **count** a harm channel, so the feature-count caveat applies to the 34-feature arm as well as the 36-feature one |
-| "Graph features do not help AML detection" | ❌ **not tested.** No subgraph feature was ever computed |
-| "Graph features do not help at larger scale" | ❌ **not tested.** Only HI-Small. Redundancy is scale-invariant, but that is an argument, not a measurement |
-| "This transfers to other AML data" | ❌ **no evidence.** One generator. Whether new-counterparty rate tracks volume is a property of AMLworld |
+| "Graph features do not help AML detection" | **not tested.** No subgraph feature was ever computed |
+| "Graph features do not help at larger scale" | **not tested.** Only HI-Small. Redundancy is scale-invariant, but that is an argument, not a measurement |
+| "This transfers to other AML data" | **no evidence.** One generator. Whether new-counterparty rate tracks volume is a property of AMLworld |
 
 After the harm was measured, `GRAPH_FEATURES` was left **active** in
 `features/build.py`, so the shipped model was the one the measurement had

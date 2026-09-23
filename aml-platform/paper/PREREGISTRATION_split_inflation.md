@@ -1,19 +1,22 @@
 # Pre-registration: how much does a naive temporal split inflate reported performance?
 
-**Status: BINDING. Committed 2026-08-20 in `3548fc3`; the experiment, its
-results file and its artifact landed 2026-09-11 in `1c07feb`, twenty-two days
-later.** That ordering is the only property a pre-registration has, and
-`git log --diff-filter=A` verifies it without trusting this line.
+**Status: Historical protocol record.**
 
-This header read **"Status: DRAFT, awaiting approval. Not yet binding."**
-with "Approval: *pending*" at the foot, while
-[`RESULTS_split_inflation.md`](RESULTS_split_inflation.md) cited the file as
-pre-registered and scored four predictions against it. One of the two had to
-be wrong. The template language was vestigial — there is no second party to
-approve anything on a solo project, and "approval" was never the thing that
-made this binding; being committed before the numbers existed was.
+This document was written on 2026-08-20, before the experiment ran; the
+results file and its artifact were added on 2026-09-11, twenty-two days later.
+That ordering was recorded in the commit history of a predecessor repository,
+which is retained privately and archived. **The canonical repository has a
+single root commit, so the ordering cannot be independently verified from its
+public history**, and nothing here should be read as cryptographic proof of
+it. What the document can still do is state the protocol and the predictions
+as they were written, so that the report scoring them can be read against a
+fixed target rather than a moving one.
 
-**This file is committed BEFORE the experiment runs and is not edited afterwards**, except for the corrective notes marked with , which are dated and which never change a prediction. Results go in a separate file. If a finding contradicts a prediction below, the prediction stays on the record.
+The predictions below and every value in them are unchanged from the original.
+Corrective notes added later are dated where they appear and never alter a
+prediction. Results are in a separate file
+([`RESULTS_split_inflation.md`](RESULTS_split_inflation.md)); where a finding
+contradicts a prediction, the prediction stays on the record.
 
 **Why pre-register at all.** The paper's claim is that AML evaluation harnesses fail silently and must be validated with controls. A paper making that argument cannot also be the kind of paper that tuned its headline experiment until it looked good. The cost of writing this down is twenty minutes. The cost of not being able to say we wrote it down is the paper's credibility.
 
@@ -132,8 +135,9 @@ Stated explicitly so it cannot be quietly discovered and dropped:
 
 ---
 
-**Approval:** not applicable — solo project, no second party. Superseded by
-the git-verifiable ordering in the header.
-**Committed before results exist:** ✅ **yes**, and checkable:
-`3548fc3` (2026-08-20) adds this file; `1c07feb` (2026-09-11) adds both
-`RESULTS_split_inflation.md` and `results_archive/derived/split_inflation.json`.
+**Approval:** not applicable — solo project, no second party.
+
+**Written before results exist:** yes, on the dates given in the header. The
+predecessor commit history that recorded that ordering is archived privately
+and is not reachable from this repository, so the claim rests on the record
+kept there rather than on anything a reader can check here.

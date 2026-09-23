@@ -33,9 +33,9 @@ done here.
 
 | mechanism | does it stop spend? |
 |---|---|
-| **Free-account spending limit** | ✅ **yes — blocks it by design** |
-| **`az group delete`** | ✅ yes — stops the meter |
-| Budget alerts | ❌ **no.** Email only, and they lag 8–24 hours |
+| **Free-account spending limit** | **yes — blocks it by design** |
+| **`az group delete`** | yes — stops the meter |
+| Budget alerts | **no.** Email only, and they lag 8–24 hours |
 
 > **Never click "Upgrade to pay-as-you-go."** That prompt is the only thing
 > that removes the free-account spending limit, and it is irreversible. Until

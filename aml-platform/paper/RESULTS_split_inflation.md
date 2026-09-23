@@ -10,7 +10,8 @@ higher-prevalence population rather than to the readmitted rows being easier?
 
 The preregistration is
 [`PREREGISTRATION_split_inflation.md`](PREREGISTRATION_split_inflation.md), and
-the contrast reported here is the one it specified in advance.
+the contrast reported here is the one it specifies. Its header states how that
+ordering was recorded and what can and cannot be checked from this repository.
 
 **Not claimed:** that the naive split *causes* the difference, that the
 difference *measures* leakage, or that either contrast identifies a mechanism.
