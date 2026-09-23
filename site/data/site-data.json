@@ -1290,7 +1290,7 @@
     "scope": "current main tree",
     "scope_note": "These counts describe the current main tree, which is where the website is deployed from. v0.2.1 remains the latest signed software release; it collected fewer tests, because the website's own tests were added after it. Result-artifact links below are pinned to v0.2.1, and every linked artifact was verified byte-identical between v0.2.1 and current main.",
     "source": "aml-platform/results_archive/derived/release_facts.json",
-    "tests_collected": 539
+    "tests_collected": 568
   },
   "results_file": "results.json",
   "schema": 2,
