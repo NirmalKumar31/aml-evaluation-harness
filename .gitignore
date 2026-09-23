@@ -42,3 +42,6 @@ htmlcov/
 # place. Personal notes that are not part of the project belong in a global
 # ignore file (`git config --global core.excludesFile`), not here, where the
 # list itself would describe material the repository is meant not to contain.
+
+# The Pages upload directory, assembled by site/assemble_site.py.
+site/_build/

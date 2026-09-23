@@ -1,5 +1,8 @@
 # AML evaluation harness
 
+**[Interactive website](https://nirmalkumar31.github.io/aml-evaluation-harness/)** — the
+findings, a results explorer over the archived artifacts, and the claim boundaries.
+
 An alert-budget evaluation harness for transaction monitoring, built on IBM's
 synthetic AMLworld benchmark. The subject is **evaluation methodology**, not
 detection performance: how to report a top-k metric so that it measures a

@@ -1,0 +1,106 @@
+# Build, validate and publish the project website.
+#
+# ONE ARTIFACT, BUILT ONCE. The build job assembles the site, checks it, and
+# uploads it. The deploy job publishes that exact artifact and never rebuilds
+# -- a second build could differ from the one that passed, which is the same
+# reason the image workflow promotes tested manifest bytes instead of
+# rebuilding on the tag.
+#
+# A PULL REQUEST NEVER DEPLOYS. The build job runs on pull requests so the
+# site is gated before merge; the deploy job is guarded on ref and event, and
+# is the only place `pages: write` and `id-token: write` exist.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege at the top level. The deploy job widens this for itself.
+permissions:
+  contents: read
+
+# One deployment at a time. Not `cancel-in-progress`: cancelling a running
+# deployment can leave Pages serving a half-published state, so a superseded
+# run waits rather than interrupting.
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      # THE COMMITTED DATA FILE MUST MATCH A FRESH BUILD. Without this the
+      # site could render numbers from an artifact state that no longer
+      # exists in the tree, which is the defect release_facts.py's
+      # --verify-artifact exists to prevent one directory over.
+      - name: Site data is current and deterministic
+        run: |
+          python site/build_site_data.py --check
+          python site/build_site_data.py
+          git diff --exit-code -- site/data/site-data.json
+
+      - name: Assemble the upload directory
+        run: python site/assemble_site.py --dest site/_build
+
+      # The site contracts: provenance, no superseded or withdrawn value, no
+      # restricted material, relative paths, labels and alt text, and the
+      # simulator's identities.
+      - name: Site contracts
+        working-directory: aml-platform
+        run: |
+          python -m pip install -q -U pip
+          pip install -q pytest
+          python -m pytest tests/unit/test_site.py -q
+
+      - name: Actions are pinned to a commit SHA
+        run: python3 aml-platform/scripts/check_pinned_actions.py
+
+      - name: actionlint
+        run: |
+          curl -fsSL -o /tmp/download-actionlint.bash \
+            https://raw.githubusercontent.com/rhysd/actionlint/5db9d9cde2f3deb5035dea3e45f0a9fff2f29448/scripts/download-actionlint.bash
+          bash /tmp/download-actionlint.bash 1.7.4
+          ./actionlint -color
+
+      # Nothing that must not be published may reach the upload. The same
+      # checker the repository uses on its own tree, pointed at the artifact.
+      - name: The upload must be publishable
+        run: python aml-platform/scripts/check_public_surface.py site/_build
+
+      - name: Upload the tested site
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site/_build
+
+  deploy:
+    # NOT FROM A PULL REQUEST, AND NOT FROM A BRANCH. A fork PR must never be
+    # able to reach a deployment token, and `main` is the protected branch.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # No checkout and no build: this job publishes the artifact the build
+      # job uploaded, and has no source tree to rebuild from by design.
+      - name: Deploy the artifact build produced
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
