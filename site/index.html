@@ -269,6 +269,14 @@
           at the maximum.</dd>
         <dt>Attainable precision ceiling <code>= min(P, k) / min(N, k)</code></dt>
         <dd>Every reviewed slot can be a true positive only while positives remain.</dd>
+        <dt>With no positives, recall is undefined</dt>
+        <dd>At <code>P = 0</code> both random-ranker recall and the attainable
+          recall ceiling are <code>0/0</code>. The simulator reports them as
+          <em>undefined</em> and plots no bar, rather than printing a rate for an
+          empty set. Precision is different and stays defined: zero true positives
+          out of the reviewed slots is <code>0</code>, and its ceiling is
+          <code>0</code> too, because no slot can be filled by a positive that does
+          not exist.</dd>
         <dt>The budget binds when <code>k &lt; N</code></dt>
         <dd>If <code>k ≥ N</code> every candidate is alerted, so precision equals prevalence for
           <em>any</em> ranker and the day tests nothing about ranking. This project reports
@@ -399,7 +407,8 @@
       <p id="replay-note"></p>
     </div>
 
-    <h3 id="release-h">Release</h3>
+    <h3 id="release-h">Current main-tree verification</h3>
+    <p class="section-intro" id="release-scope"></p>
     <div class="facts" id="release-facts"></div>
 
     <h3 id="window">Window structure</h3>
@@ -428,8 +437,11 @@
     <h3 id="withdrawn-h">Withdrawn values</h3>
     <p class="section-intro">
       These are recorded so a reader can recognise a figure from an older version of this work.
-      <strong>None of them appears anywhere else on this site</strong>, and the publication gate
-      refuses any current document that quotes one.
+      <strong>No withdrawn claim is presented elsewhere as current.</strong> A numerical level
+      may reappear only where the registry explicitly permits a different, qualified
+      interpretation — for example beside its random-ranker null, where the same number is a
+      statement about the window rather than about a model. The publication gate refuses any
+      current document that quotes a withdrawn claim.
     </p>
     <details class="withdrawn-wrap">
       <summary id="withdrawn-summary">Show the withdrawal register</summary>

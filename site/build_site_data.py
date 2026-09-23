@@ -56,30 +56,30 @@ BUDGETS = (10, 25, 50, 100, 200, 500, 1000)
 #            accounting; None where no bundle covers the run
 #   rung     the budget_null rung whose random-ranker band applies, or None
 RUNS = (
-    dict(id="large-lgbm-s0", rung="HI-Large", model="LightGBM", seed=0,
+    dict(id="large-lgbm-s0", rung="HI-Large", model="LightGBM", seed=0, variant=None,
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s0/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s0", null_rung=None),
-    dict(id="large-lgbm-s1", rung="HI-Large", model="LightGBM", seed=1,
+    dict(id="large-lgbm-s1", rung="HI-Large", model="LightGBM", seed=1, variant=None,
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s1/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s1", null_rung=None),
-    dict(id="large-lgbm-s2", rung="HI-Large", model="LightGBM", seed=2,
+    dict(id="large-lgbm-s2", rung="HI-Large", model="LightGBM", seed=2, variant=None,
          lineage="large_sorted_lgbm", artifact="gold/large_sorted_lgbm_s2/manifest.json",
          metrics="metrics", bundle="large_sorted_lgbm_s2", null_rung=None),
-    dict(id="medium-gbdt-canonical", rung="HI-Medium", model="GBDT", seed=0,
+    dict(id="medium-gbdt-canonical", rung="HI-Medium", model="GBDT", seed=0, variant="canonical",
          lineage="canonical_Medium_gbdt", artifact="gold/canonical_Medium_gbdt/manifest.json",
          metrics="metrics", bundle="medium_gbdt_s0", null_rung="Medium"),
-    dict(id="medium-gbdt-replica", rung="HI-Medium", model="GBDT (independent rerun)", seed=0,
+    dict(id="medium-gbdt-replica", rung="HI-Medium", model="GBDT", seed=0, variant="replica",
          lineage="canonical_Medium_gbdt_replica",
          artifact="gold/canonical_Medium_gbdt_replica/manifest.json",
          metrics="metrics", bundle="medium_gbdt_s0", null_rung="Medium"),
-    dict(id="medium-baseline", rung="HI-Medium", model="Logistic baseline", seed=0,
+    dict(id="medium-baseline", rung="HI-Medium", model="Logistic baseline", seed=0, variant=None,
          lineage="eval_Medium", artifact="gold/eval_Medium/baseline/baseline_metrics.json",
          metrics=None, bundle="medium_baseline_s0", null_rung="Medium"),
-    dict(id="medium-gbdt-pooled", rung="HI-Medium", model="GBDT", seed=None,
+    dict(id="medium-gbdt-pooled", rung="HI-Medium", model="GBDT", seed=None, variant="pooled",
          lineage="eval_Medium", artifact="gold/eval_Medium/gbdt/gbdt_metrics.json",
          metrics=None, bundle="medium_gbdt_s0", null_rung="Medium"),
 ) + tuple(
-    dict(id=f"medium-gbdt-seed{s}", rung="HI-Medium", model="GBDT", seed=s,
+    dict(id=f"medium-gbdt-seed{s}", rung="HI-Medium", model="GBDT", seed=s, variant="sweep",
          lineage="eval_Medium", artifact=f"gold/eval_Medium/seed{s}/gbdt_metrics.json",
          metrics=None, bundle="medium_gbdt_s0", null_rung="Medium")
     for s in range(8)
@@ -130,6 +130,25 @@ def registry() -> dict:
         "superseded": dict(sorted(c["superseded"].items())),
         "tombstones": sorted(k for k in c.get("tombstones", {}) if not k.startswith("_")),
     }
+
+
+def run_label(run: dict) -> str:
+    """The name a chart row shows. EMITTED HERE, NOT INFERRED IN THE BROWSER.
+
+    `canonical_Medium_gbdt` and `eval_Medium/seed0` are both "GBDT, seed 0"
+    and they are different runs: one is the canonical lineage, the other a
+    member of the eight-seed sweep. Rendering both as `GBDT · seed 0` made two
+    distinct artifacts indistinguishable on the chart. Deriving the
+    discriminator from the filename in JavaScript would put the registry's
+    distinction in the one place that cannot check it, so the label is built
+    from the declared run table and travels with the row.
+    """
+    parts = [run["model"]]
+    if run["variant"]:
+        parts.append(run["variant"])
+    if run["seed"] is not None:
+        parts.append(f"seed {run['seed']}")
+    return " · ".join(parts)
 
 
 def metrics_of(doc: dict, where: "str | None") -> dict:
@@ -189,7 +208,26 @@ def build() -> dict:
                     null_lo = nullrung.get(f"null_precision_low@{k}")
                     null_hi = nullrung.get(f"null_precision_high@{k}")
 
-                ceiling = m.get(f"recall_ceiling@{k}") if spec["key"] in ("recall", "recall_efficiency") else None
+                # THE CEILING OF THE PLOTTED METRIC, NOT OF ITS INPUT.
+                #
+                # `recall_efficiency@k` is recall divided by its own ceiling,
+                # so its attainable maximum is 1 by construction. Carrying
+                # `recall_ceiling@k` on an efficiency row put the RECALL
+                # ceiling on a chart whose bars are efficiencies -- a dashed
+                # rule at 0.05 beside a bar at 0.63, which reads as an
+                # impossible overshoot rather than as two different
+                # quantities.
+                if spec["key"] == "recall":
+                    ceiling = m.get(f"recall_ceiling@{k}")
+                    ceiling_kind = "recall_ceiling@k, read from the artifact"
+                elif spec["key"] == "recall_efficiency":
+                    ceiling = 1.0
+                    ceiling_kind = ("1.0 by construction: efficiency is recall "
+                                    "over its own attainable ceiling")
+                else:
+                    ceiling = None
+                    ceiling_kind = "no attainable ceiling is published for this metric"
+
                 efficiency = m.get(f"recall_efficiency@{k}") if spec["key"] == "recall" else None
 
                 lift = None
@@ -208,6 +246,8 @@ def build() -> dict:
                 rows.append({
                     "id": f"{run['id']}::{spec['key']}::{k}",
                     "run": run["id"],
+                    "run_label": run_label(run),
+                    "variant": run["variant"],
                     "rung": run["rung"],
                     "model": run["model"],
                     "seed": run["seed"],
@@ -223,6 +263,7 @@ def build() -> dict:
                     "null_high": rnd(null_hi),
                     "lift_vs_null": rnd(lift, 4),
                     "ceiling": rnd(ceiling),
+                    "ceiling_kind": ceiling_kind,
                     "efficiency": rnd(efficiency),
                     "null_status": (
                         "published" if null_hi is not None
@@ -345,6 +386,20 @@ def build() -> dict:
     inv = load("replay_inventory.json")
     release = {
         "source": "aml-platform/results_archive/derived/release_facts.json",
+        # WHAT THESE COUNTS DESCRIBE. release_facts.json is regenerated on
+        # every change, so it measures the tree it was last generated in --
+        # which is current `main`, not the commit a release tag points at.
+        # Labelling it "Release" implied v0.2.1 collected this many tests.
+        "scope": "current main tree",
+        "latest_software_release": "v0.2.1",
+        "artifact_link_ref": "v0.2.1",
+        "scope_note": (
+            "These counts describe the current main tree, which is where the "
+            "website is deployed from. v0.2.1 remains the latest signed "
+            "software release; it collected fewer tests, because the website's "
+            "own tests were added after it. Result-artifact links below are "
+            "pinned to v0.2.1, and every linked artifact was verified "
+            "byte-identical between v0.2.1 and current main."),
         "tests_collected": facts["tests_collected"],
         "result_sets": facts["result_sets"],
         "published_documents": facts["published_documents"],
