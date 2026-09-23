@@ -128,7 +128,7 @@
     "result_sets": 56,
     "retraction_patterns": 33,
     "source": "aml-platform/results_archive/derived/release_facts.json",
-    "tests_collected": 499
+    "tests_collected": 523
   },
   "results": [
     {
