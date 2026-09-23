@@ -268,6 +268,11 @@ jobs:
               "docs/ not present (running inside the image)",
               "git unavailable:",
               "no derived artifacts in this checkout",
+              # The website lives at the repository root; the image build
+              # context is aml-platform/, so site/ is absent there by
+              # construction, and the image ships no node runtime.
+              "node is not available",
+              "site/ not present (running inside the image)",
               "no exposure measured in this checkout",
               "no gold archive in this checkout",
               "no replay bundles in this checkout",
