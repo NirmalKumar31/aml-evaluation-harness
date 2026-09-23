@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Engineering and MLOps · AML evaluation harness</title>
+<meta name="description" content="The CI and release path, the publication gates, the container digest promotion, and the separate historical Azure execution path that produced the HI-Large result.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#0b1b2b">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Engineering and MLOps · AML evaluation harness">
+<meta property="og:description" content="The CI and release path, the publication gates, the container digest promotion, and the separate historical Azure execution path that produced the HI-Large result.">
+<meta property="og:url" content="https://nirmalkumar31.github.io/aml-evaluation-harness/engineering/">
+<link rel="canonical" href="https://nirmalkumar31.github.io/aml-evaluation-harness/engineering/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 32 32&#x27;%3E%3Crect width=&#x27;32&#x27; height=&#x27;32&#x27; rx=&#x27;7&#x27; fill=&#x27;%230b1b2b&#x27;/%3E%3Ccircle cx=&#x27;10&#x27; cy=&#x27;11&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Ccircle cx=&#x27;22&#x27; cy=&#x27;9&#x27; r=&#x27;2.2&#x27; fill=&#x27;%23e2e8f0&#x27;/%3E%3Ccircle cx=&#x27;21&#x27; cy=&#x27;22&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Cpath d=&#x27;M10 11 L22 9 M10 11 L21 22&#x27; stroke=&#x27;%23e2e8f0&#x27; stroke-width=&#x27;1.4&#x27; fill=&#x27;none&#x27;/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../styles.css">
+<noscript><link rel="stylesheet" href="../noscript.css"></noscript>
+</head>
+<body class="route-engineering" data-route="engineering">
+
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="../">
+      <img class="brand-mark" src="../assets/icons/github.svg" alt="" width="22" height="22">
+      <span class="brand-text"><strong>AML evaluation harness</strong>
+      <span class="brand-sub">alert-budget evaluation methodology</span></span>
+    </a>
+    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false"
+            aria-controls="site-nav">
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+      <span class="nav-toggle-text">Menu</span>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Primary">
+      <ul><li><a href="../">Home</a></li><li><a href="../explorer/">Results explorer</a></li><li><a href="../engineering/" aria-current="page">Engineering &amp; MLOps</a></li>
+        <li class="nav-sep"><a class="nav-repo" href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">
+          Repository<span class="sr-only"> on GitHub</span></a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+<main id="main">
+
+<section class="page-head band band-dark" aria-labelledby="eng-h">
+  <div class="wrap">
+    <p class="eyebrow">Engineering &amp; MLOps</p>
+    <h1 id="eng-h">How a number gets from a machine to a published claim</h1>
+    <p class="hero-lede">Two delivery paths exist in this project and they are
+      not the same path. One is the current CI and release lane, which builds a
+      single image, tests inside it, scans it, publishes it by digest and
+      deploys this website from the exact artifact that passed. The other is
+      the historical Azure run that produced the HI-Large result once, from a
+      verified source archive, in a container built on the machine itself. They
+      are kept apart here because conflating them would claim a
+      reproducibility the second one does not have.</p>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="lanes-h">
+  <div class="wrap">
+    <h2 id="lanes-h">Two lanes</h2>
+    <div class="lanes">
+    
+<section class="lane lane-current reveal" id="lane-current" aria-labelledby="lane-current-h">
+  <div class="lane-head">
+    <p class="lane-tag">Current</p>
+    <h3 class="lane-h" id="lane-current-h">CI, release and deployment — how the software ships today</h3>
+    <p class="lane-lede">Every step below runs on every pull request to the protected branch, and the merge is blocked until all of them pass.</p>
+  </div>
+  <ol class="lane-steps">
+<li class="step">
+  <span class="step-n" aria-hidden="true">1</span>
+  <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Git commit</span>
+    <span class="step-note">Signed with an SSH key; the signature is checked on the branch.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">2</span>
+  <img class="step-icon" src="../assets/icons/github.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Pull request</span>
+    <span class="step-note">Branch protection requires every check below to pass before merge.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">3</span>
+  <img class="step-icon" src="../assets/icons/actions.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Unit, reproducibility and publication gates</span>
+    <span class="step-note">568 tests on the current tree. The publication gate re-reads 706 published values against the artifacts and must report zero findings.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">4</span>
+  <img class="step-icon" src="../assets/icons/docker.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Docker build</span>
+    <span class="step-note">One image, built once from a hash-pinned requirements lock.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">5</span>
+  <img class="step-icon" src="../assets/icons/docker.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Suite runs inside that image</span>
+    <span class="step-note">The image that is tested is the image that is published. Nothing is rebuilt afterwards.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">6</span>
+  <img class="step-icon" src="../assets/icons/trivy.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Trivy and pip-audit</span>
+    <span class="step-note">The built image and the locked dependency set are both scanned.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">7</span>
+  <img class="step-icon" src="../assets/icons/github.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">CodeQL</span>
+    <span class="step-note">Static analysis of the Python surface, with triage recorded.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">8</span>
+  <img class="step-icon" src="../assets/icons/github.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">GHCR commit digest</span>
+    <span class="step-note">Pushed and pulled by immutable digest, never by a floating tag.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">9</span>
+  <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Signed release tag</span>
+    <span class="step-note">The tag is signed and the commit it points at is GitHub-verified.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">10</span>
+  <img class="step-icon" src="../assets/icons/docker.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Byte-identical manifest promotion</span>
+    <span class="step-note">A release tag is created by copying the tested manifest bytes. No second build can differ from the one that passed.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">11</span>
+  <img class="step-icon" src="../assets/icons/github.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">GitHub Release</span>
+    <span class="step-note">The notes carry the digest, so a reader can pull exactly what was tested.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">12</span>
+  <img class="step-icon" src="../assets/icons/actions.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">GitHub Pages deployment</span>
+    <span class="step-note">The deploy job publishes the artifact the site-build job uploaded, and has no source tree to rebuild from.</span>
+  </span>
+</li></ol>
+  <ul class="lane-points"><li>Every action is pinned to a commit SHA, not a moving tag.</li><li>Branch protection requires <code>test</code>, <code>static</code>, <code>public-surface</code>, <code>build</code>, <code>analyze python</code>, <code>pip-audit on the locked set</code> and <code>site-build</code>.</li><li>The image the suite runs inside is the image that is pushed. A release never rebuilds it.</li><li>Promotion to a release tag copies identical manifest bytes, so the tagged image is the tested image by construction.</li><li>The release commit and its tag are signed, and the merge commit is GitHub-verified.</li><li>The container is pullable by immutable digest.</li><li>The Pages deploy job publishes the artifact <code>site-build</code> uploaded and has no source tree to rebuild from.</li></ul>
+</section>
+    
+<section class="lane lane-historical reveal" id="lane-azure" aria-labelledby="lane-azure-h">
+  <div class="lane-head">
+    <p class="lane-tag">Historical</p>
+    <h3 class="lane-h" id="lane-azure-h">Recorded Azure execution — how the HI-Large result was produced, once</h3>
+    <p class="lane-lede">This lane ran in the past, on a machine that no longer exists. It is documented rather than repeatable, and nothing on this site claims otherwise.</p>
+  </div>
+  <ol class="lane-steps">
+<li class="step">
+  <span class="step-n" aria-hidden="true">1</span>
+  <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Fixed source commit</span>
+    <span class="step-note">One commit id, recorded in every manifest the run produced.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">2</span>
+  <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">git archive</span>
+    <span class="step-note">A source archive was shipped. No container image was shipped.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">3</span>
+  <img class="step-icon" src="../assets/icons/python.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">SHA-256 verification</span>
+    <span class="step-note">The archive digest was checked after upload and again on the machine.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">4</span>
+  <img class="step-icon" src="../assets/icons/azure-storage.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">ADLS Gen2</span>
+    <span class="step-note">Shared-key access disabled; the account was reachable by identity only.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">5</span>
+  <img class="step-icon" src="../assets/icons/azure-identity.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Managed identity</span>
+    <span class="step-note">No service principal was created and no secret was issued or stored.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">6</span>
+  <img class="step-icon" src="../assets/icons/azure-vm.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Azure virtual machine</span>
+    <span class="step-note">Four vCPUs and roughly 31 GB. The quota could not be raised, which is why three HI-Large seeds were bought rather than eight.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">7</span>
+  <img class="step-icon" src="../assets/icons/docker.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Container built on the VM</span>
+    <span class="step-note">Built there, from the verified source archive. It was NOT pulled from GHCR, so the exact image cannot be reconstructed by digest.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">8</span>
+  <img class="step-icon" src="../assets/icons/duckdb.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">DuckDB and LightGBM execution</span>
+    <span class="step-note">About 26 minutes and 30 of 31 GB resident per fit. scikit-learn gradient boosting needed 33.5 GB and did not complete.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">9</span>
+  <img class="step-icon" src="../assets/icons/python.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Result manifests</span>
+    <span class="step-note">Written back to storage and then into the committed archive.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">10</span>
+  <img class="step-icon" src="../assets/icons/actions.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">Publication gate</span>
+    <span class="step-note">The same gate the current lane runs; the HI-Large numbers on this site passed it.</span>
+  </span>
+</li></ol>
+  <ul class="lane-points"><li>The HI-Large image was <strong>not</strong> pulled from GHCR. It was built on the virtual machine from the verified source archive.</li><li>The Bicep templates in the repository are a current, reviewed deployment — <strong>not</strong> an exact reconstruction of the machine that ran the job.</li><li>What this lane establishes is <em>source</em> provenance: a fixed commit, a checksummed archive, and manifests that name both. It does not establish container reproducibility.</li><li>No service principal was created, no secret was issued, and shared-key access to storage was disabled.</li></ul>
+</section>
+    </div>
+  </div>
+</section>
+
+<section class="band band-tint" aria-labelledby="gates-h">
+  <div class="wrap">
+    <h2 id="gates-h">The scientific gates</h2>
+    <p class="lede">CI in this project does not only ask whether the code runs.
+      It asks whether the documents still say what the artifacts support.</p>
+    <div class="cards">
+      <article class="card reveal">
+        <h3>The publication gate</h3>
+        <p>Every number in a published document carries a marker naming the
+          artifact and field it came from. The gate re-reads
+          706 of them against the artifacts on
+          every run and fails on any disagreement.
+          77 are exempted, and each exemption
+          is explicit rather than implied.</p>
+      </article>
+      <article class="card reveal">
+        <h3>The retraction registry</h3>
+        <p>33 withdrawn claims are recorded with what replaced
+          them and why. 33 patterns run against
+          every candidate string, so a retracted value cannot quietly return
+          to a document.</p>
+      </article>
+      <article class="card reveal">
+        <h3>Frozen provenance</h3>
+        <p>Derived artifacts record the git object id of the package tree they
+          were produced from — currently
+          <code>f8d4a113edb4</code> — and the generator
+          script that produced them. Editing the package invalidates the
+          artifacts that name it, which is the point.</p>
+      </article>
+      <article class="card reveal">
+        <h3>Lineage registry</h3>
+        <p>Every result set is registered as canonical, supporting or
+          superseded. This website refuses to build if it is asked to display a
+          value from a superseded lineage, or from a lineage that is not
+          registered at all.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="repro-h">
+  <div class="wrap">
+    <h2 id="repro-h">Reproducibility, in three honest tiers</h2>
+    <div class="scroller" role="region" aria-labelledby="tiers-cap" tabindex="0">
+      <table class="data-table">
+        <caption id="tiers-cap">What each tier needs, and what it establishes.</caption>
+        <thead><tr><th scope="col">Tier</th><th scope="col">Needs</th>
+          <th scope="col">Establishes</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Synthetic demo</th><td>a checkout</td>
+            <td>the pipeline composes end to end; artifacts and manifests are
+              written</td></tr>
+          <tr><th scope="row">Aggregate verification</th><td>a checkout</td>
+            <td>every published figure traces to a committed artifact, checked
+              by the publication gate</td></tr>
+          <tr><th scope="row">Full replay</th>
+            <td>the licensed CSVs, or bundles regenerated from them</td>
+            <td>published budget metrics recompute exactly from stored rows</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout callout-warn">
+      <h3 class="callout-h">Full replay is not available from this repository</h3>
+      <p>The 9 row-level replay bundles — 45 Parquet
+        files, 526,355 rows — are held privately while their CDLA
+        redistribution status is unreviewed.
+        <code>row_level_data_included</code> is
+        false in the published
+        inventory. Tests that need them skip, by name, with the reason printed.
+        To run the full replay tier you obtain AMLworld from its own source and
+        regenerate the bundles.</p>
+    </div>
+    <h3>Pulling the tested image</h3>
+    <p>The container is published to GitHub Container Registry and is pullable
+      by immutable digest. The digest for a release is printed in that
+      release’s notes, and a release tag is created by copying the tested
+      manifest bytes rather than by building again.</p>
+    <pre class="code"><code>docker pull ghcr.io/nirmalkumar31/aml-evaluation-harness@sha256:&lt;digest from the release notes&gt;</code></pre>
+    <p class="more"><a class="btn" href="https://github.com/NirmalKumar31/aml-evaluation-harness/pkgs/container/aml-evaluation-harness" rel="noopener">Open the
+      container package</a></p>
+  </div>
+</section>
+
+<section class="band band-tint" aria-labelledby="facts-h">
+  <div class="wrap">
+    <h2 id="facts-h">Release and verification facts</h2>
+    <p class="lede">These counts describe the current main tree, which is where the website is deployed from. v0.2.1 remains the latest signed software release; it collected fewer tests, because the website&#x27;s own tests were added after it. Result-artifact links below are pinned to v0.2.1, and every linked artifact was verified byte-identical between v0.2.1 and current main.</p>
+    <div class="facts"><div class="fact reveal"><dl><dt>Tests collected</dt><dd>568</dd></dl><p>on the current main tree, which is what this website is built from</p></div><div class="fact reveal"><dl><dt>Published values re-checked</dt><dd>706</dd></dl><p>77 exempted by an explicit marker; the gate must report zero findings</p></div><div class="fact reveal"><dl><dt>Result manifests</dt><dd>101</dd></dl><p>across 56 archived result sets</p></div><div class="fact reveal"><dl><dt>Published documents</dt><dd>23</dd></dl><p>of 26 markdown files under the publication gate</p></div><div class="fact reveal"><dl><dt>Retraction patterns</dt><dd>33</dd></dl><p>each one blocks a withdrawn value from reappearing as current</p></div><div class="fact reveal"><dl><dt>Frozen package tree</dt><dd>f8d4a113edb4</dd></dl><p>the git object id of aml-platform/src/aml, recorded by every derived artifact that was produced from it</p></div></div>
+    <p class="fineprint">Generated from
+      <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/release_facts.json" rel="noopener"><code>release_facts.json</code></a> by
+      <code>site/build_site_data.py</code>.</p>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="archfull-h">
+  <div class="wrap">
+    
+<h2 id="architecture">Architecture diagrams</h2>
+<p class="lede">The source of truth is <code>aml-platform/docs/architecture/</code>. These are previews; select one to open it full size in a dialog that closes with Escape.</p>
+<ul class="arch-grid plain">
+<li class="arch-card reveal">
+  <button class="arch-open" type="button" data-diagram="pipeline"
+          aria-haspopup="dialog">
+    <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
+         width="1600" height="900">
+    <span class="arch-meta">
+      <span class="arch-n">Diagram 1</span>
+      <span class="arch-title">Data, models and evaluation</span>
+      <span class="arch-cue">Open full size</span>
+    </span>
+  </button>
+  <p class="arch-caption">Kaggle download through DuckDB feature construction, the ring-aware split, model fits and the account-day evaluation that produces a manifest.</p>
+</li>
+<li class="arch-card reveal">
+  <button class="arch-open" type="button" data-diagram="azure"
+          aria-haspopup="dialog">
+    <img src="../assets/02-azure-execution.svg" alt="Flow diagram: a git archive of a fixed commit is checksummed and uploaded to ADLS Gen2, an Azure virtual machine authenticates with a managed identity, builds a container locally and runs the HI-Large evaluation, writing manifests back to storage." loading="lazy" decoding="async"
+         width="1600" height="900">
+    <span class="arch-meta">
+      <span class="arch-n">Diagram 2</span>
+      <span class="arch-title">Recorded Azure execution</span>
+      <span class="arch-cue">Open full size</span>
+    </span>
+  </button>
+  <p class="arch-caption">How the HI-Large run actually happened: a verified source archive into storage, a managed identity, and a container built on the virtual machine itself.</p>
+</li>
+<li class="arch-card reveal">
+  <button class="arch-open" type="button" data-diagram="ci"
+          aria-haspopup="dialog">
+    <img src="../assets/03-ci-release.svg" alt="Flow diagram: a pull request runs unit, reproducibility and publication gates, builds a Docker image, runs the suite inside that image, scans it, pushes it to GHCR by digest, and promotes the same manifest bytes to a signed release tag." loading="lazy" decoding="async"
+         width="1600" height="900">
+    <span class="arch-meta">
+      <span class="arch-n">Diagram 3</span>
+      <span class="arch-title">CI and release</span>
+      <span class="arch-cue">Open full size</span>
+    </span>
+  </button>
+  <p class="arch-caption">Pull request gates, the image that the suite runs inside, the scanners, and promotion of identical manifest bytes to a signed release.</p>
+</li></ul>
+<p class="fineprint">Diagrams are generated from
+   <code>aml-platform/docs/architecture/</code> and copied into this site at
+   build time; there is no second copy to fall out of date. Technology icons
+   are used under the licences recorded in
+   <a href="../assets/icon-notices.txt">NOTICES.txt</a>.</p>
+<dialog class="arch-dialog" id="arch-dialog" aria-labelledby="arch-dialog-h">
+  <div class="arch-dialog-bar">
+    <h2 class="arch-dialog-h" id="arch-dialog-h">Architecture diagram</h2>
+    <button class="arch-close" type="button" id="arch-close">Close
+      <span class="sr-only">the diagram dialog</span></button>
+  </div>
+  <div class="arch-dialog-body" id="arch-dialog-body">
+<figure class="arch-panel" id="arch-panel-pipeline" hidden>
+  <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
+       width="1600" height="900">
+  <figcaption><strong>Diagram 1. Data, models and evaluation</strong>
+    Kaggle download through DuckDB feature construction, the ring-aware split, model fits and the account-day evaluation that produces a manifest.</figcaption>
+</figure>
+<figure class="arch-panel" id="arch-panel-azure" hidden>
+  <img src="../assets/02-azure-execution.svg" alt="Flow diagram: a git archive of a fixed commit is checksummed and uploaded to ADLS Gen2, an Azure virtual machine authenticates with a managed identity, builds a container locally and runs the HI-Large evaluation, writing manifests back to storage." loading="lazy" decoding="async"
+       width="1600" height="900">
+  <figcaption><strong>Diagram 2. Recorded Azure execution</strong>
+    How the HI-Large run actually happened: a verified source archive into storage, a managed identity, and a container built on the virtual machine itself.</figcaption>
+</figure>
+<figure class="arch-panel" id="arch-panel-ci" hidden>
+  <img src="../assets/03-ci-release.svg" alt="Flow diagram: a pull request runs unit, reproducibility and publication gates, builds a Docker image, runs the suite inside that image, scans it, pushes it to GHCR by digest, and promotes the same manifest bytes to a signed release tag." loading="lazy" decoding="async"
+       width="1600" height="900">
+  <figcaption><strong>Diagram 3. CI and release</strong>
+    Pull request gates, the image that the suite runs inside, the scanners, and promotion of identical manifest bytes to a signed release.</figcaption>
+</figure></div>
+</dialog>
+  </div>
+</section>
+
+<section class="band band-tint" aria-labelledby="internals-h">
+  <div class="wrap">
+    <h2 id="internals-h">Repository internals</h2>
+    <p class="lede">The registry and the withdrawal register are what make the
+      claims above checkable. They are long, so they are folded away rather
+      than dropped.</p>
+
+    <details class="notes-block">
+      <summary>Lineage registry (40 result sets)</summary>
+      <div class="notes-body">
+        <p class="fineprint">Source: <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a>.</p>
+        <h3>Canonical <span class="muted">(4)</span></h3><p class="fineprint">The lineage a published headline is allowed to come from.</p><ul class="notes"><li><code>canonical_Medium_gbdt</code> — HI-Medium GBDT under the sort; reproduces the pre-2026-09-12 lineage exactly.</li><li><code>canonical_Medium_gbdt_replica</code> — an independent rerun of canonical_Medium_gbdt on the same machine: identical training-matrix hash, prediction hash and every metric. It is the evidence that the canonical Medium result is reproducible, so it is held to the same provenance standard.</li><li><code>large_sorted_lgbm</code> — HI-Large, LightGBM, 3 seeds, ORDER BY txn_id, byte-identical training matrices.</li><li><code>leaksweep2_Small</code> — leak sweep under the (side, day) stratified placebo.</li></ul>
+        <h3>Supporting <span class="muted">(28)</span></h3><p class="fineprint">Cited for a specific purpose, and registered so that the purpose is on the record.</p><ul class="notes"><li><code>drift_Medium</code> — the induced-drift corpora.</li><li><code>drift_results_Medium</code> — the drift experiment&#x27;s strategy comparison.</li><li><code>ensemble_curve_Medium</code> — the single-ordering ensemble-size curve. Superseded for the DECISION by typology_Medium&#x27;s 12-ordering curve, but its per-seed values are still cited.</li><li><code>eval_Medium</code> — the eight-seed HI-Medium evaluation. Backs the headline precision@50, the eight-seed mean/range and the published figure.</li><li><code>graph_ab0_Small</code> — graph-feature A/B: the control arm.</li><li><code>graph_ab2_Small</code> — graph-feature A/B: second round.</li><li><code>graph_ab3_Small</code> — graph-feature A/B: third round.</li><li><code>graph_ab_Small</code> — graph-feature A/B: the +2 counterparty-count arm.</li><li><code>graph_ratio_Small</code> — graph-feature A/B: the ratio-feature arm.</li><li><code>infl_eval_naive</code> — split-inflation: evaluation of the naive fits.</li><li><code>infl_eval_ring-aware</code> — split-inflation: evaluation of the ring-aware fits. Also the manifest the small replay bundle is verified against.</li><li><code>infl_fit_naive</code> — split-inflation: the naive-protocol fits, five seeds.</li><li><code>infl_fit_ring-aware</code> — split-inflation: the ring-aware fits, five seeds.</li><li><code>infl_splits_naive_Small</code> — the naive split used by the inflation experiment.</li><li><code>infl_splits_ring-aware_Small</code> — the ring-aware split used by the inflation experiment.</li><li><code>large_splits</code> — the HI-Large split, built on the VM.</li><li><code>leak_Medium</code> — the planted-leak arms on HI-Medium.</li><li><code>leak_Small</code> — the planted-leak arms on HI-Small.</li><li><code>leakproof_Medium</code> — the leak-proof summary on HI-Medium.</li><li><code>models_Medium</code> — the HI-Medium fits behind eval_Medium. Reproduced exactly by canonical_Medium_gbdt, which is why that one is canonical and this one is its origin.</li><li><code>reconcile_Medium</code> — label reconciliation on HI-Medium. Source of row and positive counts.</li><li><code>reconcile_Small</code> — label reconciliation on HI-Small. Source of row and positive counts.</li><li><code>splits_Medium</code> — the HI-Medium ring-participant-disjoint split.</li><li><code>splits_Small</code> — the HI-Small ring-participant-disjoint split.</li><li><code>stability_Medium</code> — seed-stability sweep on HI-Medium. Source of the spread figures in RESULTS_metric_stability.md.</li><li><code>stability_Small</code> — seed-stability sweep on HI-Small.</li><li><code>typology_Medium</code> — per-typology results on HI-Medium, and the corrected 12-ordering ensemble curve the decision table is generated from.</li><li><code>typology_Small</code> — per-typology results on HI-Small.</li></ul>
+        <h3>Superseded <span class="muted">(8)</span></h3><p class="fineprint">Kept for history. This website refuses to display a value from any of these.</p><ul class="notes"><li><code>eval3_Medium</code> — evaluation of models3_Medium.</li><li><code>large_eval2_lgbm</code> — as above; a re-evaluation of the same unsorted scores.</li><li><code>large_eval3_lgbm</code> — as above; the many-to-many ring-membership re-evaluation, still over unsorted fits.</li><li><code>large_eval_lgbm</code> — evaluated scores from fits made with an undetermined training row order (pre-ORDER BY). Superseded by large_sorted_lgbm.</li><li><code>large_final_lgbm</code> — the unsorted HI-Large fits themselves. code_git_sha unknown.</li><li><code>leaksweep_Small</code> — leak sweep under the GLOBAL placebo permutation, superseded by leaksweep2_Small.</li><li><code>models3_Medium</code> — fitted during the window when load_train_xy did not sort. Reproduced neither the older lineage nor the canonical one.</li><li><code>splits3_Medium</code> — split manifest from the models3_Medium run.</li></ul>
+      </div>
+    </details>
+
+    <details class="notes-block">
+      <summary>Withdrawal register (33 entries)</summary>
+      <div class="notes-body">
+        <p>No withdrawn claim is presented elsewhere as current. A numerical
+          level may reappear only where the registry explicitly permits a
+          different, qualified interpretation — for example beside its
+          random-ranker null.</p>
+        <p class="fineprint">Source: <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/RETRACTED.json" rel="noopener"><code>RETRACTED.json</code></a>.</p>
+        <div class="scroller" role="region" aria-labelledby="wd-cap" tabindex="0">
+          <table class="data-table data-table-withdrawn">
+            <caption id="wd-cap">Every withdrawn claim, what replaced it, and
+              why it was withdrawn.</caption>
+            <thead><tr><th scope="col">Was</th><th scope="col">Now</th>
+              <th scope="col">Why</th></tr></thead>
+            <tbody><tr><td>HI-Medium GBDT ring_recall_lift@200</td><td>0.907</td><td>eval3_Medium evaluated fits made while the training load did not sort; canonical is canonical_Medium_gbdt</td></tr><tr><td>HI-Medium logistic ring_recall_lift@200</td><td>(nothing)</td><td>eval3_Medium is superseded and no canonical HI-Medium logistic re-evaluation under the permutation null exists</td></tr><tr><td>a characterisation of the benchmark</td><td>(nothing)</td><td>precision@50 spans 0.356-0.485 across three seeds on the canonical lineage; the word was withdrawn</td></tr><tr><td>a cross-architecture determinism claim</td><td>bitwise repeatable WITHIN an architecture</td><td>the arm64 manifest predates predictions_sha256, so what was compared was printed metrics</td></tr><tr><td>a judgement that the model&#x27;s contribution is small</td><td>the GBDT-minus-logistic difference: mean 0.254, range 0.021-0.328 across eight seeds</td><td>&#x27;small&#x27; is a judgement about a quantity with no stated scale, over a range that spans more than an order of magnitude</td></tr><tr><td>account-days per ring transaction, called exact</td><td>1.624 to 1.950</td><td>same unfiltered join; the transaction count was inflated by transactions that did not cause the alert, which depressed the ratio</td></tr><tr><td>an event-unit recall ceiling derived from the score-tie proxy</td><td>(nothing)</td><td>the factor was measured on the ALERTED set and applied to the positive POPULATION, and rests on a proxy that merges transactions. The field is no longer emitted</td></tr><tr><td>an unmeasured share of a result attributed to the data generator</td><td>the linear baseline is 1.16x-1.26x a random ranker pooled, against an eight-seed GBDT mean of 0.82480; the difference averages 0.254 and spans 0.021-0.328. The pooled level is retracted and is not restated here.</td><td>the same attribution the &#x27;most of the separability&#x27; retraction withdrew, in different words. No denominator, no ceiling, no attribution design</td></tr><tr><td>an unmeasured share of the benchmark&#x27;s separability attributed to linearity</td><td>the linear baseline is 1.16x-1.26x a random ranker on the pooled 19-day window, against an eight-seed GBDT mean of 0.82480 (range 0.59144-0.89815). Quote the lift over that null; the pooled level itself is retracted, so it is not restated here.</td><td>one baseline and one comparator cannot apportion separability; the fraction has no measured denominator, no ceiling and no preregistered estimand</td></tr><tr><td>recall@200, HI-Large</td><td>0.08785</td><td>same superseded lineage</td></tr><tr><td>ring lift under the closed-form independence null</td><td>0.9497</td><td>the null assumed independence between account-days that share a transaction</td></tr><tr><td>ring_recall@200, HI-Large</td><td>0.86876</td><td>same superseded lineage</td></tr><tr><td>ring_recall_lift@200, HI-Large</td><td>0.9497</td><td>large_eval3_lgbm evaluated unsorted fits; canonical is large_sorted_lgbm_s{0,1,2}</td></tr><tr><td>ring_recall_null@200, HI-Large</td><td>0.91492</td><td>same superseded lineage</td></tr><tr><td>the FIRST cliff-aware replacement for the typology-spread p-value: exposure 0.1925 (BIPARTITE) to 0.5863 (GATHER-SCATTER), rho 0.762 against detection, and p = 0.11-0.44 from assumed thin-day rates of 0.80/0.90/0.95</td><td>withdrawn. Against the repository&#x27;s own within-day permutation null the observed spread of 3.46875 sits at the 53.5th percentile of chance (p = 0.46633), and the per-typology ordering INVERTS: GATHER-SCATTER 0.9159, CYCLE 1.264, rho(rate, lift) = 0.3095</td><td>two independent defects. (1) WRONG POPULATION: exposure was measured over every ring in the patterns file, including the 736 the ring-aware split drops, so it described a different ring set from the detection rates it was explaining. (2) INFEASIBLE ASSUMED RATES: an after-cliff share of 0.66352 and a pooled rate of 0.3724 cap the after-cliff rate at 0.56125, so 0.80/0.90/0.95 cannot reproduce the observed pooled rate at any head rate in [0,1]. Inside the feasible range the p-value spans 0.0014 to 0.9014, so the assumption chose the answer. Superseded entirely: the defensible null is the within-day permutation, not any binomial</td></tr><tr><td>the SECOND cliff-aware replacement: exposure-only p = 0.0026 from fixed head/tail strata measured at ring budget 200 (tail 0.78348, head 0.57303, observed spread 1.85128, exposure-blind 1.2577), with rho 0.7143 and a t-approximated p = 0.0465</td><td>withdrawn. Against the repository&#x27;s own within-day permutation null the observed spread of 3.46875 sits at the 53.5th percentile of chance (p = 0.46633), and the per-typology ordering INVERTS: GATHER-SCATTER 0.9159, CYCLE 1.264, rho(rate, lift) = 0.3095; exposure still correlates with the RAW rate at rho = 0.7857, exact permutation p = 0.02793, but that is a statement about the generator, not a detection result</td><td>three defects at once. (1) WRONG BUDGET: the 3.05x spread is ring_recall@50 -- src/aml/eval/metrics.py sets b = 50 -- while these strata were measured at 200, so the artifact published a tail rate of 0.78348 beside its own feasibility cap of 0.56125. (2) WRONG MODEL: medium_gbdt_s0 is source_lineage &#x27;models&#x27;; its ring_recall@200 of 0.71267 matches none of the eight typology seeds. (3) WRONG NULL: two strata flatten a per-day process, and no binomial belongs on a budget-constrained metric. The rho was also a t-approximation on n=8; exactly, it is 0.0576, not 0.0465</td></tr><tr><td>the alert-unit coupling restated in transaction units</td><td>at least 28 and at most 50 -- a bound, not a point value</td><td>the score-tie proxy CAN merge transactions -- unrelated transactions may share a score -- so the group count is a LOWER bound on distinct transactions and the ratio an UPPER bound on the over-counting factor, not an estimate. The 46.4% figure once cited as evidence for this was itself wrong and is separately retracted</td></tr><tr><td>the boosted model&#x27;s volume-segment lift over the random-ranker null</td><td>17.6x (logistic) is the only volume-segment lift this project still publishes. The boosted figure came from replay/medium_gbdt_s0, which reproduces the superseded eval3_Medium lineage.</td><td>the value was withdrawn in three places in LIMITATIONS.md and then restated in a fourth, under the heading &#x27;What must be published instead&#x27;, as a figure that &#x27;survives&#x27;. Nothing caught it: the gate&#x27;s LIFT_INT extractor saw 310x, found 310.3 in the superseded bundle&#x27;s own artifact, and called it supported, because no retraction entry named the value at all. A value withdrawn in prose is not retracted until it is in this registry.</td></tr><tr><td>the claim that budget metrics and the permutation null are driven by the busy days</td><td>the reverse: week one is 40.8% of the ceiling and 3.0% of the logistic model&#x27;s true positives</td><td>reasoned from the 81.3% positive front-loading without noticing that the budget cap redistributes the attainable count toward the thin days</td></tr><tr><td>the claim that the budget-binds framing survives the window decomposition</td><td>false on the three days where the budget exceeds the population</td><td>2022-09-26, 2022-09-27 and 2022-09-28 hold 44, 16 and 4 account-days against a budget of 50, so the top-50 is the whole day and precision@50 equals the day&#x27;s prevalence for every ranker</td></tr><tr><td>the claim that the published precision@50 is below chance</td><td>it is ABOVE chance, by 1.16x-1.26x pooled</td><td>same wrong-population null. The direction of this conclusion reversed</td></tr><tr><td>the event-unit ceiling on HI-Medium and its sensitivity range</td><td>(nothing)</td><td>same defect; an event-unit ceiling needs transaction identity for every account-day, which the archived bundles do not carry</td></tr><tr><td>the headline reading of precision@50 = 0.5706, this file&#x27;s self-declared biggest finding</td><td>retracted -- 97.0% of it comes from 12 days holding 0.056% of transactions; on volume days it is 0.0429 vs the GBDT&#x27;s 0.7571</td><td>AMLworld&#x27;s generator winds down (3,021,866 txns at 0.0008 prevalence on 09-16 -&gt; 2,020 at 0.5936 on 09-17). The published window pools two regimes and `sum_d min(P_d,B)` inverts the intuition, so the tail is 59.2% of the ceiling despite holding 18.7% of positives</td></tr><tr><td>the leak-sweep noise floor</td><td>46.10</td><td>the global placebo permutation understated it; leaksweep2_Small uses a (side, day) stratified placebo</td></tr><tr><td>the per-structure spread stated as an established finding, in WORDS</td><td>withdrawn: its H0 -- one detection probability per ring -- is false. No valid null has been computed for the 3.05x ensemble figure itself; on the nearest measurable basis (one archived replay, current ring join, ring_recall@50) the observed spread is the 53.5th percentile of chance (p = 0.46633) and no per-typology ordering is established</td><td>the registry matched the withdrawn NUMBER and nothing else, so the claim walked back in as prose: paper/README.md indexed this result as &#x27;significant on HI-Medium&#x27; while the file it linked to retracted it, and no gate could see the contradiction. Register the CLAIM, not only its digits</td></tr><tr><td>the pooled logistic precision@50 quoted as a model-quality statement</td><td>1.16x-1.26x a random ranker pooled. The volume-segment figure this entry used to name was itself retracted afterwards; see the entry covering the volume-segment lifts for the current value.</td><td>a uniformly random ranker scores 0.45392-0.49147 on the EVALUATED ring-aware test split because account-day prevalence runs 0.001926 to 1.0. The pooled level barely clears it and is not a model comparison. An earlier version of this entry said 0.60209 and &#x27;below chance&#x27;: that null was read from the raw CSV with only a date cut, so it included the 736 rings the split drops</td></tr><tr><td>the random-ranker null for precision@50 on HI-Medium</td><td>0.45392-0.49147 on the evaluated ring-aware split</td><td>computed from the raw CSV with only a date cut, so it included the 736 dropped test rings -- 30,867 positive account-days against the evaluated 18,130. A 70% inflation of the positive class inflates a prevalence-weighted null</td></tr><tr><td>the same inference in shorthand</td><td>(nothing)</td><td>same defect: it asserts a share of the separability belongs to the generator without measuring one</td></tr><tr><td>the share of score groups said to span more than one ring transaction</td><td>0% on all nine bundles, once the score source is required</td><td>the figures came from joining ring_endpoints to alerted account-days on (day, acct) with no score filter, which attaches an account-day to EVERY ring transaction touching the account rather than to the one that supplied its maximum. They measured &#x27;this account-day touches several ring transactions&#x27;, not score-group merging</td></tr><tr><td>the split-inflation decomposition</td><td>47% prevalence / 53% detectability</td><td>the 97% came from dividing an AP ratio by a prevalence ratio, which is not a share of the uplift</td></tr><tr><td>the typology-spread p-value</td><td>withdrawn. Against the repository&#x27;s own within-day permutation null the observed spread of 3.46875 sits at the 53.5th percentile of chance (p = 0.46633), and the per-typology ordering INVERTS: GATHER-SCATTER 0.9159, CYCLE 1.264, rho(rate, lift) = 0.3095</td><td>a binomial H0 cannot describe a budget-constrained metric. 14 of the 529 evaluated rings end on a day where the budget exceeds the whole population and are caught by every ranker including a constant one -- and all 14 are GATHER-SCATTER, the numerator of the spread. The repo has documented that defect for precision@k since the section-1 retraction and never applied it to ring_recall</td></tr><tr><td>the volume-segment lifts over the null</td><td>17.6x (logistic). The GBDT figure that stood beside it was itself withdrawn afterwards as a superseded lineage, so this entry no longer names it: a replacement value must not be a number the project has since retracted.</td><td>derived from the wrong-population null; the head null was 0.00421 and is 0.00243-0.00244 on the evaluated split</td></tr><tr><td>three withdrawn claims restated without their digits: the 1.43 ring-recall lift, &#x27;near-saturated&#x27;, and &#x27;97% of the uplift is prevalence&#x27;</td><td>lift 0.9497 against a within-day permutation null; &#x27;saturated&#x27; is removed from every current document; the decomposition is 47% prevalence / 53% detectability</td><td>a probe of all 29 patterns found that every prose paraphrase and every numeric reformat passed clean -- &#x27;1.43 times chance&#x27;, &#x27;143% of chance&#x27;, &#x27;nearly saturated&#x27;, &#x27;97 percent prevalence&#x27;. A registry that matches only the exact string it was given catches the copy-paste and misses the rewrite</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="limfull-h">
+  <div class="wrap narrow">
+    <h2 id="limfull-h">Limitations</h2>
+    <ol class="lim-list">
+      <li><h3>One synthetic generator</h3>
+        <p>All data comes from IBM AMLworld. Its laundering patterns are
+          generated by rules, so a model can learn the generator rather than
+          the behaviour.</p></li>
+      <li><h3>No bank, customer or case validation</h3>
+        <p>No investigator outcome, no confirmed SAR, no false-positive cost.
+          “Precision” means the share of alerted account-days carrying a
+          synthetic label.</p></li>
+      <li><h3>Not a production detector</h3>
+        <p>There is no deployment, no threshold policy, no case management and
+          no model risk documentation. The deliverable is the measurement
+          apparatus.</p></li>
+      <li><h3>Raw data and replay bundles are not distributed</h3>
+        <p>The aggregate artifacts are published; the row-level material is
+          not, for the licensing reason stated above.</p></li>
+      <li><h3>Provenance verifies lineage, not the correctness of an estimand</h3>
+        <p>The gates prove a number came from the artifact it names, produced
+          by the code it names. They cannot prove the quantity was the right
+          one to measure.</p></li>
+      <li><h3>The split is label-aware, and the ring filter is not neutral</h3>
+        <p>Test days are selected with knowledge of ring membership so rings
+          are not torn across the boundary. That removes one leak and
+          introduces a selection effect, which the split-inflation work
+          measures rather than assumes away.</p></li>
+      <li><h3>The per-typology result is exploratory</h3>
+        <p>Typology counts in the evaluated window are small, and no
+          multiplicity correction is applied.</p></li>
+      <li><h3>The HI-Large lane is documented, not repeatable</h3>
+        <p>Source provenance without container reproducibility, for the reason
+          set out in the historical lane above.</p></li>
+    </ol>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div>
+      <h2 class="footer-h">This site</h2>
+      <p>Static files only. No backend, no database, no cookies, no analytics,
+         no third-party scripts, and no request to any service at runtime.</p>
+      <p>Every figure is generated from committed artifacts by
+         <code>site/build_site_data.py</code> and rendered by
+         <code>site/build_pages.py</code>. Nothing on these pages is typed in
+         by hand.</p>
+    </div>
+    <div>
+      <h2 class="footer-h">Go deeper</h2>
+      <ul class="plain">
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">Repository</a></li>
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/tree/v0.2.1/aml-platform/paper" rel="noopener">Result reports</a></li>
+        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></li>
+        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/RETRACTED.json" rel="noopener"><code>RETRACTED.json</code></a></li>
+        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/pkgs/container/aml-evaluation-harness" rel="noopener">Container package</a></li>
+      </ul>
+    </div>
+    <div>
+      <h2 class="footer-h">Provenance</h2>
+      <p>Latest signed software release <strong>v0.2.1</strong>.
+         Result-artifact links point at that tag.</p>
+      <p>Source data: the synthetic IBM AMLworld benchmark. No raw data, no
+         replay bundle and no private material is published here.</p>
+      <p><a href="../assets/icon-notices.txt">Technology icon licences and notices</a></p>
+    </div>
+  </div>
+  <div class="wrap footer-base">
+    <p>Nirmal Kumar Thirupallikrishnan Kesavan · code under the repository’s
+       licence · technology names and logos remain the property of their
+       owners.</p>
+  </div>
+</footer>
+<script type="module" src="../js/page-engineering.js"></script>
+</body>
+</html>
