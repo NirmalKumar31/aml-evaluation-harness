@@ -135,12 +135,23 @@ CONTENT_SCAN_EXEMPT = ("aml-platform/scripts/check_public_surface.py",)
 
 
 def tracked_files(root: Path) -> list[Path] | None:
-    """The paths git tracks under `root`, or None if `root` is not a repo."""
+    """The paths git tracks under `root`, or None if there is no useful index.
+
+    AN EMPTY INDEX IS NOT AN EMPTY TREE. `git ls-files` succeeds and returns
+    nothing for a directory that is ignored or untracked -- a build output,
+    for instance -- so taking that at face value reports "0 file(s); clean"
+    over a tree nothing was read from. A checker that cannot fail is worse
+    than no checker, so an empty listing under a non-empty directory falls
+    back to walking the filesystem.
+    """
     r = subprocess.run(["git", "-C", str(root), "ls-files", "-z"],
                        capture_output=True, text=True)
     if r.returncode != 0:
         return None
-    return [root / rel for rel in r.stdout.split("\0") if rel]
+    listed = [root / rel for rel in r.stdout.split("\0") if rel]
+    if not listed and any(p.is_file() for p in root.rglob("*")):
+        return None
+    return listed
 
 
 def scan_tree(root: Path) -> list[str]:

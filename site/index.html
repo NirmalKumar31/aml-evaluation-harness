@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AML evaluation harness — alert-budget-aware evaluation methodology</title>
+<meta name="description" content="An evaluation-methodology harness for AML transaction monitoring on IBM's synthetic AMLworld benchmark. Account-day alert units, random-ranker nulls, attainable ceilings and a publication gate.">
+<meta name="color-scheme" content="light">
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' rx='3' fill='%232463A5'/><path d='M4 11.5V7m4 4.5V4.5m4 7V9' stroke='white' stroke-width='1.6' stroke-linecap='round'/></svg>">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#overview">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">AML evaluation harness</span>
+    </a>
+    <button class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="site-nav">
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+      <span>Menu</span>
+    </button>
+    <nav id="site-nav" class="site-nav" aria-label="Sections">
+      <ul>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#results">Results</a></li>
+        <li><a href="#budget">Alert budget</a></li>
+        <li><a href="#stability">Seed stability</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#provenance">Provenance</a></li>
+        <li><a href="#limitations">Limitations</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ───────────────────────────── A. Overview ───────────────────────────── -->
+<section id="overview" class="section section-hero" aria-labelledby="overview-h">
+  <div class="wrap">
+    <p class="eyebrow">Evaluation methodology · IBM AMLworld synthetic benchmark</p>
+    <h1 id="overview-h">Measuring a transaction-monitoring ranker under a daily review budget</h1>
+    <p class="lede">
+      This is an <strong>evaluation harness, not an AML detector</strong>. The subject is how to
+      report a top-<em>k</em> metric so that it measures a ranker rather than the composition of
+      the window it was measured on.
+    </p>
+
+    <div class="callout callout-warn" role="note">
+      <h2 class="callout-h">What these numbers are not</h2>
+      <p>
+        Every result comes from one synthetic generator. Nothing here establishes real-world AML
+        detection performance, and no bank, customer or case validation was performed.
+      </p>
+    </div>
+
+    <div class="facts" id="overview-facts">
+      <div class="fact">
+        <dl>
+          <dt>Alert unit</dt>
+          <dd><code>(account, calendar-day)</code></dd>
+        </dl>
+        <p>A transaction contributes an account-day to both endpoints; score and label are the
+          per-day maximum.</p>
+      </div>
+      <div class="fact">
+        <dl>
+          <dt>Evaluation</dt>
+          <dd>under a daily budget <code>k</code></dd>
+        </dl>
+        <p>A team can work a fixed number of alerts a day, so every budget metric is sensitive to
+          how many candidates and positives that day contained.</p>
+      </div>
+      <div class="fact">
+        <dl>
+          <dt>Data</dt>
+          <dd>IBM AMLworld, synthetic</dd>
+        </dl>
+        <p>Published by IBM under CDLA-Sharing-1.0 and <strong>not redistributed here</strong>.
+          No real person, account or transaction exists in it.</p>
+      </div>
+    </div>
+
+    <h2 class="sr-only">Project links</h2>
+    <ul class="linkgrid">
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness">Repository<span>source, tests and archived artifacts</span></a></li>
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/releases/tag/v0.2.1">Release v0.2.1<span>signed tag and release notes</span></a></li>
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/tree/main/aml-platform/paper">Result reports<span>one per experiment, with claim boundaries</span></a></li>
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/main/aml-platform/docs/LIMITATIONS.md">Limitations<span>what may and may not be claimed</span></a></li>
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/main/DATA_LICENSE.md">Data licence<span>what each distribution contains</span></a></li>
+      <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/pkgs/container/aml-evaluation-harness">Container<span>published by digest on GHCR</span></a></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ─────────────────────── B. Interactive results ──────────────────────── -->
+<section id="results" class="section" aria-labelledby="results-h">
+  <div class="wrap">
+    <h2 id="results-h">Results explorer</h2>
+    <p class="section-intro">
+      Every value below is read from a committed artifact under
+      <code>aml-platform/results_archive/</code>. Only lineages the registry marks
+      <strong>canonical</strong> or <strong>supporting</strong> appear; superseded and withdrawn
+      values are excluded by the generator and shown separately under
+      <a href="#provenance">provenance</a>.
+    </p>
+
+    <form class="controls" id="explorer-controls" aria-label="Filter results">
+      <div class="control">
+        <label for="f-rung">Dataset rung</label>
+        <select id="f-rung" name="rung"></select>
+      </div>
+      <div class="control">
+        <label for="f-model">Model</label>
+        <select id="f-model" name="model"></select>
+      </div>
+      <div class="control">
+        <label for="f-seed">Seed</label>
+        <select id="f-seed" name="seed"></select>
+      </div>
+      <div class="control">
+        <label for="f-segment">Evaluation segment</label>
+        <select id="f-segment" name="segment"></select>
+      </div>
+      <div class="control">
+        <label for="f-metric">Metric</label>
+        <select id="f-metric" name="metric"></select>
+      </div>
+      <div class="control">
+        <label for="f-budget">Alert budget <code>k</code></label>
+        <select id="f-budget" name="budget"></select>
+      </div>
+      <div class="control control-reset">
+        <button type="button" id="f-reset" class="btn btn-quiet">Reset filters</button>
+      </div>
+    </form>
+
+    <p class="hint" id="segment-hint">
+      Observed metrics are archived for the whole evaluated window only. The head and tail
+      random-ranker bands are properties of the <em>split</em> and are shown under
+      <a href="#window">window structure</a>, not mixed into an observed value.
+    </p>
+
+    <div id="explorer-status" class="status" role="status" aria-live="polite"></div>
+
+    <div class="chart-card">
+      <h3 id="chart-h">Observed value against its random-ranker null</h3>
+      <p class="chart-desc" id="chart-desc"></p>
+      <div class="chart-scroll">
+        <svg id="results-chart" role="img" aria-labelledby="chart-h" aria-describedby="chart-desc"></svg>
+      </div>
+      <p class="legend" aria-hidden="true">
+        <span class="key key-observed"></span> observed
+        <span class="key key-null"></span> random-ranker band
+        <span class="key key-ceiling"></span> attainable ceiling
+      </p>
+    </div>
+
+    <div class="table-scroll">
+      <table id="results-table" class="data-table">
+        <caption id="results-caption">Filtered results, with the artifact each value was read from.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Run</th>
+            <th scope="col">Seed</th>
+            <th scope="col">Metric</th>
+            <th scope="col"><abbr title="alert budget">k</abbr></th>
+            <th scope="col">Observed</th>
+            <th scope="col">Random-ranker null</th>
+            <th scope="col">Lift</th>
+            <th scope="col">Ceiling</th>
+            <th scope="col">Efficiency</th>
+            <th scope="col">Budget binds?</th>
+            <th scope="col">Lineage</th>
+            <th scope="col">Source artifact</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <details class="formulas">
+      <summary>How the derived columns are computed</summary>
+      <dl>
+        <dt>Lift</dt>
+        <dd><code>observed ÷ null_high</code> — against the <em>adverse</em> end of the published
+          band, so it is the conservative figure. Shown only where a band is published.</dd>
+        <dt>Random-ranker null</dt>
+        <dd>Read from <code>derived/budget_null.json</code>. It is the slot-weighted mean of daily
+          account-day prevalence on the evaluated split, bracketed because a truncated day bounds
+          its population rather than fixing it. It is a property of the <strong>split</strong>,
+          not of any model.</dd>
+        <dt>Ceiling and efficiency</dt>
+        <dd><code>recall_ceiling@k</code> and <code>recall_efficiency@k</code> are read directly
+          from the run artifact. Efficiency is <code>recall@k ÷ recall_ceiling@k</code>.</dd>
+        <dt>Budget binds?</dt>
+        <dd>From <code>nonbinding_days@k</code>. Where the budget exceeds a day's whole
+          account-day population, every candidate is alerted and precision equals that day's
+          prevalence for <em>any</em> ranker — no ranking is being tested on those days.</dd>
+      </dl>
+    </details>
+  </div>
+</section>
+
+<!-- ─────────────────────── C. Alert-budget explainer ───────────────────── -->
+<section id="budget" class="section section-alt" aria-labelledby="budget-h">
+  <div class="wrap">
+    <h2 id="budget-h">Why a budget changes what a metric means</h2>
+
+    <div class="callout callout-warn" role="note">
+      <h3 class="callout-h">A single-day educational illustration</h3>
+      <p>
+        The figures below are computed from the numbers you type, for <strong>one day</strong>.
+        They do not reproduce this project's evaluation, which is slot-weighted across many days
+        of differing size. Use it to understand the arithmetic, not to estimate a result.
+      </p>
+    </div>
+
+    <div class="sim">
+      <form class="sim-controls" id="sim-form" aria-label="Alert budget simulator inputs">
+        <div class="control">
+          <label for="sim-n">Candidate account-days that day (<code>N</code>)</label>
+          <input type="number" id="sim-n" min="1" max="1000000" step="1" value="5000" inputmode="numeric">
+        </div>
+        <div class="control">
+          <label for="sim-p">Positive account-days that day (<code>P</code>)</label>
+          <input type="number" id="sim-p" min="0" max="1000000" step="1" value="40" inputmode="numeric">
+        </div>
+        <div class="control">
+          <label for="sim-k">Review budget (<code>k</code>)</label>
+          <input type="number" id="sim-k" min="1" max="1000000" step="1" value="50" inputmode="numeric">
+        </div>
+        <p class="sim-error" id="sim-error" role="alert"></p>
+      </form>
+
+      <div class="sim-out" id="sim-out" role="status" aria-live="polite">
+        <dl class="sim-grid">
+          <div><dt>Prevalence <code>P/N</code></dt><dd id="sim-prev">—</dd></div>
+          <div><dt>Random-ranker precision@k</dt><dd id="sim-rprec">—</dd></div>
+          <div><dt>Random-ranker recall@k</dt><dd id="sim-rrec">—</dd></div>
+          <div><dt>Attainable recall ceiling</dt><dd id="sim-ceil">—</dd></div>
+          <div><dt>Attainable precision ceiling</dt><dd id="sim-pceil">—</dd></div>
+          <div><dt>Does the budget bind?</dt><dd id="sim-binds">—</dd></div>
+        </dl>
+        <div class="chart-scroll">
+          <svg id="sim-chart" role="img" aria-labelledby="budget-h" aria-describedby="sim-chart-desc"></svg>
+        </div>
+        <p class="chart-desc" id="sim-chart-desc"></p>
+      </div>
+    </div>
+
+    <details class="formulas" open>
+      <summary>The formulas, and what each one says</summary>
+      <dl>
+        <dt>Random-ranker precision@k <code>= P / N</code></dt>
+        <dd>A ranker that orders at random alerts a representative sample, so the share of its
+          alerts that are positive is just the day's prevalence. This is why a pooled precision
+          near the prevalence is near chance — and why a precision figure quoted without its null
+          says very little.</dd>
+        <dt>Random-ranker recall@k <code>= min(k, N) / N</code></dt>
+        <dd>A random ranker catches positives in proportion to how much of the population it
+          reviews.</dd>
+        <dt>Attainable recall ceiling <code>= min(P, k) / P</code></dt>
+        <dd>No ranker can recall more positives than there are review slots. When
+          <code>k &lt; P</code> the ceiling is below 1 and a recall that looks low may already be
+          at the maximum.</dd>
+        <dt>Attainable precision ceiling <code>= min(P, k) / min(N, k)</code></dt>
+        <dd>Every reviewed slot can be a true positive only while positives remain.</dd>
+        <dt>The budget binds when <code>k &lt; N</code></dt>
+        <dd>If <code>k ≥ N</code> every candidate is alerted, so precision equals prevalence for
+          <em>any</em> ranker and the day tests nothing about ranking. This project reports
+          <code>nonbinding_days@k</code> beside every budget metric for that reason.</dd>
+      </dl>
+    </details>
+  </div>
+</section>
+
+<!-- ───────────────────────── D. Seed stability ─────────────────────────── -->
+<section id="stability" class="section" aria-labelledby="stability-h">
+  <div class="wrap">
+    <h2 id="stability-h">Seed stability</h2>
+    <p class="section-intro" id="stability-intro"></p>
+
+    <div class="chart-card">
+      <h3 id="stab-chart-h">Observed range across seeds, by metric</h3>
+      <p class="chart-desc" id="stab-desc"></p>
+      <div class="chart-scroll">
+        <svg id="stability-chart" role="img" aria-labelledby="stab-chart-h" aria-describedby="stab-desc"></svg>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table id="stability-table" class="data-table">
+        <caption>Archived seed sweep: mean, observed range and relative spread.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Metric</th><th scope="col">Mean</th><th scope="col">Min</th>
+            <th scope="col">Max</th><th scope="col">Range</th><th scope="col">Spread</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="callout" role="note">
+      <h3 class="callout-h">What this does and does not say</h3>
+      <p>
+        This spread is measured for <strong>this benchmark, this configuration and this model
+        family</strong>. It is not a universal property of gradient boosting. The seeds vary one
+        thing — the subsample used to estimate histogram bin edges — so the figure is a lower
+        bound on the nondeterminism of the procedure as shipped, not an upper bound.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ────────────────────────── E. Architecture ──────────────────────────── -->
+<section id="architecture" class="section section-alt" aria-labelledby="arch-h">
+  <div class="wrap">
+    <h2 id="arch-h">Architecture</h2>
+    <p class="section-intro">
+      Three views, kept separate because they describe three different things and conflating them
+      has caused real errors in this project.
+    </p>
+
+    <figure class="diagram">
+      <figcaption><h3>1. Data, models and evaluation</h3></figcaption>
+      <img src="./assets/01-evaluation-pipeline.svg" width="1800" height="1120" loading="lazy"
+           alt="Pipeline diagram: raw AMLworld transactions are normalised and labelled, a ring-participant-disjoint temporal split is built, features are computed from labelled history, models are fitted, and evaluation aggregates to account-day alert units under a daily budget.">
+    </figure>
+
+    <figure class="diagram">
+      <figcaption><h3>2. Recorded Azure execution</h3></figcaption>
+      <img src="./assets/02-azure-execution.svg" width="1800" height="1220" loading="lazy"
+           alt="Azure topology as recorded for the HI-Large run: a single virtual machine with a managed spill disk reads inputs from ADLS Gen2 using managed identity, builds its container locally from a checksummed source archive, and writes JSON metrics and manifests back to storage.">
+    </figure>
+
+    <figure class="diagram">
+      <figcaption><h3>3. CI and release</h3></figcaption>
+      <img src="./assets/03-ci-release.svg" width="1800" height="1220" loading="lazy"
+           alt="CI and release flow: GitHub Actions builds the amd64 image, runs the full test suite inside it, scans it, pushes it to GHCR by digest, and on a signed tag promotes the identical manifest bytes to the release tag.">
+    </figure>
+
+    <div class="callout callout-warn" role="note">
+      <h3 class="callout-h">Two different paths, and only one produced the HI-Large result</h3>
+      <ul>
+        <li><strong>The historical HI-Large image was built on the VM</strong> from a
+          <code>git archive</code> of a fixed commit, uploaded to ADLS and checked against a
+          recorded SHA-256 before the build. It was <em>not</em> pulled from a registry.</li>
+        <li><strong>The GitHub Actions → GHCR lane is the current distribution and release
+          path.</strong> It is tested on every push, and it is not what produced the archived
+          result.</li>
+        <li><strong>Current Bicep is not an exact reconstruction of the historical
+          deployment.</strong> The template declares more than was created, and the OS disk
+          deployed at a different tier.</li>
+      </ul>
+      <p>
+        The canonical HI-Large manifests record a commit SHA and a code tree hash and
+        <strong>no image digest</strong>. That is source provenance, not container
+        reproducibility.
+      </p>
+    </div>
+
+    <p class="credit">
+      Diagrams and technology icons are the ones committed in
+      <a href="https://github.com/NirmalKumar31/aml-evaluation-harness/tree/main/aml-platform/docs/architecture">
+        <code>aml-platform/docs/architecture/</code></a>, where the icon sources and licences are
+      recorded.
+    </p>
+  </div>
+</section>
+
+<!-- ─────────────────── F. Reproducibility and provenance ───────────────── -->
+<section id="provenance" class="section" aria-labelledby="prov-h">
+  <div class="wrap">
+    <h2 id="prov-h">Reproducibility and provenance</h2>
+
+    <h3 id="tiers-h">Three tiers</h3>
+    <div class="table-scroll">
+      <table class="data-table">
+        <caption>What each tier needs, and what it establishes.</caption>
+        <thead><tr><th scope="col">Tier</th><th scope="col">Needs</th><th scope="col">Establishes</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Synthetic demo</th><td>a checkout</td>
+            <td>the pipeline composes end to end; artifacts and manifests are written</td></tr>
+          <tr><th scope="row">Aggregate verification</th><td>a checkout</td>
+            <td>every published figure traces to a committed artifact, checked by the publication gate</td></tr>
+          <tr><th scope="row">Full replay</th><td>the licensed CSVs, or bundles regenerated from them</td>
+            <td>published budget metrics recompute exactly from stored rows</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-warn" role="note">
+      <h3 class="callout-h">Full replay is not available from this repository</h3>
+      <p id="replay-note"></p>
+    </div>
+
+    <h3 id="release-h">Release</h3>
+    <div class="facts" id="release-facts"></div>
+
+    <h3 id="window">Window structure</h3>
+    <p class="section-intro">
+      The random-ranker band is a property of the split. These are the published bands and the
+      day counts they rest on.
+    </p>
+    <div class="table-scroll">
+      <table id="window-table" class="data-table">
+        <caption>Published random-ranker bands, by rung and budget.</caption>
+        <thead>
+          <tr>
+            <th scope="col">Rung</th><th scope="col">Days</th><th scope="col">Head / tail</th>
+            <th scope="col"><abbr title="alert budget">k</abbr></th>
+            <th scope="col">Pooled band</th><th scope="col">Head band</th><th scope="col">Tail band</th>
+            <th scope="col">Non-binding days</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 id="lineage-h">Lineage registry</h3>
+    <div class="lineages" id="lineage-lists"></div>
+
+    <h3 id="withdrawn-h">Withdrawn values</h3>
+    <p class="section-intro">
+      These are recorded so a reader can recognise a figure from an older version of this work.
+      <strong>None of them appears anywhere else on this site</strong>, and the publication gate
+      refuses any current document that quotes one.
+    </p>
+    <details class="withdrawn-wrap">
+      <summary id="withdrawn-summary">Show the withdrawal register</summary>
+      <div class="table-scroll">
+        <table id="withdrawn-table" class="data-table data-table-withdrawn">
+          <caption>Every entry in <code>RETRACTED.json</code>. All are withdrawn; none is current.</caption>
+          <thead><tr><th scope="col">Status</th><th scope="col">Withdrawn claim</th><th scope="col">Replaced by</th><th scope="col">Why</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ────────────────────────── G. Limitations ───────────────────────────── -->
+<section id="limitations" class="section section-alt" aria-labelledby="lim-h">
+  <div class="wrap">
+    <h2 id="lim-h">Limitations</h2>
+    <p class="section-intro">
+      These are part of the result, not an appendix to it. The full treatment is in
+      <a href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/main/aml-platform/docs/LIMITATIONS.md">
+        <code>LIMITATIONS.md</code></a>.
+    </p>
+    <ul class="limitations">
+      <li><h3>One synthetic generator</h3>
+        <p>Every finding is scoped to IBM AMLworld. Nothing transfers to real AML operations.</p></li>
+      <li><h3>No bank, customer or case validation</h3>
+        <p>No operational review, no alert disposition data, no feedback from an investigator.</p></li>
+      <li><h3>Not a production detector</h3>
+        <p>This is a research harness. It has no deployment that serves traffic and makes no
+          claim about detection quality in production.</p></li>
+      <li><h3>Raw data and replay bundles are not distributed</h3>
+        <p>AMLworld is CDLA-Sharing-1.0 and is obtained from its own source. The row-level replay
+          bundles are withheld while their redistribution status is unreviewed, so tests that need
+          them skip by name.</p></li>
+      <li><h3>Provenance verifies lineage, not correctness of an estimand</h3>
+        <p>The gate answers "did this number come from that code and that data". It cannot answer
+          "is this number measuring the thing the sentence says it measures". A ring-recall lift
+          was traceable, recomputable and wrong by a sign; only a negative control caught it.</p></li>
+      <li><h3>The split is label-aware, and the ring filter is not neutral</h3>
+        <p>The cut was informed by ring-retention diagnostics, so it is a design choice rather
+          than an external protocol. Rings are dropped <em>because</em> they reuse accounts, so
+          the surviving population is systematically larger and every <code>ring_recall</code>
+          level is inflated by composition.</p></li>
+      <li><h3>The per-typology result is exploratory</h3>
+        <p>Post hoc and lineage-limited. The ordering does not transfer between rungs, and the
+          size of any per-structure spread is not established on this benchmark.</p></li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <p>
+      Code is MIT. IBM AMLworld is CDLA-Sharing-1.0 and is not redistributed here — see the
+      <a href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/main/DATA_LICENSE.md">data licence</a>.
+    </p>
+    <p id="footer-build"></p>
+  </div>
+</footer>
+
+<noscript>
+  <div class="wrap noscript">
+    <p><strong>This page uses JavaScript to render figures from the committed artifact data.</strong>
+      The same numbers, and the artifacts they come from, are in the
+      <a href="https://github.com/NirmalKumar31/aml-evaluation-harness">repository</a> — start
+      with <code>aml-platform/paper/</code> and <code>aml-platform/results_archive/</code>.</p>
+  </div>
+</noscript>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
