@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   build:
+    name: site-build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -39,7 +40,9 @@ jobs:
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          # The same interpreter CI and the container pin, so the site is
+          # built and tested on the version the rest of the project verifies.
+          python-version: "3.12.14"
 
       # THE COMMITTED DATA FILE MUST MATCH A FRESH BUILD. Without this the
       # site could render numbers from an artifact state that no longer
@@ -57,11 +60,16 @@ jobs:
       # The site contracts: provenance, no superseded or withdrawn value, no
       # restricted material, relative paths, labels and alt text, and the
       # simulator's identities.
+      # FROM THE HASHED LOCK, like every other job. `pip install pytest`
+      # resolves whatever the index serves that morning, so the suite gating
+      # a published website would be executed by an unpinned runner and a
+      # pytest release could turn this red on an untouched commit.
       - name: Site contracts
         working-directory: aml-platform
         run: |
           python -m pip install -q -U pip
-          pip install -q pytest
+          python -m pip install -q --require-hashes \
+            -r requirements-dev.linux-amd64.lock
           python -m pytest tests/unit/test_site.py -q
 
       - name: Actions are pinned to a commit SHA
@@ -80,7 +88,7 @@ jobs:
         run: python aml-platform/scripts/check_public_surface.py site/_build
 
       - name: Upload the tested site
-        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site/_build
 
@@ -103,4 +111,4 @@ jobs:
       # job uploaded, and has no source tree to rebuild from by design.
       - name: Deploy the artifact build produced
         id: deployment
-        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -19,13 +19,23 @@ export function simulate(N, P, k) {
 
   const reviewed = Math.min(k, N);           // slots that can actually be used
   const prevalence = P / N;
+
+  // WITH NO POSITIVES, RECALL HAS NO DENOMINATOR.
+  //
+  // `min(k, N) / N` is the share of the population a random ranker reviews,
+  // which is a real quantity -- but it is only recall when there is a
+  // positive to recall. At P = 0 both recall and its ceiling are 0/0, and
+  // printing 0.05 for "random-ranker recall" on a day with nothing to find
+  // states a rate for an empty set. Precision is different: it is 0 out of
+  // the reviewed slots, which is defined and correct.
+  const noPositives = P === 0;
   return {
     N, P, k,
     reviewed,
     prevalence,
-    randomPrecision: prevalence,             // P / N
-    randomRecall: reviewed / N,              // min(k, N) / N
-    recallCeiling: P === 0 ? null : Math.min(P, k) / P,
+    randomPrecision: prevalence,                             // P / N
+    randomRecall: noPositives ? null : reviewed / N,         // min(k, N) / N
+    recallCeiling: noPositives ? null : Math.min(P, k) / P,  // min(P, k) / P
     precisionCeiling: Math.min(P, k) / reviewed,
     binds: k < N,
   };
@@ -51,12 +61,14 @@ function bar(x, y, w, h, cls, title) {
 function drawChart(svg, s) {
   clear(svg);
   const W = 640, rowH = 34, padL = 172, padR = 58, padT = 14;
+  // An undefined quantity gets no bar. A zero-length bar would read as
+  // "measured, and it is zero".
   const rows = [
     ["Random-ranker precision@k", s.randomPrecision, "bar-null"],
     ["Attainable precision ceiling", s.precisionCeiling, "bar-observed"],
     ["Random-ranker recall@k", s.randomRecall, "bar-null"],
     ["Attainable recall ceiling", s.recallCeiling, "bar-observed"],
-  ].filter(([, v]) => v !== null);
+  ].filter(([, v]) => v !== null && v !== undefined);
 
   const H = padT * 2 + rows.length * rowH;
   svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
@@ -112,10 +124,11 @@ export function initBudgetSimulator(root = document) {
     }
     err.textContent = "";
     const s = simulate(N, P, k);
+    const undef = "undefined — no positive account-days";
     out.prev.textContent = fmt(s.prevalence, 6);
     out.rprec.textContent = fmt(s.randomPrecision, 6);
-    out.rrec.textContent = fmt(s.randomRecall, 6);
-    out.ceil.textContent = s.recallCeiling === null ? "—" : fmt(s.recallCeiling, 6);
+    out.rrec.textContent = s.randomRecall === null ? undef : fmt(s.randomRecall, 6);
+    out.ceil.textContent = s.recallCeiling === null ? undef : fmt(s.recallCeiling, 6);
     out.pceil.textContent = fmt(s.precisionCeiling, 6);
 
     clear(out.binds);
@@ -129,10 +142,13 @@ export function initBudgetSimulator(root = document) {
       `One day with ${s.N.toLocaleString("en")} candidate account-days, ` +
       `${s.P.toLocaleString("en")} of them positive, and a budget of ` +
       `${s.k.toLocaleString("en")}. A random ranker reaches precision ` +
-      `${fmt(s.randomPrecision, 4)} and recall ${fmt(s.randomRecall, 4)}; the ` +
-      `attainable recall ceiling is ` +
-      `${s.recallCeiling === null ? "undefined with no positives" : fmt(s.recallCeiling, 4)}` +
-      `. The budget ${s.binds ? "binds" : "does not bind, so no ranking is being tested"}.`;
+      `${fmt(s.randomPrecision, 4)}. ` +
+      (s.randomRecall === null
+        ? "Recall and its ceiling are undefined on a day with no positive " +
+          "account-days, so neither is plotted. "
+        : `Random-ranker recall is ${fmt(s.randomRecall, 4)} and the attainable ` +
+          `recall ceiling is ${fmt(s.recallCeiling, 4)}. `) +
+      `The budget ${s.binds ? "binds" : "does not bind, so no ranking is being tested"}.`;
   }
 
   for (const input of [inN, inP, inK]) {
