@@ -6,8 +6,9 @@ mechanical check on it -- and the first thing to rot would be a value copied
 into markup and left behind when the artifact moved.
 
 The rule the whole file enforces: **a number on the website exists in
-`site/data/site-data.json`, and every row in that file names the committed
-artifact it came from.** Nothing is typed into HTML or JavaScript.
+`site/data/`, every row in there names the committed artifact it came from,
+and every page is rendered from that data by `site/build_pages.py`.** Nothing
+is typed into HTML or JavaScript by hand.
 """
 from __future__ import annotations
 
@@ -22,8 +23,13 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 SITE = ROOT / "site"
 DATA = SITE / "data" / "site-data.json"
+ROWS = SITE / "data" / "results.json"
 BUILDER = SITE / "build_site_data.py"
+PAGE_BUILDER = SITE / "build_pages.py"
 PAGES_BASE = "/aml-evaluation-harness/"
+
+# The three routes, as files. `explorer/index.html` is served at `/explorer/`.
+PAGES = ("index.html", "explorer/index.html", "engineering/index.html")
 
 
 def _need_site():
@@ -32,24 +38,69 @@ def _need_site():
 
 
 def _data() -> dict:
+    """The generated facts, with the rows folded back in.
+
+    The rows live in their own file because only the explorer route loads
+    them, but every provenance rule below applies to the pair, so they are
+    read as one object here.
+    """
     _need_site()
-    if not DATA.is_file():
-        pytest.fail("site/data/site-data.json is missing; run python site/build_site_data.py")
-    return json.loads(DATA.read_text(encoding="utf-8"))
+    if not DATA.is_file() or not ROWS.is_file():
+        pytest.fail("site/data/ is incomplete; run python site/build_site_data.py")
+    d = json.loads(DATA.read_text(encoding="utf-8"))
+    d["results"] = json.loads(ROWS.read_text(encoding="utf-8"))["results"]
+    return d
+
+
+def _pages() -> dict[str, str]:
+    _need_site()
+    out = {}
+    for rel in PAGES:
+        p = SITE / rel
+        if not p.is_file():
+            pytest.fail(f"site/{rel} is missing; run python site/build_pages.py")
+        out[rel] = p.read_text(encoding="utf-8")
+    return out
 
 
 def _site_text_files() -> list[Path]:
     _need_site()
     out = []
     for p in sorted(SITE.rglob("*")):
-        if not p.is_file() or "_build" in p.parts:
+        if not p.is_file() or "_build" in p.parts or "node_modules" in p.parts:
             continue
         if p.suffix.lower() in {".html", ".css", ".js", ".py", ".json", ".txt", ".md"}:
             out.append(p)
     return out
 
 
-# ── provenance ────────────────────────────────────────────────────────────
+def _js_files() -> list[Path]:
+    _need_site()
+    return sorted((SITE / "js").glob("*.js"))
+
+
+def _metrics_of(row: dict) -> dict:
+    """The mapping a row's value lives in, found by the row's own pointer.
+
+    A run manifest keeps its metrics under one key; a seed sweep keeps a
+    dict per seed. The row says which, so nothing here has to guess.
+    """
+    node = json.loads((ROOT / row["source"]).read_text(encoding="utf-8"))
+    for part in row["source_pointer"].split("/"):
+        if part == "":          # the metrics are the document
+            continue
+        node = node[int(part)] if part.isdigit() else node[part]
+    return node
+
+
+def _strip_js_comments(body: str) -> str:
+    """Code only. A rule about what the browser does must not fire on a
+    comment explaining why it does it."""
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    return "\n".join(re.sub(r"(^|\s)//.*$", "", ln) for ln in body.splitlines())
+
+
+# -- provenance ------------------------------------------------------------
 
 def test_every_displayed_value_names_the_artifact_it_came_from():
     d = _data()
@@ -108,10 +159,20 @@ def test_the_withdrawal_register_is_carried_but_kept_out_of_the_results():
     d = _data()
     assert d["withdrawn"]["count"] > 0
     assert d["withdrawn"]["entries"], "the register is empty"
-    # It must be a separate structure, never a result row.
     keys = {k for r in d["results"] for k in r}
     assert "was" not in keys and "withdrawn" not in keys, (
         "withdrawal metadata has leaked into the result rows")
+
+
+def test_the_register_is_off_the_main_visitor_path():
+    """It is 33 entries of repository history. It belongs behind a
+    disclosure on the engineering page, not in the homepage's reading flow."""
+    p = _pages()
+    assert "Withdrawal register" in p["engineering/index.html"]
+    assert "<details" in p["engineering/index.html"]
+    for rel in ("index.html", "explorer/index.html"):
+        assert "data-table-withdrawn" not in p[rel], (
+            f"the 33-row withdrawal table is on {rel}")
 
 
 def test_a_precision_row_carries_its_null_wherever_one_is_published():
@@ -138,13 +199,13 @@ def test_every_observed_value_matches_its_source_artifact():
     cache: dict[str, dict] = {}
     checked = 0
     for r in d["results"]:
-        doc = cache.get(r["source"])
-        if doc is None:
-            doc = json.loads((ROOT / r["source"]).read_text(encoding="utf-8"))
-            cache[r["source"]] = doc
-        m = doc.get("metrics", doc)
         key = f"{r['metric']}@{r['budget']}"
-        assert key in m, f"{r['id']}: {key} is not in {r['source']}"
+        m = cache.get((r["source"], r["source_pointer"]))
+        if m is None:
+            m = _metrics_of(r)
+            cache[(r["source"], r["source_pointer"])] = m
+        assert key in m, (
+            f"{r['id']}: {key} is not at {r['source_pointer']!r} in {r['source']}")
         assert abs(float(m[key]) - r["observed"]) < 5e-6, (
             f"{r['id']}: shows {r['observed']} but {r['source']} holds {m[key]}")
         checked += 1
@@ -165,11 +226,10 @@ def test_the_lift_is_derived_at_full_precision_not_from_the_display_value():
     for r in d["results"]:
         if r["lift_vs_null"] is None:
             continue
-        doc = cache.get(r["source"])
-        if doc is None:
-            doc = json.loads((ROOT / r["source"]).read_text(encoding="utf-8"))
-            cache[r["source"]] = doc
-        m = doc.get("metrics", doc)
+        m = cache.get((r["source"], r["source_pointer"]))
+        if m is None:
+            m = _metrics_of(r)
+            cache[(r["source"], r["source_pointer"])] = m
         full = float(m[f"{r['metric']}@{r['budget']}"])
         expect = round(full / r["null_high"], 4)
         assert expect == r["lift_vs_null"], (
@@ -179,7 +239,42 @@ def test_the_lift_is_derived_at_full_precision_not_from_the_display_value():
     assert checked >= 10, f"only {checked} lift(s) checked; the assertion is too weak"
 
 
-# ── determinism ───────────────────────────────────────────────────────────
+def test_every_story_number_is_a_row_the_explorer_also_shows():
+    """The homepage's three findings are not a second source of truth."""
+    d = _data()
+    rows = {(r["run"], r["metric"], r["budget"]): r for r in d["results"]}
+    story = next(s for s in d["stories"] if s["id"] == "null-band")
+    for s in story["series"]:
+        r = rows[(s["run"], "precision", s["budget"])]
+        assert r["observed"] == s["observed"], f"{s['run']}: the story disagrees with the row"
+        assert r["null_low"] == s["null_low"] and r["null_high"] == s["null_high"]
+        assert r["lift_vs_null"] == s["lift"]
+        assert r["source"] == s["source"]
+
+    seeds = next(s for s in d["stories"] if s["id"] == "seed-spread")
+    per_seed = {p["seed"]: p["precision@50"] for p in d["stability"]["per_seed"]}
+    assert {p["seed"]: p["value"] for p in seeds["series"]} == per_seed
+
+    scaling = next(s for s in d["stories"] if s["id"] == "scaling")
+    for point in scaling["series"]:
+        if point["group"] != "HI-Large":
+            continue
+        match = [x for x in d["large_seed_spread"]["seeds"] if x["seed"] == point["seed"]]
+        assert match and match[0]["value"] == point["value"]
+
+
+def test_the_scaling_story_refuses_to_be_a_model_comparison():
+    d = _data()
+    s = next(x for x in d["stories"] if x["id"] == "scaling")
+    low = s["cannot"].lower()
+    assert "not a comparison" in low
+    assert "33.5" in s["cannot"] and "14.9" in s["cannot"], (
+        "the memory measurement that explains the gap is missing")
+    assert "memory measurement" in low
+    assert "says nothing about how either learner would have scored" in low
+
+
+# -- determinism -----------------------------------------------------------
 
 def test_site_data_is_deterministic_and_current():
     _need_site()
@@ -189,22 +284,32 @@ def test_site_data_is_deterministic_and_current():
         f"site data is stale or non-deterministic:\n{r.stdout}\n{r.stderr}")
 
 
+def test_the_pages_are_current_with_the_data_they_render():
+    _need_site()
+    r = subprocess.run([sys.executable, str(PAGE_BUILDER), "--check"],
+                       capture_output=True, text=True, cwd=ROOT)
+    assert r.returncode == 0, (
+        f"the committed HTML is stale:\n{r.stdout}\n{r.stderr}")
+
+
 def test_two_builds_are_byte_identical(tmp_path):
     _need_site()
-    original = DATA.read_bytes()
+    originals = {p: p.read_bytes() for p in (DATA, ROWS, *(SITE / r for r in PAGES))}
     try:
         first = None
         for _ in range(2):
-            run = subprocess.run([sys.executable, str(BUILDER)],
-                                 capture_output=True, text=True, cwd=ROOT)
-            assert run.returncode == 0, run.stderr
-            blob = DATA.read_bytes()
+            for script in (BUILDER, PAGE_BUILDER):
+                run = subprocess.run([sys.executable, str(script)],
+                                     capture_output=True, text=True, cwd=ROOT)
+                assert run.returncode == 0, run.stderr
+            blob = b"".join(p.read_bytes() for p in originals)
             if first is None:
                 first = blob
             else:
                 assert blob == first, "two builds of one tree produced different bytes"
     finally:
-        DATA.write_bytes(original)
+        for p, b in originals.items():
+            p.write_bytes(b)
 
 
 def test_the_generator_refuses_a_superseded_lineage():
@@ -232,7 +337,7 @@ def test_the_generator_refuses_a_superseded_lineage():
         subprocess.run([sys.executable, str(BUILDER)], capture_output=True, cwd=ROOT)
 
 
-# ── shipped surface ───────────────────────────────────────────────────────
+# -- shipped surface -------------------------------------------------------
 
 def test_no_restricted_material_reaches_the_site():
     _need_site()
@@ -245,9 +350,11 @@ def test_no_restricted_material_reaches_the_site():
                 continue
             assert frag not in body, f"{p.relative_to(ROOT)} contains a denied path {frag!r}"
 
-    shipped = [p for p in SITE.rglob("*") if p.is_file() and "_build" not in p.parts]
+    shipped = [p for p in SITE.rglob("*")
+               if p.is_file() and "_build" not in p.parts and "node_modules" not in p.parts]
     for p in shipped:
-        assert p.suffix.lower() not in {".parquet", ".csv", ".pkl", ".joblib", ".env", ".pem", ".key"}, (
+        assert p.suffix.lower() not in {".parquet", ".csv", ".pkl", ".joblib",
+                                        ".env", ".pem", ".key"}, (
             f"{p.relative_to(ROOT)} is a restricted file type")
 
 
@@ -263,47 +370,78 @@ def test_no_assistant_attribution_or_development_record_in_the_site():
         assert not m, f"{p.relative_to(ROOT)} contains editorial metadata: {m.group(0)!r}"
 
     for p in SITE.rglob("*"):
-        if p.is_file():
+        if p.is_file() and "node_modules" not in p.parts:
             assert not re.search(r"audit|handoff|remediation|transcript|learning",
-                                 p.name, re.I), f"{p.relative_to(ROOT)} looks like a development record"
+                                 p.name, re.I), (
+                f"{p.relative_to(ROOT)} looks like a development record")
 
 
 def test_no_external_runtime_script_or_stylesheet():
     _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    for m in re.finditer(r"<script\b[^>]*\bsrc=[\"']([^\"']+)", html):
-        assert not re.match(r"https?:|//", m.group(1)), (
-            f"index.html loads an external script: {m.group(1)}")
-    for m in re.finditer(r"<link\b[^>]*\bhref=[\"']([^\"']+)[\"'][^>]*>", html):
-        tag = m.group(0)
-        if "stylesheet" in tag and re.match(r"https?:|//", m.group(1)):
-            pytest.fail(f"index.html loads an external stylesheet: {m.group(1)}")
-    for bad in ("cdn.", "unpkg.com", "jsdelivr", "googleapis.com", "gtag(", "analytics"):
-        assert bad not in html, f"index.html references {bad!r}"
+    for rel, html in _pages().items():
+        for m in re.finditer(r"<script\b[^>]*\bsrc=[\"']([^\"']+)", html):
+            assert not re.match(r"https?:|//", m.group(1)), (
+                f"{rel} loads an external script: {m.group(1)}")
+        for m in re.finditer(r"<link\b[^>]*\bhref=[\"']([^\"']+)[\"'][^>]*>", html):
+            if "stylesheet" in m.group(0) and re.match(r"https?:|//", m.group(1)):
+                pytest.fail(f"{rel} loads an external stylesheet: {m.group(1)}")
+        # THE CALL, NOT THE WORD. The footer says in prose that the site
+        # runs no analytics, so a bare substring match on "analytics" fires
+        # on the sentence promising there are none.
+        for bad in ("cdn.", "unpkg.com", "jsdelivr", "googleapis.com", "gtag(",
+                    "googletagmanager", "analytics.js", "plausible.io",
+                    "matomo", "segment.com"):
+            assert bad not in html, f"{rel} references {bad!r}"
 
 
-# ── links, paths and the Pages base ───────────────────────────────────────
-
-def test_internal_links_and_assets_resolve():
+def test_no_inline_script_and_no_dangerous_sink():
     _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
+    for rel, html in _pages().items():
+        for m in re.finditer(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
+            assert "src=" in m.group(1) and not m.group(2).strip(), (
+                f"{rel} carries an inline script, which the policy forbids")
+        assert not re.search(r"\bon[a-z]+=\"", html), (
+            f"{rel} has an inline event handler attribute")
+    for js in _js_files():
+        body = _strip_js_comments(js.read_text(encoding="utf-8"))
+        for sink in ("innerHTML", "outerHTML", "document.write", "eval(",
+                     "new Function("):
+            assert sink not in body, f"{js.name} uses {sink}"
 
-    ids = set(re.findall(r'\bid="([^"]+)"', html))
-    for frag in re.findall(r'href="#([^"]+)"', html):
-        assert frag in ids, f"index.html links to #{frag}, which is not an id on the page"
 
-    # Relative asset references must resolve either in site/ or, for the
-    # diagrams, in the assembled output.
-    refs = set(re.findall(r'(?:src|href)="\./([^"#?]+)"', html))
-    for ref in sorted(refs):
-        if ref.startswith("assets/"):
-            name = ref.split("/", 1)[1]
-            src = (ROOT / "aml-platform/docs/architecture" / name)
-            alt = (ROOT / "aml-platform/docs/architecture/icons/NOTICES.txt")
-            assert src.is_file() or (name == "icon-notices.txt" and alt.is_file()), (
-                f"index.html references {ref}, which assemble_site.py does not produce")
-        else:
-            assert (SITE / ref).is_file(), f"index.html references missing {ref}"
+def test_the_content_security_policy_is_declared_and_the_site_obeys_it():
+    """`style-src 'self'` forbids inline styles, so the code may not write
+    one -- a chart that needs `style=` is a chart that cannot be restyled for
+    print, dark mode or a narrow screen anyway."""
+    _need_site()
+    for rel, html in _pages().items():
+        m = re.search(r'http-equiv="Content-Security-Policy"\s+content="([^"]+)"', html)
+        assert m, f"{rel} declares no content security policy"
+        policy = m.group(1)
+        for directive in ("default-src 'self'", "script-src 'self'",
+                          "style-src 'self'", "img-src 'self' data:",
+                          "connect-src 'self'", "object-src 'none'",
+                          "base-uri 'none'", "form-action 'none'"):
+            assert directive in policy, f"{rel}: the policy is missing {directive!r}"
+        assert "unsafe-inline" not in policy and "unsafe-eval" not in policy
+        assert 'name="referrer" content="strict-origin-when-cross-origin"' in html, (
+            f"{rel} declares no referrer policy")
+        assert not re.search(r'\sstyle="', html), (
+            f"{rel} carries an inline style attribute, which its own policy blocks")
+    for js in _js_files():
+        body = _strip_js_comments(js.read_text(encoding="utf-8"))
+        assert not re.search(r"\.style\.(?!length)", body), (
+            f"{js.name} writes an inline style, which the policy blocks at runtime")
+        assert 'setAttribute("style"' not in body
+
+
+# -- links, paths and the Pages base ---------------------------------------
+
+def test_internal_anchors_resolve_on_the_page_that_uses_them():
+    for rel, html in _pages().items():
+        ids = set(re.findall(r'\bid="([^"]+)"', html))
+        for frag in re.findall(r'href="#([^"]+)"', html):
+            assert frag in ids, f"{rel} links to #{frag}, which is not an id on that page"
 
 
 def test_every_path_is_relative_so_the_pages_base_path_works():
@@ -313,83 +451,315 @@ def test_every_path_is_relative_so_the_pages_base_path_works():
     working perfectly on a local server at /, which is why this is asserted
     rather than eyeballed.
     """
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    for m in re.finditer(r'(?:src|href)="(/[^/][^"]*)"', html):
-        pytest.fail(f"index.html uses a root-absolute path {m.group(1)!r}; it would 404 "
-                    f"under the Pages base {PAGES_BASE}")
-    for js in sorted((SITE / "js").glob("*.js")):
+    for rel, html in _pages().items():
+        for m in re.finditer(r'(?:src|href)="(/[^/][^"]*)"', html):
+            pytest.fail(f"{rel} uses a root-absolute path {m.group(1)!r}; it would 404 "
+                        f"under the Pages base {PAGES_BASE}")
+    for js in _js_files():
         body = js.read_text(encoding="utf-8")
         for m in re.finditer(r'fetch\(\s*[\"\']([^\"\']+)', body):
             assert not m.group(1).startswith("/"), (
                 f"{js.name} fetches a root-absolute path {m.group(1)!r}")
 
 
-def test_the_assembler_produces_every_file_the_page_needs(tmp_path):
+def test_the_three_routes_link_to_each_other_relatively():
+    p = _pages()
+    assert 'href="explorer/"' in p["index.html"]
+    assert 'href="engineering/"' in p["index.html"]
+    assert 'href="../"' in p["explorer/index.html"]
+    assert 'href="../engineering/"' in p["explorer/index.html"]
+    assert 'href="../explorer/"' in p["engineering/index.html"]
+    for rel, html in p.items():
+        marks = re.findall(r'<a href="[^"]*"\s+aria-current="page">', html)
+        assert len(marks) == 1, f"{rel} marks {len(marks)} navigation links as current"
+
+
+def test_the_assembler_produces_every_file_every_page_needs(tmp_path):
     _need_site()
     dest = tmp_path / "out"
     r = subprocess.run([sys.executable, str(SITE / "assemble_site.py"), "--dest", str(dest)],
                        capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stderr
-    html = (dest / "index.html").read_text(encoding="utf-8")
-    for ref in sorted(set(re.findall(r'(?:src|href)="\./([^"#?]+)"', html))):
-        assert (dest / ref).is_file(), f"the assembled site is missing {ref}"
+    for rel in PAGES:
+        page = dest / rel
+        assert page.is_file(), f"the assembled site is missing {rel}"
+        html = page.read_text(encoding="utf-8")
+        refs = re.findall(r'(?:src|href)="(?!https?:|//|#|data:|mailto:)([^"#?]+)"', html)
+        assert refs, f"{rel} references nothing, which cannot be right"
+        for ref in sorted(set(refs)):
+            target = (page.parent / ref).resolve()
+            # A link to a route names its directory; Pages serves the index
+            # inside it.
+            if ref.endswith("/"):
+                target = target / "index.html"
+            assert target.is_file(), (
+                f"{rel} references {ref}, which the assembler does not produce")
     assert (dest / ".nojekyll").is_file(), "Pages would run Jekyll over the artifact"
 
 
-# ── accessibility surface ─────────────────────────────────────────────────
+def test_every_committed_icon_is_actually_shown():
+    """An icon copied into the artifact but never rendered is an unexplained
+    third-party asset in a published tree."""
+    _need_site()
+    sys.path.insert(0, str(SITE))
+    import assets as site_assets
+
+    html = "".join(_pages().values())
+    for name in site_assets.ICONS:
+        assert f"icons/{name}" in html, (
+            f"{name} is copied into the artifact but no page shows it")
+    for d in site_assets.DIAGRAMS:
+        assert d["deployed"] in html, f"{d['src']} is copied but never displayed"
+
+
+# -- accessibility surface -------------------------------------------------
 
 def test_every_control_has_a_label_and_every_image_has_alt_text():
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
+    for rel, html in _pages().items():
+        labelled = set(re.findall(r'<label\b[^>]*\bfor="([^"]+)"', html))
+        for m in re.finditer(r'<(select|input)\b[^>]*\bid="([^"]+)"[^>]*>', html):
+            tag, cid = m.group(1), m.group(2)
+            has_aria = "aria-label" in m.group(0) or "aria-labelledby" in m.group(0)
+            assert cid in labelled or has_aria, f"{rel}: <{tag} id={cid}> has no label"
 
-    labelled = set(re.findall(r'<label\b[^>]*\bfor="([^"]+)"', html))
-    for m in re.finditer(r'<(select|input)\b[^>]*\bid="([^"]+)"[^>]*>', html):
-        tag, cid = m.group(1), m.group(2)
-        has_aria = 'aria-label' in m.group(0) or 'aria-labelledby' in m.group(0)
-        assert cid in labelled or has_aria, f"<{tag} id={cid}> has no label"
+        for m in re.finditer(r"<img\b[^>]*>", html):
+            tag = m.group(0)
+            # alt="" is correct and deliberate for a decorative icon that sits
+            # beside its own text label.
+            assert re.search(r'\balt="(?:|[^"]{20,})"', tag), (
+                f"{rel}: an <img> has neither empty nor descriptive alt text: {tag[:90]}")
 
-    for m in re.finditer(r"<img\b[^>]*>", html):
-        assert re.search(r'\balt="[^"]{20,}"', m.group(0)), (
-            f"an <img> has no descriptive alt text: {m.group(0)[:90]}")
+        for m in re.finditer(r"<table\b[^>]*>(.*?)</table>", html, re.S):
+            assert "<caption" in m.group(1), f"{rel}: a table has no caption"
 
-    for m in re.finditer(r"<table\b[^>]*>(.*?)</table>", html, re.S):
-        assert "<caption" in m.group(1), "a table has no caption"
+        for m in re.finditer(r'<svg\b[^>]*\bid="[^"]+"[^>]*>', html):
+            tag = m.group(0)
+            assert 'role="img"' in tag and ("aria-labelledby" in tag or "aria-label" in tag), (
+                f"{rel}: an inline <svg> is not described to assistive technology: {tag[:90]}")
 
-    # Inline chart surfaces only. The favicon is a data URI inside a <link>
-    # href and is decorative; matching it here would be matching a string,
-    # not an element.
-    for m in re.finditer(r'<svg\b[^>]*\bid="[^"]+"[^>]*>', html):
-        tag = m.group(0)
-        assert 'role="img"' in tag and ('aria-labelledby' in tag or 'aria-label' in tag), (
-            f"an inline <svg> is not described to assistive technology: {tag[:90]}")
-    assert len(re.findall(r'<svg\b[^>]*\bid="[^"]+"', html)) >= 3, (
-        "fewer chart surfaces than expected; this check may have stopped covering them")
+        assert 'class="skip"' in html, f"{rel} has no skip link"
+        assert 'lang="en"' in html, f"{rel} declares no language"
+        assert len(re.findall(r"<h1\b", html)) == 1, f"{rel} does not have exactly one h1"
+        assert "<main id=\"main\">" in html, f"{rel} has no main landmark"
+        assert '<nav id="site-nav"' in html and 'aria-label="Primary"' in html
 
-    assert 'class="skip-link"' in html, "no skip link"
-    assert 'lang="en"' in html, "the document declares no language"
+
+def test_the_decorative_hero_is_hidden_from_assistive_technology():
+    html = _pages()["index.html"]
+    m = re.search(r'<svg class="hero-net"[^>]*>', html)
+    assert m and 'aria-hidden="true"' in m.group(0) and 'focusable="false"' in m.group(0), (
+        "the hero network is decorative and must not be announced or focusable")
 
 
 def test_reduced_motion_and_focus_states_are_honoured():
     _need_site()
     css = (SITE / "styles.css").read_text(encoding="utf-8")
-    assert "prefers-reduced-motion" in css
+    assert "prefers-reduced-motion: reduce" in css
     assert ":focus-visible" in css and "outline" in css
+    hero = (SITE / "js" / "hero.js").read_text(encoding="utf-8")
+    assert "prefersReducedMotion()" in hero, "the hero animation ignores the preference"
+    reveal = (SITE / "js" / "reveal.js").read_text(encoding="utf-8")
+    assert "prefersReducedMotion()" in reveal
+
+
+def test_no_state_is_carried_by_colour_alone():
+    """Every coverage cell and every selected table row says what it is in
+    words; the tint is decoration on top of the word."""
+    d = _data()
+    html = "".join(_pages().values())
+    for row in d["coverage"]["rungs"]:
+        for cell in row["cells"]:
+            word = {"measured": "measured", "diagnostic": "diagnostic only",
+                    "not-run": "not run"}[cell["state"]]
+            assert f'class="chip chip-{cell["state"]}">{word}<' in html, (
+                f"{row['rung']}/{cell['family']} is not labelled in words")
+    explorer = (SITE / "js" / "explorer.js").read_text(encoding="utf-8")
+    assert 'text: "selected"' in explorer, (
+        "the selected row is marked only by its background colour")
 
 
 def test_the_small_screen_navigation_is_a_real_disclosure():
     _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    assert 'id="nav-toggle"' in html and 'aria-expanded="false"' in html
-    assert 'aria-controls="site-nav"' in html
+    for rel, html in _pages().items():
+        assert 'id="nav-toggle"' in html and 'aria-expanded="false"' in html, rel
+        assert 'aria-controls="site-nav"' in html, rel
     nav = (SITE / "js" / "nav.js").read_text(encoding="utf-8")
     assert 'setAttribute("aria-expanded"' in nav, "the toggle never updates aria-expanded"
     assert "Escape" in nav, "the menu cannot be dismissed from the keyboard"
+    assert "toggle.focus()" in nav, "focus is not returned to the opener"
     css = (SITE / "styles.css").read_text(encoding="utf-8")
-    assert "@media (max-width: 60rem)" in css, "no small-screen navigation rule"
+    assert "@media (min-width: 60rem)" in css, "no wide-screen navigation rule"
 
 
-# ── simulator ─────────────────────────────────────────────────────────────
+def test_the_architecture_dialog_is_keyboard_operable():
+    _need_site()
+    for rel in ("index.html", "engineering/index.html"):
+        html = _pages()[rel]
+        assert '<dialog class="arch-dialog"' in html, f"{rel} has no diagram dialog"
+        assert 'aria-haspopup="dialog"' in html
+        assert html.count('class="arch-open"') == 3, f"{rel} does not preview all three diagrams"
+    js = (SITE / "js" / "lightbox.js").read_text(encoding="utf-8")
+    assert "showModal()" in js, "the dialog is not modal, so Escape and the focus trap are lost"
+    assert "opener.focus()" in js, "focus is not restored to the control that opened it"
+    assert 'addEventListener("close"' in js
+
+
+def test_the_site_is_readable_with_no_javascript():
+    """The values are rendered at build time, so the only thing scripting
+    adds is interaction."""
+    _need_site()
+    assert (SITE / "noscript.css").is_file()
+    ns = (SITE / "noscript.css").read_text(encoding="utf-8")
+    assert ".js-only" in ns and "display: none" in ns
+    for rel, html in _pages().items():
+        assert '<noscript><link rel="stylesheet"' in html, f"{rel} has no no-script stylesheet"
+        assert "<noscript>" in html
+    home = _pages()["index.html"]
+    # The three findings are in the markup, not fetched.
+    for fig in ("nullband-50-svg", "seed-spread-svg", "scaling-svg"):
+        assert f'id="{fig}"' in home, f"the homepage chart {fig} is not rendered at build time"
+
+
+# -- the experiment model --------------------------------------------------
+
+def test_every_experiment_option_is_backed_by_an_artifact():
+    d = _data()
+    assert len(d["experiments"]) >= 4
+    rows = d["results"]
+    registered = set(d["registry"]["canonical"]) | set(d["registry"]["supporting"])
+    for e in d["experiments"]:
+        mine = [r for r in rows if r["experiment"] == e["id"]]
+        assert mine, f"{e['id']} is offered but has no rows"
+        assert e["n_rows"] == len(mine)
+        for lineage in e["lineages"]:
+            assert lineage in registered, f"{e['id']} names unregistered lineage {lineage}"
+        for src in e["sources"]:
+            assert (ROOT / src).is_file(), f"{e['id']} names a missing artifact {src}"
+        assert (ROOT / e["report"]).is_file(), f"{e['id']} names a missing report {e['report']}"
+
+
+def test_no_selectable_combination_returns_zero_rows():
+    """The cascade is built from these three maps. If a map offers a
+    combination the rows do not contain, the explorer offers a dead choice --
+    which is the defect the whole redesign exists to remove."""
+    d = _data()
+    rows = d["results"]
+    checked = 0
+    for e in d["experiments"]:
+        for metric, budgets in e["budgets_by_metric"].items():
+            assert metric in e["metrics"]
+            for budget in budgets:
+                seeds = e["seeds_by_metric_budget"][f"{metric}@{budget}"]
+                assert seeds, f"{e['id']} {metric}@{budget} offers no seed"
+                for seed in seeds:
+                    hits = [r for r in rows
+                            if r["experiment"] == e["id"] and r["metric"] == metric
+                            and r["budget"] == budget and r["seed"] == seed]
+                    assert hits, f"{e['id']} {metric}@{budget} seed={seed} selects nothing"
+                    checked += 1
+                # And the unfiltered choice, which is what the control offers
+                # first.
+                assert [r for r in rows if r["experiment"] == e["id"]
+                        and r["metric"] == metric and r["budget"] == budget]
+    assert checked >= 100, f"only {checked} combination(s) checked; too weak"
+
+
+def test_the_metric_and_budget_maps_are_exactly_what_the_rows_contain():
+    d = _data()
+    for e in d["experiments"]:
+        mine = [r for r in d["results"] if r["experiment"] == e["id"]]
+        assert sorted({r["metric"] for r in mine}) == e["metrics"]
+        for metric in e["metrics"]:
+            want = sorted({r["budget"] for r in mine if r["metric"] == metric})
+            assert e["budgets_by_metric"][metric] == want, (
+                f"{e['id']}/{metric}: the control offers {e['budgets_by_metric'][metric]} "
+                f"but the rows hold {want}")
+
+
+def test_hi_small_is_not_offered_the_budgets_only_hi_medium_has():
+    """The concrete case the flat control got wrong: HI-Small's sweep carries
+    three metrics at k=50 and one at k=200, and nothing else."""
+    d = _data()
+    small = next(e for e in d["experiments"] if e["rung"] == "HI-Small")
+    assert small["budgets_by_metric"] == {
+        "precision": [50], "recall": [50], "recall_efficiency": [50],
+        "ring_recall": [200]}, small["budgets_by_metric"]
+
+
+def test_the_coverage_matrix_agrees_with_the_rows():
+    d = _data()
+    cov = d["coverage"]
+    families = [f["id"] for f in cov["families"]]
+    assert len(cov["rungs"]) == 3
+    measured_from_rows = {(r["rung"], r["experiment"]) for r in d["results"]}
+    for row in cov["rungs"]:
+        assert [c["family"] for c in row["cells"]] == families
+        for cell in row["cells"]:
+            assert cell["state"] in {"measured", "diagnostic", "not-run"}
+            assert cell["short"] and cell["note"]
+            if cell["state"] == "measured":
+                assert cell["experiments"], f"{row['rung']}/{cell['family']} claims a measurement"
+                for eid in cell["experiments"]:
+                    assert (row["rung"], eid) in measured_from_rows, (
+                        f"{row['rung']}/{cell['family']} names {eid}, which has no rows there")
+            else:
+                assert not cell["experiments"]
+                assert cell["link"], (
+                    f"{row['rung']}/{cell['family']} gives a reason with nothing to check it "
+                    f"against")
+                assert (ROOT / cell["link"]).is_file(), (
+                    f"{row['rung']}/{cell['family']} links a missing {cell['link']}")
+
+
+def test_an_absent_run_is_never_presented_as_a_performance_failure():
+    """Absence of a run is not a result. The wording is checked because the
+    temptation to write "LightGBM won" over this table is exactly the
+    inference the archive cannot support."""
+    d = _data()
+    banned = re.compile(
+        r"\b(?:worse|beat|beaten|outperform\w*|inferior|superior|lost to|underperform\w*|"
+        r"failed to match|weaker)\b", re.I)
+    for row in d["coverage"]["rungs"]:
+        for cell in row["cells"]:
+            for field in ("short", "note"):
+                m = banned.search(cell[field])
+                assert not m, (
+                    f"{row['rung']}/{cell['family']} explains an absent run with "
+                    f"{m.group(0)!r}, which claims a comparison that was never made")
+    # In prose, "worse" is an ordinary English word. Inside the coverage
+    # section it is a claim about a run that never happened, so that is where
+    # the rendered check applies.
+    for rel, html in _pages().items():
+        start = html.find('id="coverage"')
+        if start < 0:
+            continue
+        end = html.find("</details>", start)
+        section = html[start:end if end > 0 else len(html)]
+        for m in banned.finditer(section):
+            context = section[max(0, m.start() - 120):m.end() + 120]
+            pytest.fail(f"{rel} compares models it did not run: ...{context}...")
+
+
+def test_the_large_rung_explains_itself_with_the_memory_measurement():
+    d = _data()
+    cell = next(c for row in d["coverage"]["rungs"] if row["rung"] == "HI-Large"
+                for c in row["cells"] if c["family"] == "gbdt-canonical")
+    assert cell["state"] == "not-run"
+    assert "33.5 GB" in cell["note"] and "14.9 GB" in cell["note"]
+    assert "memory measurement" in cell["note"]
+    assert "did not complete" in cell["note"]
+
+
+def test_the_explorer_builds_its_controls_from_the_data_not_a_fixed_list():
+    _need_site()
+    js = _strip_js_comments((SITE / "js" / "explorer.js").read_text(encoding="utf-8"))
+    assert "budgets_by_metric" in js and "seeds_by_metric_budget" in js
+    # A hard-coded budget list is the defect being removed.
+    assert not re.search(r"\[\s*10\s*,\s*25\s*,\s*50\s*,", js), (
+        "the explorer carries its own budget list; it must read the experiment's")
+
+
+# -- simulator -------------------------------------------------------------
 
 SIM = """
 const {simulate, validate} = await import(%r);
@@ -451,32 +821,97 @@ def test_simulator_refuses_incoherent_inputs():
         assert entry["s"] is None, f"{entry['in']} produced a result anyway"
 
 
-# ── the page states its own boundaries ────────────────────────────────────
-
-def test_the_page_says_what_it_is_not():
+def test_simulator_recall_is_undefined_with_no_positives():
     _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    for phrase in (
-        "evaluation harness, not an AML detector",
-        "(account, calendar-day)",
-        "single-day educational illustration",
-        "not redistributed here",
-    ):
-        assert phrase in html, f"the overview no longer says {phrase!r}"
+    _node()
+    script = SIM % (str(SITE / "js" / "budget.js"), json.dumps([[1000, 0, 50], [10, 0, 10]]))
+    r = subprocess.run(["node", "--input-type=module", "-e", script],
+                       capture_output=True, text=True, cwd=SITE)
+    assert r.returncode == 0, r.stderr
+    for entry in json.loads(r.stdout):
+        s = entry["s"]
+        assert s is not None, f"{entry['in']} is a coherent day and must simulate"
+        assert s["randomRecall"] is None, (
+            f"{entry['in']}: random-ranker recall is 0/0 with no positives, not "
+            f"{s['randomRecall']}")
+        assert s["recallCeiling"] is None, (
+            f"{entry['in']}: the recall ceiling is 0/0 with no positives")
+        assert s["randomPrecision"] == 0, "precision stays defined and is zero"
+        assert s["precisionCeiling"] == 0, "the precision ceiling stays defined and is zero"
 
-    banned = ("production-ready", "cutting-edge", "revolutionary", "state-of-the-art",
-              "world-class", "game-chang")
-    low = html.lower()
-    for word in banned:
-        assert word not in low, f"marketing language on the page: {word!r}"
+
+def test_the_page_states_the_zero_positive_boundary():
+    html = _pages()["explorer/index.html"]
+    flat = re.sub(r"\s+", " ", html)
+    assert "recall and its ceiling are undefined rather than zero" in flat
+    js = (SITE / "js" / "budget.js").read_text(encoding="utf-8")
+    assert "undefined — no positive account-days" in js, (
+        "the simulator does not label the undefined case")
+    assert "v !== null && v !== undefined" in js, (
+        "an undefined quantity would still be drawn as a zero-length bar")
+
+
+# -- the page states its own boundaries ------------------------------------
+
+def test_the_home_page_says_what_the_project_is_not():
+    html = _pages()["index.html"]
+    for phrase in (
+        "What these numbers are not",
+        "one synthetic generator",
+        "account-day",
+        "no investigator feedback",
+    ):
+        assert phrase in html, f"the homepage no longer says {phrase!r}"
+    assert "It is the apparatus that" in html, (
+        "the homepage no longer says the deliverable is the measurement apparatus")
+
+    low = "".join(_pages().values()).lower()
+    for word in ("production-ready", "cutting-edge", "revolutionary",
+                 "state-of-the-art", "world-class", "game-chang"):
+        assert word not in low, f"marketing language on the site: {word!r}"
+
+
+def test_the_simulator_is_labelled_as_an_illustration_not_a_result():
+    html = _pages()["explorer/index.html"]
+    assert "A single-day illustration with made-up inputs" in html
+    assert "does not reproduce any published number" in html
 
 
 def test_full_replay_is_not_claimed_as_available():
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
+    html = _pages()["engineering/index.html"]
     assert "Full replay is not available from this repository" in html
     d = _data()
     assert d["release"]["replay"]["row_level_data_included"] is False
+    assert "row_level_data_included" in html and "false" in html
+
+
+def test_the_two_delivery_lanes_are_never_merged():
+    html = _pages()["engineering/index.html"]
+    assert 'id="lane-current"' in html and 'id="lane-azure"' in html
+    assert html.index('id="lane-current"') < html.index('id="lane-azure"')
+    flat = re.sub(r"\s+", " ", html)
+    for phrase in (
+        "was <strong>not</strong> pulled from GHCR",
+        "<strong>not</strong> an exact reconstruction",
+    ):
+        assert phrase in flat, f"the historical lane no longer says {phrase!r}"
+    assert "source</em> provenance" in html
+    assert "does not establish container reproducibility" in html
+    css = (SITE / "styles.css").read_text(encoding="utf-8")
+    assert ".lane-current" in css and ".lane-historical" in css, (
+        "the two lanes are not styled apart")
+
+
+def test_the_current_lane_names_every_control_it_claims():
+    html = _pages()["engineering/index.html"]
+    for step in ("Git commit", "Pull request", "Docker build", "Trivy and pip-audit",
+                 "CodeQL", "GHCR commit digest", "Signed release tag",
+                 "Byte-identical manifest promotion", "GitHub Release",
+                 "GitHub Pages deployment"):
+        assert step in html, f"the current lane no longer shows {step!r}"
+    for check in ("test", "static", "public-surface", "build", "analyze python",
+                  "pip-audit on the locked set", "site-build"):
+        assert f"<code>{check}</code>" in html, f"the required check {check!r} is not listed"
 
 
 def test_the_surface_checker_does_not_report_clean_over_an_unread_tree(tmp_path):
@@ -492,7 +927,6 @@ def test_the_surface_checker_does_not_report_clean_over_an_unread_tree(tmp_path)
     sys.path.insert(0, str(ROOT / "aml-platform" / "scripts"))
     import check_public_surface as cps
 
-    # A directory inside the repository that git does not track.
     untracked = ROOT / "site" / "_build"
     if not untracked.is_dir():
         r = subprocess.run([sys.executable, str(SITE / "assemble_site.py"),
@@ -508,9 +942,8 @@ def test_the_surface_checker_does_not_report_clean_over_an_unread_tree(tmp_path)
     assert problems == [], f"the assembled site is not publishable: {problems}"
 
     files = [p for p in untracked.rglob("*") if p.is_file()]
-    assert len(files) >= 10, "the assembled site is smaller than expected"
+    assert len(files) >= 13, "the assembled site is smaller than expected"
 
-    # And the inverse: a denied file placed in the upload must be caught.
     planted = untracked / "HANDOFF.md"
     try:
         planted.write_text("x")
@@ -519,7 +952,7 @@ def test_the_surface_checker_does_not_report_clean_over_an_unread_tree(tmp_path)
         planted.unlink(missing_ok=True)
 
 
-# ── the ceiling belongs to the metric being plotted ───────────────────────
+# -- the ceiling belongs to the metric being plotted -----------------------
 
 def test_recall_efficiency_rows_carry_a_ceiling_of_one():
     """Efficiency is recall over its own ceiling, so its maximum IS one.
@@ -542,18 +975,28 @@ def test_recall_rows_keep_the_artifact_backed_recall_ceiling():
     d = _data()
     rec = [r for r in d["results"] if r["metric"] == "recall"]
     assert rec, "no recall rows"
-    cache: dict[str, dict] = {}
+    cache: dict[tuple, dict] = {}
+    published = 0
     for r in rec:
-        doc = cache.setdefault(
-            r["source"], json.loads((ROOT / r["source"]).read_text(encoding="utf-8")))
-        m = doc.get("metrics", doc)
+        key = (r["source"], r["source_pointer"])
+        m = cache.setdefault(key, _metrics_of(r))
         want = m.get(f"recall_ceiling@{r['budget']}")
-        assert want is not None, f"{r['id']}: the artifact has no recall_ceiling"
+        if want is None:
+            # The HI-Small sweep artifact publishes no ceiling. Saying so is
+            # correct; inventing 1.0 would not be.
+            assert r["ceiling"] is None, (
+                f"{r['id']}: the artifact has no recall_ceiling, but the row carries "
+                f"{r['ceiling']}")
+            assert "no" in r["ceiling_kind"] and "published" in r["ceiling_kind"], (
+                f"{r['id']}: the row claims {r['ceiling_kind']!r} with nothing behind it")
+            continue
         assert abs(float(want) - r["ceiling"]) < 5e-6, (
             f"{r['id']}: ceiling {r['ceiling']} but the artifact holds {want}")
         assert r["ceiling"] != 1.0 or float(want) == 1.0, (
             f"{r['id']}: a recall ceiling of exactly 1.0 must come from the artifact")
         assert "read from the artifact" in r["ceiling_kind"]
+        published += 1
+    assert published >= 50, f"only {published} artifact-backed ceiling(s) checked"
 
 
 def test_a_metric_with_no_published_ceiling_carries_none():
@@ -565,22 +1008,38 @@ def test_a_metric_with_no_published_ceiling_carries_none():
                 f"but the row carries {r['ceiling']}")
 
 
-def test_the_chart_describes_the_ceiling_of_the_metric_it_plots():
+def test_the_chart_draws_and_names_the_ceiling_of_the_metric_it_plots():
     _need_site()
-    js = (SITE / "js" / "explorer.js").read_text(encoding="utf-8")
+    js = _strip_js_comments((SITE / "js" / "explorer.js").read_text(encoding="utf-8"))
     assert "ceiling_kind" in js, "the chart never explains which ceiling it drew"
-    assert "METRIC" in js and "PLOTTED" in js, (
-        "the chart description does not say the rule is the plotted metric's ceiling")
+    assert "first.ceiling" in js, "the chart does not read the row's own ceiling"
+    # Each metric's ceiling travels with its row, so the browser has no rule
+    # of its own to get wrong.
+    assert "recall_ceiling" not in js, (
+        "the browser is reconstructing a ceiling; that belongs to the generator")
 
 
-# ── unique, generator-emitted chart labels ────────────────────────────────
+def test_one_band_and_one_ceiling_per_selectable_view():
+    """The chart draws both once, behind every bar. That is only honest if
+    the rows in a view agree, so the generator checks it and so does this."""
+    d = _data()
+    groups: dict[tuple, set] = {}
+    for r in d["results"]:
+        key = (r["experiment"], r["metric"], r["budget"])
+        groups.setdefault(key, set()).add((r["ceiling"], r["null_low"], r["null_high"]))
+    bad = {k: v for k, v in groups.items() if len(v) > 1}
+    assert not bad, f"these views carry more than one band or ceiling: {list(bad)[:3]}"
+
+
+# -- unique, generator-emitted chart labels --------------------------------
 
 def test_every_filterable_result_set_has_a_unique_chart_label():
-    """`canonical_Medium_gbdt` and `eval_Medium/seed0` are both "GBDT, seed 0".
+    """`canonical_Medium_gbdt` and `eval_Medium/seed0` are both "GBDT, seed 0",
+    and the two stability sweeps are both "stability sweep, seed 0".
 
     They are different artifacts on different lineages, and a chart that
-    renders both as `GBDT · seed 0` makes them indistinguishable at the one
-    moment a reader is comparing them.
+    renders them identically makes them indistinguishable at the one moment a
+    reader is comparing them.
     """
     d = _data()
     by_run = {}
@@ -594,48 +1053,28 @@ def test_every_filterable_result_set_has_a_unique_chart_label():
     assert len(labels) == len(by_run) >= 10
 
 
+def test_a_label_that_would_be_ambiguous_gains_its_rung():
+    d = _data()
+    labels = {r["run"]: r["run_label"] for r in d["results"]}
+    small = [lab for run, lab in labels.items() if run.startswith("small-gbdt-")]
+    medium = [lab for run, lab in labels.items() if run.startswith("medium-gbdt-seed")]
+    assert small and medium
+    assert all(lab.startswith("HI-Small · ") for lab in small), small
+    assert all(lab.startswith("HI-Medium · ") for lab in medium), medium
+    # And a label that was never ambiguous is left alone.
+    assert labels["medium-gbdt-canonical"] == "GBDT · canonical · seed 0"
+
+
 def test_the_label_is_emitted_by_the_generator_not_inferred_in_the_browser():
     _need_site()
-    js = (SITE / "js" / "explorer.js").read_text(encoding="utf-8")
+    js = _strip_js_comments((SITE / "js" / "explorer.js").read_text(encoding="utf-8"))
     assert "r.run_label" in js, "the chart does not use the emitted label"
-    assert "canonical" not in js and "sweep" not in js, (
+    assert "canonical" not in js and "replica" not in js, (
         "the browser is inferring a lineage discriminator; that distinction "
         "belongs to the registry and must travel with the row")
 
 
-# ── the P = 0 boundary ────────────────────────────────────────────────────
-
-def test_simulator_recall_is_undefined_with_no_positives():
-    _need_site()
-    _node()
-    script = SIM % (str(SITE / "js" / "budget.js"), json.dumps([[1000, 0, 50], [10, 0, 10]]))
-    r = subprocess.run(["node", "--input-type=module", "-e", script],
-                       capture_output=True, text=True, cwd=SITE)
-    assert r.returncode == 0, r.stderr
-    for entry in json.loads(r.stdout):
-        s = entry["s"]
-        assert s is not None, f"{entry['in']} is a coherent day and must simulate"
-        assert s["randomRecall"] is None, (
-            f"{entry['in']}: random-ranker recall is 0/0 with no positives, not "
-            f"{s['randomRecall']}")
-        assert s["recallCeiling"] is None, (
-            f"{entry['in']}: the recall ceiling is 0/0 with no positives")
-        assert s["randomPrecision"] == 0, "precision stays defined and is zero"
-        assert s["precisionCeiling"] == 0, "the precision ceiling stays defined and is zero"
-
-
-def test_the_page_states_the_zero_positive_boundary():
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    assert "With no positives, recall is undefined" in html
-    js = (SITE / "js" / "budget.js").read_text(encoding="utf-8")
-    assert "undefined — no positive account-days" in js, (
-        "the simulator does not label the undefined case")
-    assert "v !== null && v !== undefined" in js, (
-        "an undefined quantity would still be drawn as a zero-length bar")
-
-
-# ── the withdrawal distinction ────────────────────────────────────────────
+# -- the withdrawal distinction --------------------------------------------
 
 def test_the_page_distinguishes_a_withdrawn_claim_from_a_permitted_level():
     """0.5706 is the worked example.
@@ -646,12 +1085,13 @@ def test_the_page_distinguishes_a_withdrawn_claim_from_a_permitted_level():
     this site" was therefore false of the site's own results table, which
     renders 0.5706 with its band.
     """
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
+    html = _pages()["engineering/index.html"]
     assert "No withdrawn claim is presented elsewhere as current" in html
-    assert "None of them appears anywhere else on this site" not in html, (
-        "the page still claims the numbers appear nowhere else, which is not true")
+    assert "different, qualified interpretation" in html
     assert "random-ranker null" in html
+    joined = "".join(_pages().values())
+    assert "None of them appears anywhere else on this site" not in joined, (
+        "the site still claims the numbers appear nowhere else, which is not true")
 
     d = _data()
     rows = [r for r in d["results"]
@@ -665,7 +1105,16 @@ def test_the_page_distinguishes_a_withdrawn_claim_from_a_permitted_level():
         "0.5706 is rendered without its band, which IS the withdrawn presentation")
 
 
-# ── the current-tree label ────────────────────────────────────────────────
+def test_the_home_story_shows_the_withdrawn_level_only_beside_its_null():
+    d = _data()
+    story = next(s for s in d["stories"] if s["id"] == "null-band")
+    for s in story["series"]:
+        assert s["null_low"] is not None and s["null_high"] is not None, (
+            f"{s['label']} at k={s['budget']} appears in the story without its band")
+    assert "registry permits only in this qualified form" in story["cannot"]
+
+
+# -- the current-tree label ------------------------------------------------
 
 def test_the_counts_are_labelled_as_the_current_tree_not_the_release():
     d = _data()
@@ -675,12 +1124,11 @@ def test_the_counts_are_labelled_as_the_current_tree_not_the_release():
     assert "v0.2.1 remains the latest signed" in rel["scope_note"]
     assert "byte-identical between v0.2.1 and current main" in rel["scope_note"]
 
-    _need_site()
-    html = (SITE / "index.html").read_text(encoding="utf-8")
-    assert "Current main-tree verification" in html
-    assert '<h3 id="release-h">Release</h3>' not in html, (
-        "the section still calls these counts a release, implying v0.2.1 "
-        "collected them")
+    html = _pages()["engineering/index.html"]
+    assert "on the current main tree" in html
+    assert "Latest signed software release" in _pages()["index.html"], (
+        "the footer no longer separates the signed release from the current tree")
+    assert "release_facts" in html
 
 
 def test_result_artifact_links_are_pinned_and_the_pin_is_byte_identical():
@@ -707,9 +1155,13 @@ def test_result_artifact_links_are_pinned_and_the_pin_is_byte_identical():
 
     js = (SITE / "js" / "util.js").read_text(encoding="utf-8")
     assert 'ref = "v0.2.1"' in js, "the link helper no longer pins to the release"
+    for rel, html in _pages().items():
+        for m in re.finditer(r'href="https://github\.com/NirmalKumar31/'
+                             r'aml-evaluation-harness/blob/([^/]+)/', html):
+            assert m.group(1) == ref, f"{rel} links an artifact at {m.group(1)}, not {ref}"
 
 
-# ── the Pages workflow ────────────────────────────────────────────────────
+# -- the Pages workflow ----------------------------------------------------
 
 def _pages_yml() -> str:
     p = ROOT / ".github" / "workflows" / "pages.yml"
@@ -765,8 +1217,57 @@ def test_a_pull_request_can_never_deploy():
     guard = deploy[:deploy.index("steps:")]
     assert "github.event_name != 'pull_request'" in guard
     assert "github.ref == 'refs/heads/main'" in guard
-    # The elevated scopes exist only in the deploy job.
     build = body[body.index("  build:"):body.index("  deploy:")]
     for scope in ("pages: write", "id-token: write"):
         assert scope not in build, f"{scope} is granted to the build job"
         assert scope in deploy, f"{scope} is missing from the deploy job"
+
+
+def test_the_workflow_builds_the_pages_before_it_checks_them():
+    """The HTML is generated. A workflow that checked the committed pages
+    without regenerating them would pass on a stale tree."""
+    body = _pages_yml()
+    assert "build_site_data.py --check" in body
+    assert "build_pages.py --check" in body
+    assert body.index("build_site_data.py --check") < body.index("assemble_site.py"), (
+        "the data is checked after the artifact is assembled from it")
+
+
+def test_the_browser_tests_are_pinned_and_do_not_download_a_browser():
+    _need_site()
+    pkg = SITE / "tests" / "package.json"
+    lock = SITE / "tests" / "package-lock.json"
+    if not pkg.is_file():
+        pytest.skip("site/tests/ not present (running inside the image)")
+    assert lock.is_file(), "the frontend test environment has no committed lockfile"
+    manifest = json.loads(pkg.read_text(encoding="utf-8"))
+    version = manifest["devDependencies"]["@playwright/test"]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", version), (
+        f"@playwright/test is not pinned to an exact version: {version}")
+    locked = json.loads(lock.read_text(encoding="utf-8"))
+    entry = locked["packages"]["node_modules/@playwright/test"]
+    assert entry["version"] == version, "the lockfile and the manifest disagree"
+    assert entry.get("integrity", "").startswith("sha512-"), "the lock has no integrity hash"
+
+    config = (SITE / "tests" / "playwright.config.js").read_text(encoding="utf-8")
+    assert 'channel: "chrome"' in config, (
+        "the tests do not use the browser already on the machine")
+    body = _pages_yml()
+    if "playwright" in body:
+        assert "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD" in body, (
+            "CI would download a browser at test time")
+
+
+def test_the_browser_tests_cover_the_behaviour_that_cannot_be_read_statically():
+    _need_site()
+    tests_dir = SITE / "tests"
+    if not tests_dir.is_dir():
+        pytest.skip("site/tests/ not present (running inside the image)")
+    body = "".join(p.read_text(encoding="utf-8") for p in sorted(tests_dir.glob("*.spec.js")))
+    for behaviour in (
+        "no console error", "skip link", "overflow", "Escape", "toBeFocused",
+        "no selectable combination returns zero rows", "reset",
+        "unique in every view", "undefined", "javaScriptEnabled: false",
+        "reducedMotion", "paginates",
+    ):
+        assert behaviour in body, f"no browser test covers {behaviour!r}"
