@@ -1,0 +1,172 @@
+{
+ "code_git_sha": "3b0ac1517b0af46f53b1755169070abb238e9c04",
+ "generator_script": "aml-platform/scripts/split_inflation_counterfactual.py",
+ "generator_sha256": "025f0010ec1c0d78eb1d937679e4e2d8c6c4523dbd17321f5151d6b4260fbec6",
+ "generator_matches_commit": true,
+ "code_tree_sha256": "d9191a0acba286bc6e3ad5edde72eb84e75f902dd6b031488379b1f5539a6d46",
+ "code_tree_matches_commit": true,
+ "generator_blob_oid": "fe0a5adcdae52d55a476f59f4fd6a0b50678d646",
+ "package_tree_oid": "f8d4a113edb4fbfa16e32a5879d7584c5b037ff9",
+ "provenance_scope": [
+  "aml-platform/src",
+  "aml-platform/scripts"
+ ],
+ "scope_clean": true,
+ "generated_at": "2026-09-19T01:19:54Z",
+ "python_version": "3.12.3",
+ "platform": "macOS-26.5.2-arm64-arm-64bit",
+ "env_lock_sha256": "d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08",
+ "status": "ok",
+ "inputs": [
+  {
+   "path": "data/gold",
+   "kind": "directory",
+   "n_files": 132,
+   "bytes": 1197355572,
+   "listing_sha256": "2c45028fbe216eda6fe9c07ae35c5042acb2fca465eb5fe67cbe02b17f3c3f5a",
+   "identity": "metadata (path and size), NOT content",
+   "identity_reason": "1197355572 bytes exceeds OUTPUT_HASH_MAX_BYTES=67108864"
+  }
+ ],
+ "parameters": {
+  "gold": "data/gold",
+  "variant": "Small",
+  "seeds": "0,1,2,3,4",
+  "draws": 400
+ },
+ "method": "counterfactual rescoring of the excluded positives from the retained-positive score distribution; no assumption about how AP responds to prevalence",
+ "estimand": "the share of the observed average-precision CONTRAST between the naive and ring-aware test sets that remains when the excluded positives are given score-typical values. Not a causal effect and not an identification of leakage.",
+ "assumptions": [
+  "Excluded and retained positives are EXCHANGEABLE UNCONDITIONALLY: the resample conditions on no covariate. This is false by construction -- a positive is excluded because its ring reuses accounts, which correlates with day, typology, ring size and account history -- so read the split as a sensitivity analysis, not a decomposition.",
+  "Average precision is computed on the same ranker and the same rows in both arms; only the excluded rows' scores are altered.",
+  "The seed range is a spread across five optimizer seeds on one dataset and one split, not an inferential interval."
+ ],
+ "does_not_establish": "that the score-distribution component is train/test contamination. It is CONSISTENT with contamination and does not identify it.",
+ "supersedes": "the AP-ratio / prevalence-ratio division in analyze_split_inflation.py, and the '97%' figure derived from it",
+ "per_seed": {
+  "0": {
+   "ap_ring_aware": 0.19803230480610795,
+   "ap_naive_actual": 0.2772983971218541,
+   "ap_naive_counterfactual_mean": 0.23470564682516268,
+   "ap_naive_counterfactual_lo": 0.22807405610507178,
+   "ap_naive_counterfactual_hi": 0.24106168436876735,
+   "total_gap": 0.07926609231574616,
+   "composition_contrast": 0.03667334201905473,
+   "score_distribution_contrast": 0.042592750296691434,
+   "prevalence_effect": 0.03667334201905473,
+   "detectability_effect": 0.042592750296691434,
+   "_deprecated_field_names": {
+    "prevalence_effect": "composition_contrast",
+    "detectability_effect": "score_distribution_contrast",
+    "why": "they name causal effects; this design measures contrasts"
+   },
+   "prevalence_share": 0.46266115747161146,
+   "detectability_share": 0.5373388425283885,
+   "n_excluded": 966,
+   "n_retained_positives": 2683,
+   "n_excluded_positives": 966,
+   "excluded_all_positive": true,
+   "draws": 400
+  },
+  "1": {
+   "ap_ring_aware": 0.19623506959858636,
+   "ap_naive_actual": 0.26859810766936687,
+   "ap_naive_counterfactual_mean": 0.2323150178254455,
+   "ap_naive_counterfactual_lo": 0.22547419614153133,
+   "ap_naive_counterfactual_hi": 0.23899577477397554,
+   "total_gap": 0.07236303807078051,
+   "composition_contrast": 0.03607994822685914,
+   "score_distribution_contrast": 0.03628308984392137,
+   "prevalence_effect": 0.03607994822685914,
+   "detectability_effect": 0.03628308984392137,
+   "_deprecated_field_names": {
+    "prevalence_effect": "composition_contrast",
+    "detectability_effect": "score_distribution_contrast",
+    "why": "they name causal effects; this design measures contrasts"
+   },
+   "prevalence_share": 0.4985963716941823,
+   "detectability_share": 0.5014036283058178,
+   "n_excluded": 966,
+   "n_retained_positives": 2683,
+   "n_excluded_positives": 966,
+   "excluded_all_positive": true,
+   "draws": 400
+  },
+  "2": {
+   "ap_ring_aware": 0.18182772183030244,
+   "ap_naive_actual": 0.257373762259419,
+   "ap_naive_counterfactual_mean": 0.2154636704339901,
+   "ap_naive_counterfactual_lo": 0.20895524536956891,
+   "ap_naive_counterfactual_hi": 0.22249350851862473,
+   "total_gap": 0.07554604042911656,
+   "composition_contrast": 0.033635948603687654,
+   "score_distribution_contrast": 0.0419100918254289,
+   "prevalence_effect": 0.033635948603687654,
+   "detectability_effect": 0.0419100918254289,
+   "_deprecated_field_names": {
+    "prevalence_effect": "composition_contrast",
+    "detectability_effect": "score_distribution_contrast",
+    "why": "they name causal effects; this design measures contrasts"
+   },
+   "prevalence_share": 0.4452377439324254,
+   "detectability_share": 0.5547622560675746,
+   "n_excluded": 966,
+   "n_retained_positives": 2683,
+   "n_excluded_positives": 966,
+   "excluded_all_positive": true,
+   "draws": 400
+  },
+  "3": {
+   "ap_ring_aware": 0.20265264301492933,
+   "ap_naive_actual": 0.27861957015929745,
+   "ap_naive_counterfactual_mean": 0.23915256140787844,
+   "ap_naive_counterfactual_lo": 0.2321646932750365,
+   "ap_naive_counterfactual_hi": 0.24576901000947662,
+   "total_gap": 0.07596692714436812,
+   "composition_contrast": 0.03649991839294911,
+   "score_distribution_contrast": 0.03946700875141901,
+   "prevalence_effect": 0.03649991839294911,
+   "detectability_effect": 0.03946700875141901,
+   "_deprecated_field_names": {
+    "prevalence_effect": "composition_contrast",
+    "detectability_effect": "score_distribution_contrast",
+    "why": "they name causal effects; this design measures contrasts"
+   },
+   "prevalence_share": 0.48047117035001813,
+   "detectability_share": 0.5195288296499819,
+   "n_excluded": 966,
+   "n_retained_positives": 2683,
+   "n_excluded_positives": 966,
+   "excluded_all_positive": true,
+   "draws": 400
+  },
+  "4": {
+   "ap_ring_aware": 0.1808375683654266,
+   "ap_naive_actual": 0.2603874911774934,
+   "ap_naive_counterfactual_mean": 0.21588816429037344,
+   "ap_naive_counterfactual_lo": 0.2093588170648195,
+   "ap_naive_counterfactual_hi": 0.22275258200496442,
+   "total_gap": 0.07954992281206677,
+   "composition_contrast": 0.03505059592494683,
+   "score_distribution_contrast": 0.04449932688711994,
+   "prevalence_effect": 0.03505059592494683,
+   "detectability_effect": 0.04449932688711994,
+   "_deprecated_field_names": {
+    "prevalence_effect": "composition_contrast",
+    "detectability_effect": "score_distribution_contrast",
+    "why": "they name causal effects; this design measures contrasts"
+   },
+   "prevalence_share": 0.4406113128199048,
+   "detectability_share": 0.5593886871800953,
+   "n_excluded": 966,
+   "n_retained_positives": 2683,
+   "n_excluded_positives": 966,
+   "excluded_all_positive": true,
+   "draws": 400
+  }
+ },
+ "prevalence_share_mean": 0.4655155512536284,
+ "prevalence_share_min": 0.4406113128199048,
+ "prevalence_share_max": 0.4985963716941823,
+ "detectability_share_mean": 0.5344844487463716
+}

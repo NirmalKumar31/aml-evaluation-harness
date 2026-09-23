@@ -1,0 +1,40 @@
+// Markdown rules, chosen deliberately rather than defaulted.
+//
+// A default run over this repository returns thousands of findings, most of
+// them long lines. Applying the default line-length rule would wrap the
+// results tables and reference links and make the documents worse, so the
+// question worth answering is not "how many problems" but "which rules apply
+// here".
+//
+// What is enforced: heading structure, fenced-code languages, list
+// consistency, trailing whitespace, and link/anchor shape. What is not: line
+// length (tables and URLs), and inline HTML (the <!-- derived --> provenance
+// markers are load-bearing).
+{
+  "config": {
+    "default": true,
+    "MD013": false,          // line length -- tables and URLs, see above
+    "MD033": false,          // inline HTML -- the provenance markers
+    "MD024": { "siblings_only": true },  // repeated headings in sibling sections
+    "MD029": { "style": "ordered" },
+    "MD041": false,          // first line need not be a top-level heading
+    "MD034": false,          // bare URLs appear inside fenced output samples
+    // Consecutive callout blockquotes separated by a blank line. The rule
+    // exists because the separation is ambiguous to a parser; here they are
+    // deliberate, differently-titled callouts, and merging them would change
+    // the meaning to satisfy a linter.
+    "MD028": false
+  },
+  "globs": [
+    "*.md",
+    ".github/**/*.md",
+    "aml-platform/*.md",
+    "aml-platform/docs/**/*.md",
+    "aml-platform/infra/*.md",
+    "aml-platform/paper/**/*.md"
+  ],
+  "ignores": [
+    "**/node_modules/**",
+    "**/.venv/**"
+  ]
+}

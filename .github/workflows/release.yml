@@ -1,0 +1,168 @@
+# Strict release verification, at the only moment it is knowable: the tag.
+#
+# WHY THIS EXISTS
+#     Demanding that the newest git tag equal the version in `pyproject.toml`
+#     and `CITATION.cff` makes the release process circular: branch protection
+#     requires the tests to pass before the commit can enter `main`, the tests
+#     require the tag, and the tag is supposed to point at the commit on
+#     `main`. Nobody should have to discover that ordering by hitting it.
+#
+#     So the tests were relaxed in one direction only. On a branch or a pull
+#     request a tree may declare a version AHEAD of the newest tag -- that is a
+#     release candidate, and it is the normal state of `main` between a version
+#     bump and a tag. The tree may never declare a version BEHIND the newest
+#     tag, because then a published release exists that the tree does not
+#     describe.
+#
+#     Exact agreement is still required. It is required here, where the tag
+#     name is a known fact rather than something the test has to guess.
+#     `AML_RELEASE_TAG` switches the same assertions from directional to
+#     strict, so there is one set of rules and not two.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "tag to verify, e.g. v0.1.5"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # FULL HISTORY AND TAGS. The checks below read every tag's own
+      # `CITATION.cff`, which a shallow clone does not contain -- and a test
+      # that cannot see the tags would pass by finding nothing to compare.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        working-directory: aml-platform
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Resolve the tag under verification
+        env:
+          DISPATCH_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          TAG="${DISPATCH_TAG:-$REF_NAME}"
+          case "$TAG" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::$TAG is not a vX.Y.Z tag"; exit 1 ;;
+          esac
+          echo "AML_RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "verifying $TAG"
+
+      # STRICT MODE. The same two tests that run on every branch, with
+      # AML_RELEASE_TAG set so their directional comparisons become equalities.
+      - name: Version, citation and tag must agree exactly
+        working-directory: aml-platform
+        run: |
+          set -euo pipefail
+          echo "AML_RELEASE_TAG=$AML_RELEASE_TAG"
+          pytest -q \
+            tests/repro/test_release_metadata.py::test_release_metadata_does_not_claim_a_release_that_does_not_exist \
+            tests/repro/test_release_metadata.py::test_every_file_that_names_a_version_names_the_same_one
+
+      # The tag is immutable, so what it CONTAINS is what a citation tool
+      # reads. v0.1.0's tag carried a CITATION.cff with no version at all,
+      # because the stamping commit landed after the tag was cut.
+      - name: The tag's own CITATION.cff must name this release
+        run: |
+          set -euo pipefail
+          WANT="${AML_RELEASE_TAG#v}"
+          GOT=$(git show "$AML_RELEASE_TAG:CITATION.cff" \
+                | sed -n 's/^version:[[:space:]]*["'\'']\?\([0-9][^"'\'' ]*\).*/\1/p' \
+                | head -1)
+          DATE=$(git show "$AML_RELEASE_TAG:CITATION.cff" \
+                 | sed -n 's/^date-released:[[:space:]]*["'\'']\?\([0-9-]*\).*/\1/p' \
+                 | head -1)
+          echo "tag contains version=${GOT:-<none>} date-released=${DATE:-<none>}"
+          [ "$GOT" = "$WANT" ] || {
+            echo "::error::tag $AML_RELEASE_TAG contains CITATION.cff version"
+            echo "::error::'${GOT:-<none>}', expected '$WANT'"; exit 1; }
+          [ -n "$DATE" ] || {
+            echo "::error::tag $AML_RELEASE_TAG has no date-released"; exit 1; }
+
+          # DATE-RELEASED IS THE PUBLICATION DATE, not the CHANGELOG's "work
+          # landed" heading. They are different facts, and the publication
+          # date can never precede the work.
+          LANDED=$(git show "$AML_RELEASE_TAG:CHANGELOG.md" \
+                   | sed -n "s/^## v${WANT}[[:space:]]*—[[:space:]]*\([0-9-]*\).*/\1/p" \
+                   | head -1)
+          echo "changelog says the work landed $LANDED"
+          if [ -n "$LANDED" ] && [ "$DATE" \< "$LANDED" ]; then
+            echo "::error::date-released $DATE precedes the CHANGELOG date"
+            echo "::error::$LANDED: a release cannot be published before its"
+            echo "::error::work landed."; exit 1
+          fi
+
+      - name: The tag must be signed and annotated
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # RE-FETCH THE TAG OBJECT FIRST. `actions/checkout` leaves
+          # `refs/tags/<tag>` pointing at the COMMIT, not at the annotated tag
+          # object, so `git cat-file -t v0.1.5` answered `commit` and the first
+          # real run of this workflow failed on a tag that was correctly signed
+          # and annotated. The tag was fine; the check was reading a ref
+          # checkout had rewritten.
+          git fetch --force origin \
+            "refs/tags/$AML_RELEASE_TAG:refs/tags/$AML_RELEASE_TAG"
+
+          TYPE=$(git cat-file -t "refs/tags/$AML_RELEASE_TAG")
+          [ "$TYPE" = "tag" ] || {
+            echo "::error::$AML_RELEASE_TAG is a $TYPE, not an annotated tag"
+            exit 1; }
+          git cat-file -p "refs/tags/$AML_RELEASE_TAG" \
+            | grep -qE "BEGIN (SSH|PGP) SIGNATURE" || {
+            echo "::error::$AML_RELEASE_TAG carries no signature block"; exit 1; }
+          echo "$AML_RELEASE_TAG is an annotated tag carrying a signature block"
+
+          # AND ASK GITHUB, which holds the signing key. The runner has no
+          # allowed-signers file, so it can confirm a signature EXISTS and not
+          # that it is valid. `verified: true` is the claim a reader sees, so
+          # it is the claim this gate makes.
+          OBJ=$(gh api "/repos/${{ github.repository }}/git/refs/tags/$AML_RELEASE_TAG" \
+                  --jq '.object.sha')
+          VERIFIED=$(gh api "/repos/${{ github.repository }}/git/tags/$OBJ" \
+                       --jq '.verification.verified')
+          REASON=$(gh api "/repos/${{ github.repository }}/git/tags/$OBJ" \
+                     --jq '.verification.reason')
+          echo "GitHub reports verified=$VERIFIED reason=$REASON"
+          # An `if`, not `A && B || C`. shellcheck SC2015 is right that the
+          # chain is not if-then-else, and this is a security assertion -- the
+          # shape that "usually works" is not the shape it should have.
+          if [ "$VERIFIED" != "true" ] || [ "$REASON" != "valid" ]; then
+            echo "::error::GitHub reports verified=$VERIFIED reason=$REASON for"
+            echo "::error::$AML_RELEASE_TAG; a release tag must verify."
+            exit 1
+          fi
+
+      - name: Published numbers and counts still gate in this tree
+        working-directory: aml-platform
+        run: |
+          set -euo pipefail
+          python scripts/make_tables.py --check --gate
+          python scripts/release_facts.py --check --gate

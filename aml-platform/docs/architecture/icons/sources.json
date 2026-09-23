@@ -1,0 +1,66 @@
+{
+  "python": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/python/python-original.svg",
+    "sha256": "71493b4a732f0532b3a03a7a95da3ee11a65766367c8303b901ffbe7bf91a3a2"
+  },
+  "git": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/git/git-original.svg",
+    "sha256": "717a57ea97bf7e86de721dab3e68afac66332a10676d5c9abce4ae6a5a9c9983"
+  },
+  "github": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/github/github-original.svg",
+    "sha256": "45262793de6292206a895ed63593cdb1eaed82074173f7f4b5bdb3e427ca805a"
+  },
+  "actions": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/githubactions/githubactions-original.svg",
+    "sha256": "3a2524052ccf301d1a239f20cfef98d655e060c51cc29c5e94c867913899a47e"
+  },
+  "docker": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/docker/docker-original.svg",
+    "sha256": "3fd830ea69431ed7a0b8d068cd5b34ad3f00a1a78195d50f13ff56713f2462e1"
+  },
+  "azure": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/azure/azure-original.svg",
+    "sha256": "7923db83e3f9755bd412241a683fa996fb7a9d0259b5084de449e6be92f7ca20"
+  },
+  "sklearn": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/scikitlearn/scikitlearn-original.svg",
+    "sha256": "d60362a1c43c5571876ebaab923f7783f6f7d3bd64bd78cca765a451dc5e92e2"
+  },
+  "kaggle": {
+    "source": "https://raw.githubusercontent.com/devicons/devicon/7330accdbc47e2dc0c19789a48533c4a3c50fe58/icons/kaggle/kaggle-original.svg",
+    "sha256": "ec56e8894a290b84606421f02bce598957549d87e7c5203156a2445b0c5dacb6"
+  },
+  "trivy": {
+    "source": "https://raw.githubusercontent.com/simple-icons/simple-icons/b86d5c9a0bdd4f3f5c30898a63654dd32f39fd76/icons/trivy.svg",
+    "sha256": "bef45d7760bb16e6d3379921220cd31753e8e3fbb6523066b166fcc9c8c8456d"
+  },
+  "lightgbm": {
+    "source": "https://raw.githubusercontent.com/lightgbm-org/LightGBM/main/docs/logo/LightGBM-logo-hex.svg",
+    "sha256": "261878a35c75ea250bd5d836a9d6eb2b7b83e102365c9bd4ef502a5edd233b08"
+  },
+  "duckdb": {
+    "source": "https://duckdb.org/design/duckdb.zip#duckdb/DuckDB_icon-lightmode.svg",
+    "sha256": "dc75e0d2055e5f42560f4892efd4ce3219241ab801ab88c3dbc2c6b681af0782"
+  },
+  "azure-vm": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip#Azure_Public_Service_Icons/Icons/compute/10021-icon-service-Virtual-Machine.svg",
+    "sha256": "092d18ffadec9ec0e5af129186dc7bc2a80544011e55f965604ed4b13873e0fc"
+  },
+  "azure-storage": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip#Azure_Public_Service_Icons/Icons/storage/10086-icon-service-Storage-Accounts.svg",
+    "sha256": "7190d3bb14ce30ce74bd0af873915830fe821e8c5f6ef6f3149e6f7cfb2aa4f7"
+  },
+  "azure-identity": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip#Azure_Public_Service_Icons/Icons/identity/10227-icon-service-Managed-Identities.svg",
+    "sha256": "fa2e0fb863e81d7923b5708bed196e19310867a194d23bea96dddc42e302693c"
+  },
+  "azure-disk": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip#Azure_Public_Service_Icons/Icons/compute/10032-icon-service-Disks.svg",
+    "sha256": "7ab5cc684d995ff898448b32424a55bbb5c6669a83a0bb7c547047fec21f292f"
+  },
+  "azure-network": {
+    "source": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip#Azure_Public_Service_Icons/Icons/networking/10061-icon-service-Virtual-Networks.svg",
+    "sha256": "64a5e75ecef2f9f69067faa2eb131266cb8f2858706f8ab74bfea5ad0d98b14d"
+  }
+}

@@ -1,0 +1,35 @@
+{
+ "code_git_sha": "0d259d35c7a3e89e12949e1238c2c5bf14c190a3",
+ "generator_script": "aml-platform/scripts/make_figures.py",
+ "generator_sha256": "cc777c6f31f48fd4868d859d5f1e04c00f49dd22361aa3fe98db6851bdfc3637",
+ "generator_matches_commit": true,
+ "code_tree_sha256": "b8697008265df579f09c6e91d4bd5ad8288265da14768e79a0ee9c80cccfb369",
+ "code_tree_matches_commit": true,
+ "generator_blob_oid": "cf6da1d099034ac6cd70afdc5f1885731056f83c",
+ "package_tree_oid": "273e03c618b9ebc75b7684e0e5b864afc7e21697",
+ "provenance_scope": [
+  "aml-platform/src",
+  "aml-platform/scripts"
+ ],
+ "scope_clean": true,
+ "generated_at": "2026-09-18T20:48:32Z",
+ "python_version": "3.12.3",
+ "platform": "macOS-26.5.2-arm64-arm-64bit",
+ "env_lock_sha256": "d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08",
+ "status": "ok",
+ "inputs": [
+  {
+   "path": "results_archive/gold/eval_Medium",
+   "kind": "directory",
+   "n_files": 20,
+   "bytes": 66616,
+   "listing_sha256": "4a1270bf9297564ca262295bc14cd47b93dccdf6c824994d33b4fd92804a2bdb",
+   "content_sha256": "ad14d36233e0ad3ed2295ea0b8d76b79166671861ad640e98307ee6a84c0184c",
+   "identity": "content (every file hashed)"
+  }
+ ],
+ "parameters": {
+  "metric": "precision@50",
+  "budget": 50
+ }
+}

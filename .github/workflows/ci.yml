@@ -1,0 +1,166 @@
+# The cheap gate. Runs on every push, finishes in about two minutes, and is
+# the only thing standing between a broken commit and a paid cloud run.
+name: ci
+
+on:
+  push:
+    # NO `stage-*` HERE. A release candidate lives on a stage-* branch with an
+    # open pull request, so listing it under `push` ran this workflow twice for
+    # the same commit -- once for the push and once for the pull request --
+    # doubling the runs and the failure emails. The pull_request trigger below
+    # is what gates a candidate; push covers the default branch.
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: aml-platform
+
+# Least privilege at the TOP level, so a job that forgets to declare its own
+# does not silently inherit write scope. The image job widens this to
+# `packages: write` for exactly the step that needs it.
+permissions:
+  contents: read
+
+# A superseded run is wasted money and a misleading green tick. Cancel it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # FULL HISTORY. The derived-artifact provenance test resolves
+          # `git cat-file -e <recorded-sha>:<generator>`, and a shallow
+          # clone has neither the commit nor the blob -- so the check
+          # could not run at all, which is worse than failing.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12.14'  # pinned to match the container base image
+          cache: pip
+
+      # requirements.lock is what the CONTAINER installs. Installing the same
+      # file here means CI and the image cannot drift; pyproject's ranges are a
+      # compatibility claim, the lock is what was actually verified.
+      # Every dependency from a LOCK, including the test runner.
+      #
+      # Installing `-e ".[dev,azure]"` would resolve pytest and ruff from
+      # pyproject's RANGES, so the suite gating a paid cloud run would be
+      # executed by an unpinned test runner and a ruff release could turn CI
+      # red on an untouched commit. The azure extras are already in
+      # requirements.lock, so the package installs with --no-deps and cannot
+      # re-open a range.
+      - name: Install locked dependencies
+        run: |
+          python -m pip install -q -U pip
+          pip install -q -r requirements.lock
+          pip install -q -r requirements-dev.lock
+          pip install -q --no-deps -e .
+
+      # scripts/ too. They generate every derived artifact and gate the
+      # release, so leaving them outside the linter would hold the tooling
+      # that CHECKS the pipeline to a lower standard than the pipeline.
+      - name: Lint
+        run: ruff check src/ tests/ scripts/
+
+      - name: Tests
+        run: pytest -q
+
+      # The real pipeline, end to end, on a generated corpus. Unit tests can
+      # all pass while the stages fail to compose -- this is what catches that,
+      # and it needs no dataset.
+      - name: Pipeline smoke test
+        run: python -m aml.cli demo --dest "${RUNNER_TEMP}/demo"
+
+      # Storage-abstraction gate: every stage through file:// URIs, asserted
+      # identical to the local-path run. Two production defects were found by
+      # this test on its first execution; it costs one second.
+      - name: Cloud storage compatibility gate
+        run: pytest tests/cloud/ -q
+
+      # Every published figure must exist in an artifact. The README table
+      # written specifically to fix a unit-mixing problem contained four
+      # numerical errors, one of them BACK-SOLVED from two neighbouring cells --
+      # which made internal consistency necessary by construction, so no
+      # cross-check on that table could ever have failed. Proofreading does not
+      # catch that. This does.
+      - name: Published numbers must trace to an artifact
+        run: |
+          # EVERY current document that carries a number, from ONE
+          # definition. This step, the Makefile and release_facts.py would
+          # otherwise each carry a copy of the inventory, and copies diverge:
+          # `make_tables.PUBLICATION_CORE` plus `paper/RESULTS_*.md` is the
+          # only definition, and `--gate` is how a caller asks for it.
+          python scripts/make_tables.py --check --gate
+
+      # Counts in prose are generated and then checked, for the same reason
+      # metric values are: five separate documents had five different test
+      # counts, none of them current.
+      # THE COMMITTED ARTIFACT, not a fresh one.
+      #
+      # Regenerating release_facts.json in the CI checkout and checking the
+      # documents against that fresh copy would let the tracked file be
+      # arbitrarily stale while the job stayed green. `--verify-artifact`
+      # recollects and fails if the COMMITTED file disagrees on any field that
+      # does not depend on where you are standing.
+      - name: The committed release facts must not be stale
+        run: python scripts/release_facts.py --verify-artifact
+
+      - name: Published counts must match the artifacts
+        # `--gate` rather than a list. This step and the Makefile each carried
+        # their own copy of the inventory and both had lost the same document:
+        # aml-platform/README.md publishes the 526,355-row replay inventory AND
+        # is what pyproject points `readme` at, so it becomes the package-index
+        # description -- the text that reaches a reader who never sees this
+        # repository -- and nothing checked it.
+        #
+        # DATA_LICENSE.md exists twice, at the root and inside the package (the
+        # wheel ships the second), and a test asserts they are byte-identical;
+        # `COUNT_DOCS` holds both so neither can drift alone.
+        run: python scripts/release_facts.py --check --gate
+
+      # THESE TWO RAN NOWHERE. `check_units.py` and `replay-demo` were in
+      # `make release-check` and in no workflow, so a unit-mismatch or a broken
+      # replay bundle could ship with all three workflows green. The gap ran in
+      # both directions: markdownlint was in CI and not in release-check, and
+      # these were in release-check and not in CI.
+      - name: Budget metrics agree on their alert unit
+        run: python scripts/check_units.py
+
+      - name: Replay bundles recompute the published metrics with no dataset
+        # PY, not PYTHON. `replay-demo` expands $(PY) (Makefile:6 =
+        # .venv/bin/python); PYTHON is a different variable used only by the
+        # interpreter guard. `PYTHON=python` overrode nothing, so CI ran
+        # .venv/bin/python -- which does not exist here -- and died with 127.
+        run: make replay-demo PY=python
+
+      - name: Local Markdown links and table structure
+        run: python scripts/check_links.py ..
+
+      # A figure is a published number in a different shape. This one is SVG
+      # so the values are readable text rather than pixels, and --check fails
+      # if the committed chart stops agreeing with the artifacts it was drawn
+      # from.
+      - name: Published figures must match the archive
+        run: python scripts/make_figures.py --check
+
+      # THE DOCUMENTED CLEAN-CLONE COMMAND, in CI.
+      #
+      # `make setup && make package-smoke` is what CONTRIBUTING and the release
+      # checklist tell a reader to run, and in a clean clone the second command
+      # failed with "No module named build" -- neither dev lock contained it.
+      # Nothing caught that because nothing ran it. This builds the sdist and
+      # wheel from a locked toolchain, validates the metadata with twine, and
+      # installs the wheel into an empty interpreter to run the CLI and the
+      # no-data demo through it.
+      - name: The wheel builds, twine accepts it, and the demo runs through it
+        # setup-python put 3.12.14 on PATH as `python`, and check_python
+        # verifies the minor version before creating any venv.
+        run: make package-smoke PYTHON=python

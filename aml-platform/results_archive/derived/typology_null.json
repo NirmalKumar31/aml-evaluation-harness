@@ -1,0 +1,446 @@
+{
+ "ring_budget": 50,
+ "ring_budget_source": "stability.json predates the `_metric` label; 50 is what `_typology_summary` used",
+ "draws": 20000,
+ "spread_Medium": {
+  "observed_spread": 3.04745319982586,
+  "pooled_rate": 0.3724007561436673,
+  "null_spread_median": 1.5789473684210527,
+  "null_spread_p95": 2.077067669172932,
+  "p_value": 0.0007999600019999,
+  "n_rings": {
+   "BIPARTITE": 61,
+   "CYCLE": 78,
+   "FAN-IN": 74,
+   "FAN-OUT": 65,
+   "GATHER-SCATTER": 60,
+   "RANDOM": 76,
+   "SCATTER-GATHER": 60,
+   "STACK": 55
+  }
+ },
+ "spread_Small": {
+  "observed_spread": 2.2918041804180422,
+  "pooled_rate": 0.5673758865248227,
+  "null_spread_median": 1.8333333333333333,
+  "null_spread_p95": 2.823529411764706,
+  "p_value": 0.16964151792410379,
+  "n_rings": {
+   "BIPARTITE": 14,
+   "CYCLE": 22,
+   "FAN-IN": 15,
+   "FAN-OUT": 17,
+   "GATHER-SCATTER": 18,
+   "RANDOM": 22,
+   "SCATTER-GATHER": 16,
+   "STACK": 17
+  }
+ },
+ "replication_power": {
+  "observed_rho": 0.28571428571428575,
+  "n_typologies": 8,
+  "median_rho_if_ordering_replicated_perfectly": 0.7619047619047621,
+  "fraction_at_or_below_observed": 0.01375,
+  "rho_2p5": 0.34701220938936683,
+  "rho_97p5": 0.9761904761904763
+ },
+ "cliff_exposure_Medium": {
+  "BIPARTITE": {
+   "n_rings": 61,
+   "n_after_cliff": 13,
+   "share_after_cliff": 0.2131
+  },
+  "CYCLE": {
+   "n_rings": 78,
+   "n_after_cliff": 60,
+   "share_after_cliff": 0.7692
+  },
+  "FAN-IN": {
+   "n_rings": 74,
+   "n_after_cliff": 52,
+   "share_after_cliff": 0.7027
+  },
+  "FAN-OUT": {
+   "n_rings": 65,
+   "n_after_cliff": 43,
+   "share_after_cliff": 0.6615
+  },
+  "GATHER-SCATTER": {
+   "n_rings": 60,
+   "n_after_cliff": 60,
+   "share_after_cliff": 1.0
+  },
+  "RANDOM": {
+   "n_rings": 76,
+   "n_after_cliff": 39,
+   "share_after_cliff": 0.5132
+  },
+  "SCATTER-GATHER": {
+   "n_rings": 60,
+   "n_after_cliff": 43,
+   "share_after_cliff": 0.7167
+  },
+  "STACK": {
+   "n_rings": 55,
+   "n_after_cliff": 41,
+   "share_after_cliff": 0.7455
+  }
+ },
+ "measured_segment_rates_Medium": {
+  "budget": 50,
+  "n_rings": 529,
+  "pooled_rate": 0.36862,
+  "tail_rate_measured": 0.41595,
+  "head_rate_measured": 0.27528,
+  "n_after": 351,
+  "n_before": 178,
+  "observed_spread": 3.46875,
+  "per_typology": {
+   "BIPARTITE": {
+    "n_rings": 61,
+    "n_after_cliff": 13,
+    "rate": 0.22951
+   },
+   "CYCLE": {
+    "n_rings": 78,
+    "n_after_cliff": 60,
+    "rate": 0.38462
+   },
+   "FAN-IN": {
+    "n_rings": 74,
+    "n_after_cliff": 52,
+    "rate": 0.21622
+   },
+   "FAN-OUT": {
+    "n_rings": 65,
+    "n_after_cliff": 43,
+    "rate": 0.33846
+   },
+   "GATHER-SCATTER": {
+    "n_rings": 60,
+    "n_after_cliff": 60,
+    "rate": 0.75
+   },
+   "RANDOM": {
+    "n_rings": 76,
+    "n_after_cliff": 39,
+    "rate": 0.28947
+   },
+   "SCATTER-GATHER": {
+    "n_rings": 60,
+    "n_after_cliff": 43,
+    "rate": 0.41667
+   },
+   "STACK": {
+    "n_rings": 55,
+    "n_after_cliff": 41,
+    "rate": 0.38182
+   }
+  }
+ },
+ "permutation_spread_Medium": {
+  "estimand": "ring_coverage_concentration per typology: the share of a typology's rings the ranker covers, divided by what a WITHIN-DAY permutation of ring-transaction scores gives it. Below 1 means the alerts concentrate into fewer distinct rings than a ring-blind reassignment of the same scores -- it is NOT a statement that the model is worse than chance at finding rings, and metrics.py (ring_coverage_concentration) renames the metric to stop that reading.",
+  "budget": 50,
+  "draws": 50000,
+  "observed_spread": 3.46875,
+  "null_spread_median": 3.4131,
+  "null_spread_p95": 4.56,
+  "p_value": 0.45661,
+  "observed_percentile": 54.3,
+  "per_typology_concentration": {
+   "BIPARTITE": {
+    "observed": 0.22951,
+    "null": 0.27408,
+    "concentration": 0.8374,
+    "ci95": [
+     0.6087,
+     1.2727
+    ],
+    "p_two_sided": 0.40903,
+    "n_draws_at_or_beyond": 20451,
+    "p_mc_se": 0.0022,
+    "ci95_excludes_1": false,
+    "p_holm": 1.0
+   },
+   "CYCLE": {
+    "observed": 0.38462,
+    "null": 0.30553,
+    "concentration": 1.2589,
+    "ci95": [
+     0.9677,
+     1.7647
+    ],
+    "p_two_sided": 0.1029,
+    "n_draws_at_or_beyond": 5144,
+    "p_mc_se": 0.00136,
+    "ci95_excludes_1": false,
+    "p_holm": 0.56543
+   },
+   "FAN-IN": {
+    "observed": 0.21622,
+    "null": 0.36403,
+    "concentration": 0.594,
+    "ci95": [
+     0.4706,
+     0.8
+    ],
+    "p_two_sided": 0.00506,
+    "n_draws_at_or_beyond": 252,
+    "p_mc_se": 0.00032,
+    "ci95_excludes_1": true,
+    "p_holm": 0.04048
+   },
+   "FAN-OUT": {
+    "observed": 0.33846,
+    "null": 0.32295,
+    "concentration": 1.048,
+    "ci95": [
+     0.7857,
+     1.5714
+    ],
+    "p_two_sided": 0.771,
+    "n_draws_at_or_beyond": 38550,
+    "p_mc_se": 0.00188,
+    "ci95_excludes_1": false,
+    "p_holm": 1.0
+   },
+   "GATHER-SCATTER": {
+    "observed": 0.75,
+    "null": 0.82141,
+    "concentration": 0.9131,
+    "ci95": [
+     0.8333,
+     1.0
+    ],
+    "p_two_sided": 0.09424,
+    "n_draws_at_or_beyond": 4711,
+    "p_mc_se": 0.00131,
+    "ci95_excludes_1": false,
+    "p_holm": 0.56543
+   },
+   "RANDOM": {
+    "observed": 0.28947,
+    "null": 0.27937,
+    "concentration": 1.0362,
+    "ci95": [
+     0.7857,
+     1.4667
+    ],
+    "p_two_sided": 0.88322,
+    "n_draws_at_or_beyond": 44161,
+    "p_mc_se": 0.00144,
+    "ci95_excludes_1": false,
+    "p_holm": 1.0
+   },
+   "SCATTER-GATHER": {
+    "observed": 0.41667,
+    "null": 0.54963,
+    "concentration": 0.7581,
+    "ci95": [
+     0.641,
+     0.9259
+    ],
+    "p_two_sided": 0.02162,
+    "n_draws_at_or_beyond": 1080,
+    "p_mc_se": 0.00065,
+    "ci95_excludes_1": true,
+    "p_holm": 0.15134
+   },
+   "STACK": {
+    "observed": 0.38182,
+    "null": 0.43548,
+    "concentration": 0.8768,
+    "ci95": [
+     0.7,
+     1.1667
+    ],
+    "p_two_sided": 0.44503,
+    "n_draws_at_or_beyond": 22251,
+    "p_mc_se": 0.00222,
+    "ci95_excludes_1": false,
+    "p_holm": 1.0
+   }
+  },
+  "n_significant_after_holm_at_0.05": 1,
+  "smallest_p_holm": 0.04048,
+  "smallest_p_holm_attainable_at_this_draw_count": 0.00016,
+  "smallest_p_holm_mc_ci95": [
+   0.0355,
+   0.04545
+  ],
+  "holm_conclusion_is_resolved": true,
+  "draws_needed_to_resolve_at_0.05": null,
+  "holm_family": {
+   "n_tests": 8,
+   "definition": "the per-typology ring_coverage_concentration tests in this block, one per typology present",
+   "members": [
+    "FAN-IN",
+    "SCATTER-GATHER",
+    "GATHER-SCATTER",
+    "CYCLE",
+    "BIPARTITE",
+    "STACK",
+    "FAN-OUT",
+    "RANDOM"
+   ],
+   "note": "other p-values in this file (the spread null, exposure_vs_detection) are separate pre-specified questions and are NOT in this family"
+  },
+  "basis": {
+   "this_null": {
+    "model": "single fit, replay bundle, `models` lineage",
+    "metric": "ring_recall@50",
+    "ring_membership": "current many-to-many join",
+    "observed_spread": 3.46875
+   },
+   "withdrawn_claim": {
+    "model": "eight-seed score-averaged ensemble",
+    "source": "gold/typology_Medium/stability.json",
+    "metric": "ring_recall@50",
+    "ring_membership": "predates the many-to-many correction",
+    "observed_spread": 3.04745
+   },
+   "like_for_like_test_not_run": "an ensemble replay under current HEAD, asserting that the null's per-typology observed rates equal the source artifact's. It needs the HI-Medium feature table rebuilt (hours, and more free disk than this machine has), so the 3.05x figure is withdrawn because its H0 is false -- not because a valid null was computed for it"
+  },
+  "interpretation": "`concentration` is `ring_coverage_concentration` computed per typology: observed ring recall over a within-day permutation null that conditions on the model's own per-day score multiset. Below 1 means the alerts concentrate into FEWER DISTINCT RINGS than a ring-blind reassignment of the same scores -- NOT that the model is worse than chance at finding rings, and not that the typology is harder to detect (see metrics.py (ring_coverage_concentration)). No per-typology ORDERING is established: 6 of 8 intervals span 1. 1 deviation (FAN-IN) has an adjusted p-value of 0.04048 with a Monte-Carlo interval of [0.03550376248993439, 0.04545461834244896], which clears 0.05. It is FRAGILE IN THE FAMILY SIZE: the multiplier here is 8, declared in `holm_family`, and at 10 tests the same raw p-value gives 0.05060 and the finding is gone. Report it with the family, or not at all."
+ },
+ "exposure_vs_detection": {
+  "rho": 0.7857,
+  "p_exact_permutation": 0.02793,
+  "n_orderings": 40320,
+  "p_t_approximation_WITHDRAWN": 0.02082,
+  "rho_without_GATHER_SCATTER": 0.6786,
+  "p_without_GATHER_SCATTER_exact": 0.10952,
+  "note": "the t-approximation is recorded only to show what was withdrawn and must not be quoted; with n = 8 the exact permutation p is the test"
+ },
+ "nonbinding_rings_Medium": {
+  "budget": 50,
+  "nonbinding_days": [
+   "2022-09-26",
+   "2022-09-27",
+   "2022-09-28"
+  ],
+  "rings_ending_on_a_nonbinding_day": 14,
+  "rings_total": 529,
+  "per_typology": {
+   "BIPARTITE": {
+    "n_rings": 61,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "CYCLE": {
+    "n_rings": 78,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "FAN-IN": {
+    "n_rings": 74,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "FAN-OUT": {
+    "n_rings": 65,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "GATHER-SCATTER": {
+    "n_rings": 60,
+    "n_on_nonbinding_days": 14,
+    "share": 0.2333
+   },
+   "RANDOM": {
+    "n_rings": 76,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "SCATTER-GATHER": {
+    "n_rings": 60,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   },
+   "STACK": {
+    "n_rings": 55,
+    "n_on_nonbinding_days": 0,
+    "share": 0.0
+   }
+  },
+  "note": "these rings are caught by ANY ranker, including a constant one, so they carry no information about the model and they inflate a max/min spread through whichever typology holds most of them"
+ },
+ "feasible_tail_range_ensemble_basis": {
+  "after_cliff_share": 0.66352,
+  "pooled_rate": 0.3724,
+  "max_feasible_tail_rate": 0.56125,
+  "min_feasible_tail_rate": 0.05413,
+  "note": "a tail rate outside this range cannot reproduce the observed pooled rate with a head rate in [0, 1]"
+ },
+ "code_git_sha": "c99a8c6bc2bf0d2e358e9d9f1088e671229f4e10",
+ "generator_script": "aml-platform/scripts/typology_null.py",
+ "generator_sha256": "b0f053b0bf0a2dd78e8ad8afd948d2ecce7f15931c36badf3092b0466aa4d6c4",
+ "generator_matches_commit": true,
+ "code_tree_sha256": "d9191a0acba286bc6e3ad5edde72eb84e75f902dd6b031488379b1f5539a6d46",
+ "code_tree_matches_commit": true,
+ "generator_blob_oid": "020680fc21947bc4adc2be3c0f39c61d10919ae8",
+ "package_tree_oid": "f8d4a113edb4fbfa16e32a5879d7584c5b037ff9",
+ "provenance_scope": [
+  "aml-platform/src",
+  "aml-platform/scripts"
+ ],
+ "scope_clean": true,
+ "generated_at": "2026-09-20T01:49:13Z",
+ "python_version": "3.12.3",
+ "platform": "macOS-26.5.2-arm64-arm-64bit",
+ "env_lock_sha256": "d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08",
+ "status": "ok",
+ "inputs": [
+  {
+   "path": "results_archive/gold/typology_Medium/stability.json",
+   "bytes": 10272,
+   "kind": "file",
+   "sha256": "cfb3a6bf74f1608db5cf48ae0e7868ed15d8d63be6c19abe2bd944ef8ff63fce"
+  },
+  {
+   "path": "results_archive/gold/typology_Small/stability.json",
+   "bytes": 10258,
+   "kind": "file",
+   "sha256": "648821e39670ef1ccd9ab9877cfe9e1caf258059554041eabc82666417205070"
+  },
+  {
+   "path": "data/bronze/patterns_Medium/rings.parquet",
+   "bytes": 68387,
+   "kind": "file",
+   "sha256": "fe0549b7320224b5f8cbd1e3302636eb11419b63bbbad5a4f6441dfec58bb6ca"
+  },
+  {
+   "path": "results_archive/replay/medium_gbdt_s0/ring_membership.parquet",
+   "bytes": 59080,
+   "kind": "file",
+   "sha256": "c14c927e3773e2f777be2ba527e9519c19d3bd3c482800cfd08fc5f44f4fc7a9"
+  },
+  {
+   "path": "results_archive/replay/medium_gbdt_s0/account_days_topk.parquet",
+   "bytes": 298507,
+   "kind": "file",
+   "sha256": "3b59e85c2624f5ec8416d54a973e95f7e65972f1b5f46abdb55b7a1f6359cf09"
+  },
+  {
+   "path": "results_archive/replay/medium_gbdt_s0/ring_endpoints.parquet",
+   "bytes": 100476,
+   "kind": "file",
+   "sha256": "18071f2a75f91943ee836de97733f9e4e851f9f13a81addc9ea7aa702dae7401"
+  },
+  {
+   "path": "results_archive/replay/medium_gbdt_s0/ring_transactions.parquet",
+   "bytes": 88442,
+   "kind": "file",
+   "sha256": "82ac086978f1add31cca6d9668634e15f49ff04b15bb1026360f18a07f219039"
+  }
+ ],
+ "parameters": {
+  "draws": 20000,
+  "thin_from": "2022-09-17",
+  "ring_budget": 50,
+  "perm_draws": 50000,
+  "patterns_dir": "data/bronze/patterns_Medium",
+  "bundle": "results_archive/replay/medium_gbdt_s0",
+  "rates": "MEASURED from the bundle, not assumed"
+ }
+}

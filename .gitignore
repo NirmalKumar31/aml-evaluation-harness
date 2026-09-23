@@ -1,0 +1,44 @@
+# Datasets. Tens of GB of CSV and Parquet, obtained from the source named in
+# DATA_LICENSE.md and never committed.
+aml-platform/data/
+**/data/bronze/
+**/data/silver/
+**/data/gold/
+*.csv
+*.parquet
+!aml-platform/tests/fixtures/*.csv
+
+# Environments and caches.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+*.log
+
+# Build output. `build/` once held a stale second copy of io.py, sweep.py and
+# train.py that had drifted from src/aml, so a reader or scanner saw two
+# apparent implementations of the same module.
+build/
+dist/
+*.egg-info/
+
+# Coverage. `.coverage` is a SQLite database embedding absolute local paths,
+# so a committed copy leaks the maintainer's directory layout and is not a
+# portable report.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# A .gitignore entry is not a privacy control.
+#
+# `Cloud/_v1_superseded/` was listed here while its five files were already
+# tracked from an earlier commit. Ignoring a tracked file does not untrack it,
+# so the entry read like a control and was not one.
+#
+# Anything that must not be published must not be committed in the first
+# place. Personal notes that are not part of the project belong in a global
+# ignore file (`git config --global core.excludesFile`), not here, where the
+# list itself would describe material the repository is meant not to contain.

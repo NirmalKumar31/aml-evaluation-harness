@@ -1,0 +1,50 @@
+name: codeql
+
+# Static analysis for Python, as its own control.
+#
+# CodeQL, secret scanning and push protection are three separate things, and
+# grouping them under one "security features enabled" row lets a control that
+# does not exist be recorded beside two that do. This workflow is the
+# implementation; the checklist row stays unchecked until an analysis
+# actually appears in the API.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly, so the analysis does not go stale between releases.
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: analyze python
+    runs-on: ubuntu-latest
+    # CodeQL's SARIF upload needs GitHub Advanced Security on a PRIVATE
+    # repository and fails with "Resource not accessible by integration"
+    # without it. It is free on public repositories, which is where the
+    # release lives, so the job runs there and is skipped here rather than
+    # failing the build for a control that cannot exist on this repo.
+    if: github.event.repository.visibility == 'public'
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd  # v4.38.1
+        with:
+          languages: python
+          # security-and-quality is noisier than the default and is the point:
+          # this repository has no other static analyser beyond ruff and bandit.
+          queries: security-and-quality
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd  # v4.38.1
+        with:
+          category: "/language:python"
