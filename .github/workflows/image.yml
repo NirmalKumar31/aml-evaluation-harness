@@ -274,6 +274,9 @@ jobs:
               "node is not available",
               "pages.yml not present (running inside the image)",
               "site/ not present (running inside the image)",
+              # The browser-test environment is developer tooling. The
+              # production image ships neither it nor a browser to run it in.
+              "site/tests/ not present (running inside the image)",
               # A shallow or tagless checkout cannot resolve the release
               # the site pins its artifact links to.
               "the v0.2.1 tag is not present in this checkout",

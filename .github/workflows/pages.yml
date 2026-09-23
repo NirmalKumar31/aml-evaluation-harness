@@ -32,7 +32,10 @@ jobs:
   build:
     name: site-build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Longer than the other jobs: this one installs the locked Python suite
+    # and the locked browser-test package, then drives three routes at five
+    # widths in a real browser.
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -44,15 +47,19 @@ jobs:
           # built and tested on the version the rest of the project verifies.
           python-version: "3.12.14"
 
-      # THE COMMITTED DATA FILE MUST MATCH A FRESH BUILD. Without this the
-      # site could render numbers from an artifact state that no longer
+      # THE COMMITTED FILES MUST MATCH A FRESH BUILD. Both the data and the
+      # HTML are generated, so either could be committed stale; without this
+      # the site could render numbers from an artifact state that no longer
       # exists in the tree, which is the defect release_facts.py's
       # --verify-artifact exists to prevent one directory over.
-      - name: Site data is current and deterministic
+      - name: Site data and pages are current and deterministic
         run: |
           python site/build_site_data.py --check
+          python site/build_pages.py --check
           python site/build_site_data.py
-          git diff --exit-code -- site/data/site-data.json
+          python site/build_pages.py
+          git diff --exit-code -- site/data site/index.html site/explorer \
+            site/engineering
 
       - name: Assemble the upload directory
         run: python site/assemble_site.py --dest site/_build
@@ -71,6 +78,18 @@ jobs:
           python -m pip install -q --require-hashes \
             -r requirements-dev.linux-amd64.lock
           python -m pytest tests/unit/test_site.py -q
+
+      # THE SITE IS INTERACTIVE, so a static read of the markup cannot tell
+      # whether a control works. These drive the assembled artifact in the
+      # browser already installed on the runner: no download at test time,
+      # and an exact, locked Playwright version.
+      - name: Browser tests
+        working-directory: site/tests
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          npx playwright test
 
       - name: Actions are pinned to a commit SHA
         run: python3 aml-platform/scripts/check_pinned_actions.py
