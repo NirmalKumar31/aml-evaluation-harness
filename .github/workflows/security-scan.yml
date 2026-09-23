@@ -1,0 +1,50 @@
+name: security-scan
+
+# Dependency vulnerability scanning. The container scan belongs to image.yml,
+# where it runs against the exact image that passed the suite and is pushed.
+#
+# The repository already had Bandit (with an accepted baseline), gitleaks,
+# SHA-pinned actions, hashed locks and a generated SBOM. It did NOT have any
+# vulnerability analysis, and an SBOM is an inventory, not a scan -- listing
+# packages says nothing about whether any of them has a CVE. This workflow
+# checks the lock; image.yml checks the deployable artifact.
+#
+# SEVERITY POLICY. Both scans fail the build on HIGH or CRITICAL findings and
+# report MEDIUM and below without failing. The rationale is that this project
+# pins every dependency by hash and rebuilds rarely, so a HIGH in a pinned
+# dependency is actionable immediately, while the MEDIUM tail on a Debian base
+# image is mostly unfixed-upstream noise that would make the gate meaningless.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # The locks do not change between releases; the advisories do.
+    - cron: "41 5 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    name: pip-audit on the locked set
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: pip install --disable-pip-version-check 'pip-audit==2.7.3'
+
+      - name: Audit the runtime lock
+        working-directory: aml-platform
+        run: |
+          # --strict fails on any error resolving a package rather than
+          # silently skipping it, which is the failure mode that would make a
+          # green scan meaningless.
+          pip-audit --strict --requirement requirements.linux-amd64.lock \
+            --desc --format columns

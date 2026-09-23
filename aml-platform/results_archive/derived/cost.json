@@ -1,0 +1,206 @@
+{
+ "code_git_sha": "9eba4d2551373486eb297081d43cb7d4b4af281c",
+ "generator_script": "aml-platform/scripts/cost_table.py",
+ "generator_sha256": "e13e8aadbed6f60a1a0dcf546f9cfca9f442da03b1b8fb273e703cfa45f1dd13",
+ "generator_matches_commit": true,
+ "code_tree_sha256": "d9191a0acba286bc6e3ad5edde72eb84e75f902dd6b031488379b1f5539a6d46",
+ "code_tree_matches_commit": true,
+ "generator_blob_oid": "21b50757200ed86df313ed7731e19db583d6d6aa",
+ "package_tree_oid": "f8d4a113edb4fbfa16e32a5879d7584c5b037ff9",
+ "provenance_scope": [
+  "aml-platform/src",
+  "aml-platform/scripts"
+ ],
+ "scope_clean": true,
+ "generated_at": "2026-09-20T04:22:54Z",
+ "python_version": "3.12.3",
+ "platform": "macOS-26.5.2-arm64-arm-64bit",
+ "env_lock_sha256": "d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08",
+ "status": "ok",
+ "parameters": {
+  "created": "2026-09-09T22:36:49Z",
+  "until": null,
+  "blob_bytes": 6593630103,
+  "resources": [
+   "VM (Standard_E4ds_v7, Linux)",
+   "OS disk (Premium SSD, 64 GB)",
+   "spill disk (Standard SSD, 1024 GB)",
+   "public IP (Standard, static)",
+   "blob storage (Hot LRS, ADLS Gen2, data stored)",
+   "container registry (Basic)"
+  ]
+ },
+ "priced_at": "2026-09-20T04:22:54Z",
+ "price_requests": [
+  {
+   "filter": "armRegionName eq 'eastus' and armSkuName eq 'Standard_E4ds_v7' and priceType eq 'Consumption'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20armSkuName%20eq%20%27Standard_E4ds_v7%27%20and%20priceType%20eq%20%27Consumption%27",
+   "response_sha256": "1aec9d7dc58795819364498201a9e66ab5a345fdb45ac5cdb5d964da0934b90b",
+   "response_bytes": 2482,
+   "items_returned": 4,
+   "matched": {
+    "meterId": "bef80c9e-38c0-5d89-b065-7e56af7dbad9",
+    "meterName": "Standard_E4ds_v7",
+    "skuName": "Standard_E4ds_v7",
+    "armRegionName": "eastus",
+    "retailPrice": 0.416,
+    "unitOfMeasure": "1 Hour",
+    "effectiveStartDate": "2026-05-01T00:00:00Z"
+   }
+  },
+  {
+   "filter": "armRegionName eq 'eastus' and serviceName eq 'Storage' and skuName eq 'P6 LRS'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20serviceName%20eq%20%27Storage%27%20and%20skuName%20eq%20%27P6%20LRS%27",
+   "response_sha256": "a8cbba8f7ee4755007a9f082d822e7465f0e5452b802e5a2f055d5eee349ba7d",
+   "response_bytes": 1777,
+   "items_returned": 3,
+   "matched": {
+    "meterId": "22ac9479-1ced-4f8a-912d-f288d091146c",
+    "meterName": "P6 LRS Disk",
+    "skuName": "P6 LRS",
+    "armRegionName": "eastus",
+    "retailPrice": 10.207,
+    "unitOfMeasure": "1/Month",
+    "effectiveStartDate": "2018-10-01T00:00:00Z"
+   }
+  },
+  {
+   "filter": "armRegionName eq 'eastus' and serviceName eq 'Storage' and skuName eq 'E30 LRS'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20serviceName%20eq%20%27Storage%27%20and%20skuName%20eq%20%27E30%20LRS%27",
+   "response_sha256": "7865309c6be2a13c4faccbd125b5d2295309999f867a5a16cb58161aabac0a36",
+   "response_bytes": 1742,
+   "items_returned": 3,
+   "matched": {
+    "meterId": "5bd6f7c7-7bdc-4792-ac4f-c685f2ea6694",
+    "meterName": "E30 LRS Disk",
+    "skuName": "E30 LRS",
+    "armRegionName": "eastus",
+    "retailPrice": 76.8,
+    "unitOfMeasure": "1/Month",
+    "effectiveStartDate": "2018-11-01T00:00:00Z"
+   }
+  },
+  {
+   "filter": "armRegionName eq 'eastus' and serviceName eq 'Virtual Network' and skuName eq 'Standard'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20serviceName%20eq%20%27Virtual%20Network%27%20and%20skuName%20eq%20%27Standard%27",
+   "response_sha256": "f74b6924fb30adb2475cb03d5a5eadb83fbfe7542c384b6c3ba394b167b38bfc",
+   "response_bytes": 1789,
+   "items_returned": 3,
+   "matched": {
+    "meterId": "9c150bf9-2bad-430e-a53c-c213804f49ef",
+    "meterName": "Standard IPv4 Static Public IP",
+    "skuName": "Standard",
+    "armRegionName": "eastus",
+    "retailPrice": 0.005,
+    "unitOfMeasure": "1 Hour",
+    "effectiveStartDate": "2018-06-01T00:00:00Z"
+   }
+  },
+  {
+   "filter": "armRegionName eq 'eastus' and serviceName eq 'Storage' and skuName eq 'Hot LRS' and priceType eq 'Consumption'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20serviceName%20eq%20%27Storage%27%20and%20skuName%20eq%20%27Hot%20LRS%27%20and%20priceType%20eq%20%27Consumption%27",
+   "response_sha256": "2b6bae9f8edd0be840ba2b0dfeef68a66f4543ee8e1b16bebaa5ae8564f68a68",
+   "response_bytes": 30539,
+   "items_returned": 55,
+   "matched": {
+    "meterId": "b68f7f09-5474-4996-be76-5feac4fc6680",
+    "meterName": "Hot LRS Data Stored",
+    "skuName": "Hot LRS",
+    "armRegionName": "eastus",
+    "retailPrice": 0.021,
+    "unitOfMeasure": "1 GB/Month",
+    "effectiveStartDate": "2020-03-01T00:00:00Z"
+   }
+  },
+  {
+   "filter": "armRegionName eq 'eastus' and serviceName eq 'Container Registry' and skuName eq 'Basic'",
+   "url": "https://prices.azure.com/api/retail/prices?$filter=armRegionName%20eq%20%27eastus%27%20and%20serviceName%20eq%20%27Container%20Registry%27%20and%20skuName%20eq%20%27Basic%27",
+   "response_sha256": "91dd1e1a39983a7ba850b890869325b42d7cdac2dca1211cb84210523fdfeaf9",
+   "response_bytes": 2308,
+   "items_returned": 4,
+   "matched": {
+    "meterId": "5c9e7a65-5784-494c-9718-7749d4075dd9",
+    "meterName": "Basic Registry Unit",
+    "skuName": "Basic",
+    "armRegionName": "eastus",
+    "retailPrice": 0.1666,
+    "unitOfMeasure": "1/Day",
+    "effectiveStartDate": "2018-01-01T00:00:00Z"
+   }
+  }
+ ],
+ "price_source": "https://prices.azure.com/api/retail/prices (East US, pay-as-you-go list, USD)",
+ "basis": "ELAPSED resource time since the VM was created, multiplied by list price. It is NOT an upper bound on compute, and it used to say it was: the justification given was that the VM had been deallocated for part of the window, but the subscription activity log for the whole window contains no deallocate or powerOff operation at all -- the VM was shut down from inside the guest OS, which holds the allocation and bills compute in full. Treat the VM line as the elapsed charge. The disks and the IP bill either way. The trial subscription reports pretaxCost: null for every meter, so no authoritative per-resource figure exists. SCOPE: the resources listed under `items` only. Blob storage is priced for DATA AT REST at the first Hot LRS tier, scaled by the --blob-bytes passed in; its transaction, egress and early-deletion meters are NOT priced, and neither is any resource outside the resource group -- notably the Cloud Shell file share, which a resource-group delete does not remove.",
+ "snapshot_is_final": false,
+ "snapshot_note": "PROVISIONAL: no end time was given, so this is elapsed time up to the moment of generation and it GROWS while the resources run. Regenerate with --until <ISO-8601> once they are stopped, and only then quote it as the project's cost.",
+ "window_hours": 245.77,
+ "window_start": "2026-09-09T22:36:49+00:00",
+ "window_end": "2026-09-20T04:22:52.716020+00:00",
+ "blob_stored_gb": 6.59,
+ "items": [
+  {
+   "what": "VM (Standard_E4ds_v7, Linux)",
+   "list_price": 0.416,
+   "unit": "1 Hour",
+   "usd_per_hour": 0.416,
+   "usd_per_hour_per_unit": 0.416,
+   "quantity": 1.0,
+   "hours": 245.77,
+   "usd": 102.24
+  },
+  {
+   "what": "OS disk (Premium SSD, 64 GB)",
+   "list_price": 10.207,
+   "unit": "1/Month",
+   "usd_per_hour": 0.01398,
+   "usd_per_hour_per_unit": 0.01398,
+   "quantity": 1.0,
+   "hours": 245.77,
+   "usd": 3.44
+  },
+  {
+   "what": "spill disk (Standard SSD, 1024 GB)",
+   "list_price": 76.8,
+   "unit": "1/Month",
+   "usd_per_hour": 0.10521,
+   "usd_per_hour_per_unit": 0.10521,
+   "quantity": 1.0,
+   "hours": 245.77,
+   "usd": 25.86
+  },
+  {
+   "what": "public IP (Standard, static)",
+   "list_price": 0.005,
+   "unit": "1 Hour",
+   "usd_per_hour": 0.005,
+   "usd_per_hour_per_unit": 0.005,
+   "quantity": 1.0,
+   "hours": 245.77,
+   "usd": 1.23
+  },
+  {
+   "what": "blob storage (Hot LRS, ADLS Gen2, data stored)",
+   "list_price": 0.021,
+   "unit": "1 GB/Month",
+   "usd_per_hour": 0.00019,
+   "usd_per_hour_per_unit": 3e-05,
+   "quantity": 6.5936,
+   "hours": 245.77,
+   "usd": 0.05
+  },
+  {
+   "what": "container registry (Basic)",
+   "list_price": 0.1666,
+   "unit": "1/Day",
+   "usd_per_hour": 0.00694,
+   "usd_per_hour_per_unit": 0.00694,
+   "quantity": 1.0,
+   "hours": 245.77,
+   "usd": 1.71
+  }
+ ],
+ "total_usd_at_list": 134.51,
+ "actually_charged_usd": null,
+ "actually_charged_claim": "0.00 USD -- STATED, NOT MEASURED",
+ "actually_charged_note": "An Azure free-trial subscription with the spending limit in place cannot bill a payment method, and the limit was never lifted -- so the charge is asserted to be zero on that basis. It is not an invoice figure: the consumption API returns pretaxCost: null for every meter here, and no billing statement was retrieved. Quote it as 'no charge expected under the trial credit', never as '$0 billed'."
+}

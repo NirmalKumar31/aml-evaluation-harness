@@ -1,0 +1,108 @@
+{
+ "code_git_sha": "3b0ac1517b0af46f53b1755169070abb238e9c04",
+ "generator_script": "aml-platform/scripts/verify_dataset.py",
+ "generator_sha256": "c0ccf1102e8bf0d4e777c25748437da8ae954ca3db5c0c6bff0cfb0778306fc5",
+ "generator_matches_commit": true,
+ "code_tree_sha256": "d9191a0acba286bc6e3ad5edde72eb84e75f902dd6b031488379b1f5539a6d46",
+ "code_tree_matches_commit": true,
+ "generator_blob_oid": "8a18d187e541e92d71ae70548ff28840a7ab07cd",
+ "package_tree_oid": "f8d4a113edb4fbfa16e32a5879d7584c5b037ff9",
+ "provenance_scope": [
+  "aml-platform/src",
+  "aml-platform/scripts"
+ ],
+ "scope_clean": true,
+ "generated_at": "2026-09-19T00:51:24Z",
+ "python_version": "3.12.3",
+ "platform": "macOS-26.5.2-arm64-arm-64bit",
+ "env_lock_sha256": "d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08",
+ "status": "ok",
+ "inputs": [
+  {
+   "path": "data/HI-Small_Trans.csv",
+   "bytes": 475664283,
+   "kind": "file",
+   "sha256": null,
+   "sha256_skipped": "larger than 67108864 bytes"
+  },
+  {
+   "path": "data/HI-Small_Patterns.txt",
+   "bytes": 323844,
+   "kind": "file",
+   "sha256": "2c546b5ce6009e73851f0139af053cf845f08bf92f3bc82fe1eb937dec2ef39b"
+  },
+  {
+   "path": "data/HI-Medium_Trans.csv",
+   "bytes": 3031783420,
+   "kind": "file",
+   "sha256": null,
+   "sha256_skipped": "larger than 67108864 bytes"
+  },
+  {
+   "path": "data/HI-Medium_Patterns.txt",
+   "bytes": 2279574,
+   "kind": "file",
+   "sha256": "d612cd7ed6f7761c0e36f3b788dfbae68aa0842c77145b192c777c22daba5c9f"
+  },
+  {
+   "path": "data/HI-Large_Patterns.txt",
+   "bytes": 13807473,
+   "kind": "file",
+   "sha256": "bcf815a1931cfdcefd5d6d9feaa8f95dbc33cfd6ef8cd52d9a41e8d994c22820"
+  }
+ ],
+ "parameters": {
+  "data": "data",
+  "contract": [
+   "HI-Small_Trans.csv",
+   "HI-Small_Patterns.txt",
+   "HI-Medium_Trans.csv",
+   "HI-Medium_Patterns.txt",
+   "HI-Large_Trans.csv",
+   "HI-Large_Patterns.txt"
+  ],
+  "drop_missing": false,
+  "allow_incomplete": false
+ },
+ "contract": [
+  "HI-Small_Trans.csv",
+  "HI-Small_Patterns.txt",
+  "HI-Medium_Trans.csv",
+  "HI-Medium_Patterns.txt",
+  "HI-Large_Trans.csv",
+  "HI-Large_Patterns.txt"
+ ],
+ "complete": true,
+ "pinned_at": "2026-09-19T00:51:24Z",
+ "dataset": "IBM AMLworld (Altman et al., NeurIPS 2023 D&B)",
+ "licence": "CDLA-Sharing-1.0; not redistributed. See DATA_LICENSE.md",
+ "source": "https://www.kaggle.com/datasets/ealtman2019/ibm-transactions-for-anti-money-laundering-aml",
+ "note": "Kaggle exposes no immutable version id for this dataset, so the CONTENT HASH is the version. If a future download does not match, it is a different dataset and the published numbers do not describe it.",
+ "files": {
+  "HI-Small_Trans.csv": {
+   "sha256": "b19d39f515523373f991b689c07e11e7b0b95c17a2c27a87d91584ae16c5b040",
+   "bytes": 475664283
+  },
+  "HI-Small_Patterns.txt": {
+   "sha256": "2c546b5ce6009e73851f0139af053cf845f08bf92f3bc82fe1eb937dec2ef39b",
+   "bytes": 323844
+  },
+  "HI-Medium_Trans.csv": {
+   "sha256": "3126afb8155e7c8815d62bc5370549a7b5ae6bf7dfe872b3cd7813e66a3d7ff5",
+   "bytes": 3031783420
+  },
+  "HI-Medium_Patterns.txt": {
+   "sha256": "d612cd7ed6f7761c0e36f3b788dfbae68aa0842c77145b192c777c22daba5c9f",
+   "bytes": 2279574
+  },
+  "HI-Large_Patterns.txt": {
+   "sha256": "bcf815a1931cfdcefd5d6d9feaa8f95dbc33cfd6ef8cd52d9a41e8d994c22820",
+   "bytes": 13807473
+  },
+  "HI-Large_Trans.csv": {
+   "sha256": "d13635e297c64673826217631fb88d635c4f506052e1bde833895eda2a65c3f2",
+   "bytes": 17052760651,
+   "carried_from": "a previous pin; not present on this machine at re-pin time"
+  }
+ }
+}

@@ -1,0 +1,686 @@
+# Builds the amd64 container image.
+#
+# WHY THIS IS NOT OPTIONAL POLISH
+#     The development laptop is arm64 and has no Docker installed. Azure
+#     compute is amd64. An image built locally would either not build at all,
+#     or build and then die at container start with "exec format error" --
+#     after the compute has been provisioned and billed. `ubuntu-latest` is
+#     amd64, so this runner is currently the only way this project can produce
+#     a runnable image at all.
+#
+#     It also runs the test suite INSIDE the built image. "The image starts" is
+#     a much weaker statement than "the image behaves like the machine the
+#     results came from", and the second one is what the cloud run depends on.
+name: image
+
+on:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+    # NO `paths` FILTER, deliberately.
+    #
+    # It was limited to `aml-platform/**` and this file, so a root-only change
+    # produced no image run at all -- and a required status check that
+    # sometimes does not exist blocks a pull request forever rather than
+    # passing it. The build is six minutes and the concurrency group cancels
+    # superseded runs; always having the status is worth more than skipping
+    # the occasional unnecessary rebuild.
+  # PULL REQUESTS TOO, and this is the point of the trigger.
+  #
+  # Without it this workflow cannot be a required pre-merge check -- there is
+  # no run to require -- while the release checklist said the image check
+  # should be required. A PR build gets no registry credentials and does not
+  # push; it builds, asserts provenance, and runs the suite inside the image,
+  # which is the part worth gating on.
+  # NO PATH FILTER HERE EITHER, and the header above already said so while
+  # this block still had one.
+  #
+  # A root-only change -- README, LICENSE, SECURITY.md, CITATION.cff -- matched
+  # neither pattern, so no `image` run was created. Once `image` is a REQUIRED
+  # check, a pull request with no run waits forever for a status that cannot
+  # appear: the check is not failing, it does not exist. A six-minute build on
+  # the occasional documentation PR is the cheaper half of that trade, and the
+  # concurrency group cancels superseded runs.
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      promote_tag:
+        description: >-
+          Promote this commit's tested image to this registry tag, without
+          building. Exists so the promotion mechanism can be PROVEN in the
+          runner before a release tag depends on it -- "the YAML parses" is
+          not evidence that a registry write works. The name MUST start with
+          `promote-probe-`; reserved and SHA-like names are rejected. Leave
+          empty for a normal build.
+        required: false
+        default: ""
+
+
+# Least privilege at the TOP level, so a job that forgets to declare its own
+# does not silently inherit write scope. The image job widens this to
+# `packages: write` for exactly the step that needs it.
+permissions:
+  contents: read
+
+# A superseded run is wasted money and a misleading green tick. Cancel it.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # NOT ON A TAG, AND NOT ON A PROMOTION-ONLY DISPATCH.
+    #
+    # Building again on the tag push would build the same commit twice, and
+    # the two builds are NOT byte-identical, because this Dockerfile consumes
+    # mutable external state on purpose. The release tag and the commit tag
+    # would then resolve to two different images from one source commit, each
+    # correctly describable as "the image we tested".
+    #
+    # The `promote_tag` clause matters for the same reason in reverse: a
+    # promotion-only dispatch must show `build: skipped`, or the rehearsal is
+    # not rehearsing what a release tag does.
+    #
+    # Build once, on the branch push. `promote` moves that exact manifest.
+    if: github.ref_type != 'tag' && inputs.promote_tag == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      # `packages: write` for the whole job, and that IS broader than the two
+      # steps that need it.
+      #
+      # An `if:` on the login and push steps does NOT narrow it: `if:`
+      # decides what runs, not what the job's token may do, so every step in
+      # a pull-request build holds a package-write token it has no use for.
+      #
+      # It is not expressible as a conditional -- GitHub rejects an expression
+      # in `permissions` -- and the obvious fix, a separate publish job, would
+      # put the push on a different runner from the Docker daemon that holds
+      # the TESTED image. Rebuilding there is precisely the defect this
+      # workflow was changed to remove: test one artifact, publish another.
+      #
+      # So this is an accepted trade, written down rather than explained away:
+      # narrower scope would cost the tested-equals-published guarantee.
+      # GitHub already withholds write scope from FORK pull requests, which is
+      # the case that matters for untrusted code.
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Test-only dependencies are prepared on the runner and mounted into
+      # the container. The production image deliberately contains neither pip
+      # nor setuptools/wheel, so the scanner sees the runtime surface, not
+      # build tools.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.14"
+
+      # GHCR rejects any tag containing an uppercase letter, and GitHub
+      # usernames routinely contain them. github.repository is passed through
+      # verbatim by every example in the docs, so this fails on first run for
+      # anyone whose username is not already lowercase.
+      - name: Compute a lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Not on pull requests: a fork PR must never receive a token that can
+      # write packages, and the PR path does not push.
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (amd64) and load for testing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: aml-platform
+          platforms: linux/amd64
+          load: true
+          # WITHOUT THIS THE IMAGE DOES NOT KNOW WHAT IT IS.
+          # .dockerignore excludes .git (correctly -- it is not needed at
+          # runtime), so manifest.py finds no repository and records
+          # code_git_sha "unknown". Seven archived manifests are in exactly
+          # that state. The Dockerfile grew an ARG to fix it; this is the half
+          # that passes the value in, and until now CI did not.
+          build-args: |
+            AML_GIT_SHA=${{ github.sha }}
+          tags: ${{ env.IMAGE }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # pytest is deliberately stripped from requirements.lock -- a production
+      # image should not ship a test runner. So it is installed here, for this
+      # one check, rather than baked in.
+      - name: Provenance must be baked in, not discovered
+        run: |
+          docker run --rm --entrypoint python ${{ env.IMAGE }}:ci -c \
+            "import os, sys; s = os.environ.get('AML_GIT_SHA', 'unknown'); \
+             print('AML_GIT_SHA =', s); sys.exit(s == 'unknown')"
+
+      - name: Build tools must not ship in the runtime image
+        run: |
+          docker run --rm --entrypoint python ${{ env.IMAGE }}:ci -c \
+            "import importlib.util as u; \
+             assert u.find_spec('pip') is None, 'pip is present'; \
+             assert u.find_spec('setuptools') is None, 'setuptools is present'; \
+             assert u.find_spec('wheel') is None, 'wheel is present'"
+
+      # pytest from a LOCK, not from whatever is current -- otherwise "the
+      # suite passes inside the image" is a statement about whichever pytest
+      # existed that morning. A production image should not ship a test
+      # runner, so it is installed for this check and not baked in, but
+      # installed from a hashed lock like everything else.
+      - name: Run the full suite inside the image
+        run: |
+          # `-p no:cacheprovider`, because /app is read-only for the runtime
+          # user on purpose and pytest otherwise emits two PytestCacheWarnings
+          # trying to write .pytest_cache there. The read-only source is the
+          # feature; the warning is noise in a release gate.
+          #
+          # NO `| tee`. GitHub's default shell is `bash -e`, WITHOUT pipefail,
+          # so a pipeline's status is the last command's -- `docker run ... |
+          # tee` reports tee's success and a red suite inside the image would
+          # have gone green. Redirect, then check the status explicitly.
+          # The tested image's own identity, so the suite running inside it
+          # records the artifact it ran in rather than the OS tag that
+          # artifact reports. `manifest.env_id()` folds this into the cache
+          # key; nothing was supplying it.
+          TESTED=$(docker image inspect --format '{{.Id}}' "${{ env.IMAGE }}:ci")
+          TEST_DEPS="$RUNNER_TEMP/aml-test-deps"
+          rm -rf "$TEST_DEPS"
+          python -m pip install -q --target "$TEST_DEPS" --require-hashes \
+            -r aml-platform/requirements-dev.linux-amd64.lock
+          set +e
+          docker run --rm -v "$TEST_DEPS:/test-deps:ro" \
+            -e AML_IMAGE_DIGEST="$TESTED" \
+            -e PYTHONPATH=/test-deps \
+            --entrypoint sh ${{ env.IMAGE }}:ci -c \
+            "python -m pytest -q -rs -p no:cacheprovider" > image-pytest.txt 2>&1
+          status=$?
+          cat image-pytest.txt
+          exit $status
+
+      # PARITY, ASSERTED BY REASON rather than by count.
+      #
+      # An image that excludes results_archive/ still passes its suite: every
+      # replay recomputation, provenance check and pin-contract test finds
+      # nothing and skips. "The suite runs in the image" would be true and
+      # "the image validates the released archive" would not, and only the
+      # second is evidence that the artifact behaves like the machine the
+      # results came from.
+      #
+      # A count would be the wrong assertion -- it drifts every time a test is
+      # added. What must hold is that the only things skipped in here are the
+      # ones that CANNOT run in here. The archive and docs/ ship in the image,
+      # so the permitted reasons are the repository-ROOT documents and the
+      # Dockerfile, outside this build context by construction, plus the
+      # data-dependent contract tests, which skip on the host too. Anything
+      # else means something stopped running inside the artifact.
+      # See aml-platform/docs/RELEASE_CHECKLIST.md section 3a.
+      - name: Only the unrunnable may skip inside the image
+        run: |
+          python3 - <<'PY'
+          import sys
+          # EVERY skip reason the suite can emit, not just the ones someone
+          # remembered. Twice in one session a new test shipped a reason that
+          # was not here, and because this step fails on an unlisted skip, the
+          # required `image` job went red and blocked every merge.
+          #
+          # The list is now a REGISTRY: `test_every_skip_reason_is_registered`
+          # keeps it in sync with the suite, so adding a reason is a deliberate
+          # act rather than a discovery in CI. This step still enforces the
+          # real rule -- that only a reason on this list may fire inside the
+          # image -- so nothing is weakened by listing them all.
+          # EVERY skip reason the suite can emit, from the WHOLE tests/
+          # tree -- not one file. Regenerating this from
+          # tests/repro/ alone dropped every tests/contract/
+          # reason and turned this job red on the next push; the sync test
+          # read the same single file, so it passed while the list was wrong.
+          # A checker narrower than the thing it checks is this project's
+          # signature defect, and it got me again here.
+          #
+          # test_every_skip_reason_is_registered keeps this in sync. The job
+          # still enforces the real rule: only a listed reason may FIRE.
+          allowed = [
+              "Dockerfile not present (running inside the image)",
+              # test_promote_guards runs the workflow's own shell
+              # guards; inside the image there is no .github/ to read
+              # them from, and bash is not guaranteed.
+              "bash not available",
+              "workflows directory not present (running inside the image)",
+              "HI-Small bronze not built; run `make ingest VARIANT=Small`",
+              "Makefile not present (running inside the image)",
+              "budget null not generated in this checkout",
+              "cli does not expose its parser",
+              "coupling artifact not generated in this checkout",
+              "current documents not present (running inside the image)",
+              # THESE TWO ARE PREFIXES, NOT LITERALS. The reasons are built
+              # by f-strings, so the runtime text carries interpolated stderr
+              # and can NEVER equal the source text. The sync test compares
+              # SOURCE to this list and is green; step `image.yml` compares
+              # RUNTIME text, so the registry meant to keep the required job
+              # green guaranteed it would go red. Matched by prefix below.
+              "demo did not build:",
+              "docs/ not present (running inside the image)",
+              "git unavailable:",
+              "no derived artifacts in this checkout",
+              "no exposure measured in this checkout",
+              "no gold archive in this checkout",
+              "no replay bundles in this checkout",
+              "no superseded lineages registered",
+              "no superseded manifest publishes a divergent precision@50",
+              "not a git checkout, so there is no real sha to prefer",
+              "not a git checkout, so tag state cannot be established",
+              "no workflows directory or no make, so overrides cannot be expanded",
+              "package source not present",
+              "patterns absent; exposure correctly not computed",
+              "release facts not generated in this checkout",
+              "replay bundle not archived in this checkout",
+              "repository documents not present (running inside the image)",
+              "repository root not present (running inside the image)",
+              "run `make patterns reconcile VARIANT=Small` first",
+              "sbom not generated in this checkout",
+              "scripts/ not present",
+              "split-inflation gold outputs not built in this checkout",
+              "typology artifacts not generated in this checkout",
+              "typology null not generated in this checkout",
+              "window decomposition not generated in this checkout",
+          ]
+          skipped = [ln.rstrip() for ln in open("image-pytest.txt")
+                     if ln.startswith("SKIPPED")]
+          bad = [ln for ln in skipped if not any(a in ln for a in allowed)]
+          print(f"{len(skipped)} skip(s) inside the image")
+          if bad:
+              print("skipped for a reason that is not part of the defined "
+                    "parity gap:")
+              for b in bad:
+                  print("  " + b)
+              sys.exit(1)
+          print("every skip inside the image is one that cannot run there")
+          PY
+
+      - name: Verify the DuckDB azure extension is baked in, not fetched at runtime
+        run: |
+          docker run --rm --entrypoint python ${{ env.IMAGE }}:ci -c \
+            "import duckdb; c=duckdb.connect(); c.execute('LOAD azure'); \
+             print('azure extension OK')"
+
+      # Scan the exact local image that passed the tests above. Rebuilding
+      # the Dockerfile in a separate scanning workflow would scan a second
+      # image, and mutable APT repositories and extension downloads mean that
+      # is not necessarily the artifact this job pushes.
+      - name: Scan the tested image for HIGH and CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Report MEDIUM and below without failing
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:ci
+          format: table
+          severity: MEDIUM,LOW,UNKNOWN
+          ignore-unfixed: true
+          exit-code: "0"
+
+      # PUSH THE IMAGE THAT WAS TESTED, not a second build of the same
+      # source.
+      #
+      # PUSH THE TESTED BYTES. Invoking `docker/build-push-action` a second
+      # time with `push: true` would publish an artifact that nothing above
+      # ran against: provenance, the full suite inside the container, the
+      # skip-reason parity check and the DuckDB extension check all ran on the
+      # `:ci` image loaded by the first build. Layer cache makes the two
+      # usually identical and never provably identical, and this Dockerfile
+      # consumes mutable external state on purpose. "We tested an image and
+      # published an image" is not the claim a release needs.
+      #
+      # So: tag the already-loaded, already-tested image and push THAT. No
+      # rebuild exists to differ.
+      - name: Push the tested image
+        if: github.event_name != 'pull_request'
+        # `git check-ref-format` permits backticks, $( ) and ; in a tag name,
+        # so interpolating ${{ github.ref_name }} straight into a shell string
+        # is a command-injection sink -- in a job holding packages: write.
+        # Passing it through the environment means the shell never parses it.
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          TESTED=$(docker image inspect --format '{{.Id}}' "${{ env.IMAGE }}:ci")
+          echo "tested image id: $TESTED"
+
+          # THREE KINDS OF TAG, because they answer different questions.
+          #   latest    what should I pull to try it
+          #   <sha>     which commit is this, exactly
+          #   <vX.Y.Z>  which release is this, for a citation
+          # `latest` alone cannot answer either of the other two, and a paper
+          # citing an image needs the third.
+          TAGS="latest ${{ github.sha }}"
+          case "$REF" in
+            refs/tags/v*) TAGS="$TAGS $REF_NAME" ;;
+          esac
+
+          for t in $TAGS; do
+            docker tag "${{ env.IMAGE }}:ci" "${{ env.IMAGE }}:$t"
+            # Every tag must still be the image we tested. `docker tag` cannot
+            # make it otherwise, and asserting it costs nothing.
+            got=$(docker image inspect --format '{{.Id}}' "${{ env.IMAGE }}:$t")
+            [ "$got" = "$TESTED" ] || { echo "::error::$t is not the tested image"; exit 1; }
+            docker push "${{ env.IMAGE }}:$t"
+          done
+
+          DIGEST=$(docker image inspect --format '{{index .RepoDigests 0}}' \
+                     "${{ env.IMAGE }}:${{ github.sha }}")
+          echo "PUBLISHED DIGEST: $DIGEST"
+          echo "digest=$DIGEST" >> "$GITHUB_STEP_SUMMARY"
+
+          # Pull the published digest back and confirm it is the same image.
+          # This is the acceptance test: the digest under the commit tag must
+          # be the artifact the suite ran in.
+          docker rmi "${{ env.IMAGE }}:latest" > /dev/null 2>&1 || true
+          docker pull -q "$DIGEST"
+          back=$(docker image inspect --format '{{.Id}}' "$DIGEST")
+          if [ "$back" != "$TESTED" ]; then
+            echo "::error::the published digest is not the tested image"
+            exit 1
+          fi
+          echo "the published digest IS the tested image"
+
+      # GHCR packages are PRIVATE by default even on a public repository, and
+      # an anonymous pull then fails with `unauthorized`. If this image is ever
+      # pulled by Azure Container Instances without a pull secret, make the
+      # package public in the repo's Packages settings, or use ACR instead.
+      # GHCR packages are PRIVATE by default even when the repository is
+      # public, so an anonymous `docker pull` fails with `unauthorized` and the
+      # published pull command in the README does not work for anybody. That is
+      # a decision, not an accident, and it has to be made explicitly: either
+      # flip the package to public in repo Settings -> Packages, or state in
+      # the README that the image requires authentication.
+      #
+      # This step TESTS the answer rather than asserting it. It does not fail
+      # the build -- a private package is a legitimate choice -- but it puts
+      # the true state in the log instead of leaving it to be discovered by a
+      # reader whose pull fails.
+      - name: Report whether the published image is anonymously pullable
+        if: github.event_name != 'pull_request'
+        run: |
+          docker logout ghcr.io
+          if docker manifest inspect "${{ env.IMAGE }}:latest" > /dev/null 2>&1; then
+            echo "ANONYMOUS PULL: OK -- the GHCR package is public"
+          else
+            echo "ANONYMOUS PULL: DENIED -- the GHCR package is private."
+            echo "Either make it public in Settings -> Packages, or say so in the README."
+          fi
+
+  # PROMOTE, DO NOT REBUILD.
+  #
+  # A release tag must point at the bytes that were tested, and the only way to
+  # guarantee that is to never produce a second set of bytes. This job does no
+  # build and no test: it takes the manifest already published for the commit
+  # and re-PUTs those exact bytes under the version tag.
+  #
+  # NOT `docker buildx imagetools create`. That was the first implementation
+  # and it failed its own assertion on the first real tag, which is the outcome
+  # the assertion existed for. `imagetools create` does not add a name to a
+  # manifest -- it builds a manifest LIST wrapping it, so the commit tag stayed
+  # `application/vnd.docker.distribution.manifest.v2+json` at
+  # `sha256:2600a7c0…` while `v0.1.5` became
+  # `application/vnd.docker.distribution.manifest.list.v2+json` at
+  # `sha256:d9c31b06…`. Same image, genuinely different object, different
+  # digest. Wrapping is the correct behaviour of that command and the wrong
+  # operation for promotion.
+  #
+  # A registry digest IS the sha256 of the manifest bytes. So PUT the identical
+  # bytes with the identical Content-Type and the digest is identical by
+  # construction, not by luck -- and the assertion below confirms it rather
+  # than trusting the argument.
+  promote:
+    if: github.ref_type == 'tag' || inputs.promote_tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Resolve the image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        # The same pinned SHA the build job uses; one action, one pin.
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote the tested commit image to the release tag
+        env:
+          # On a tag push this is the tag. On a manual dispatch it is the
+          # probe name, so the identical code path is what gets proven.
+          REF_NAME: ${{ inputs.promote_tag != '' && inputs.promote_tag || github.ref_name }}
+          REPO: ${{ github.repository }}
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # WHAT A MANUAL DISPATCH MAY NAME.
+          #
+          # This job holds `packages: write`. Without a whitelist, a dispatch
+          # could point `latest`, a released `vX.Y.Z` or a commit-SHA tag at
+          # any manifest -- i.e. rewrite what a published release resolves to,
+          # which is the exact property the release process exists to fix.
+          #
+          # A rehearsal may only ever create a name that is obviously a
+          # rehearsal. Real version promotion stays on the tag-push path, where
+          # the name comes from an immutable signed tag and not from an input.
+          if [ -n "${{ inputs.promote_tag }}" ]; then
+            case "$REF_NAME" in
+              promote-probe-*) ;;
+              *) echo "::error::manual promotion may only create a"
+                 echo "::error::'promote-probe-*' tag; got '$REF_NAME'."
+                 echo "::error::Release versions are promoted by pushing the"
+                 echo "::error::signed tag, never by dispatch."
+                 exit 1 ;;
+            esac
+            case "$REF_NAME" in
+              v[0-9]*|latest|*[!a-zA-Z0-9._-]*)
+                 echo "::error::'$REF_NAME' is a reserved or unsafe tag name"
+                 exit 1 ;;
+            esac
+            # A 40-hex name would shadow a commit tag.
+            if printf '%s' "$REF_NAME" | grep -qiE '[0-9a-f]{40}'; then
+              echo "::error::'$REF_NAME' looks like a commit SHA"; exit 1
+            fi
+            if [ ${#REF_NAME} -gt 64 ]; then
+              echo "::error::tag name too long"; exit 1
+            fi
+            echo "manual promotion target accepted: $REF_NAME"
+          fi
+
+          # A TAG-PUSH PROMOTION MUST VERIFY THE TAG ITSELF.
+          #
+          # "The name comes from a signed tag" is not a check unless this
+          # job performs it. This workflow and `release.yml` run independently
+          # and in parallel, so an unsigned, lightweight or malformed `v*` tag
+          # would have its package tag promoted here while the release
+          # workflow was still deciding to reject it -- and the registry write
+          # is the part a reader pulls.
+          #
+          # `release.yml` keeps the same assertions as defence in depth. This
+          # is the copy that guards the write.
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            case "$REF_NAME" in
+              v[0-9]*.[0-9]*.[0-9]*) ;;
+              *) echo "::error::tag '$REF_NAME' is not vX.Y.Z"; exit 1 ;;
+            esac
+            if ! printf '%s' "$REF_NAME" \
+               | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+              echo "::error::tag '$REF_NAME' is not EXACTLY vX.Y.Z"
+              exit 1
+            fi
+
+            REF_JSON=$(gh api "/repos/$REPO/git/ref/tags/$REF_NAME")
+            OBJ_TYPE=$(printf '%s' "$REF_JSON" | jq -r '.object.type')
+            OBJ_SHA=$(printf '%s' "$REF_JSON" | jq -r '.object.sha')
+            # A lightweight tag's ref points straight at a commit; an
+            # annotated tag's ref points at a tag OBJECT.
+            if [ "$OBJ_TYPE" != "tag" ]; then
+              echo "::error::$REF_NAME is a lightweight tag (ref -> $OBJ_TYPE)."
+              echo "::error::A release tag must be annotated and signed."
+              exit 1
+            fi
+
+            TAG_JSON=$(gh api "/repos/$REPO/git/tags/$OBJ_SHA")
+            VERIFIED=$(printf '%s' "$TAG_JSON" | jq -r '.verification.verified')
+            REASON=$(printf '%s'  "$TAG_JSON" | jq -r '.verification.reason')
+            TARGET=$(printf '%s'  "$TAG_JSON" | jq -r '.object.sha')
+            TARGET_TYPE=$(printf '%s' "$TAG_JSON" | jq -r '.object.type')
+            echo "tag object   : $OBJ_SHA"
+            echo "verified     : $VERIFIED ($REASON)"
+            echo "points at    : $TARGET_TYPE $TARGET"
+
+            if [ "$VERIFIED" != "true" ] || [ "$REASON" != "valid" ]; then
+              echo "::error::$REF_NAME is not a verified signed tag"
+              echo "::error::(verified=$VERIFIED reason=$REASON). Refusing to"
+              echo "::error::promote a package tag for it."
+              exit 1
+            fi
+            # Reject a tag-of-a-tag: the release must name a commit.
+            if [ "$TARGET_TYPE" != "commit" ]; then
+              echo "::error::$REF_NAME points at a $TARGET_TYPE, not a commit"
+              exit 1
+            fi
+            # And it must be THIS commit, or the image promoted would belong
+            # to a different revision than the tag names.
+            if [ "$TARGET" != "${{ github.sha }}" ]; then
+              echo "::error::$REF_NAME points at $TARGET but this run is for"
+              echo "::error::${{ github.sha }}"
+              exit 1
+            fi
+            echo "tag verification passed; promotion may proceed"
+          fi
+
+          PKG="$(echo "$REPO" | tr '[:upper:]' '[:lower:]')"
+          API="https://ghcr.io/v2/$PKG"
+          ACCEPT='application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json'
+
+          # A pull+push token for the registry, from the workflow token.
+          BEARER=$(curl -fsSL -u "x:$TOKEN" \
+            "https://ghcr.io/token?scope=repository:$PKG:pull,push&service=ghcr.io" \
+            | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')
+
+          # A MISSING SOURCE IS AN ORDERING ERROR, and it must say so. If the
+          # tag was pushed before the commit reached a built branch, there is
+          # nothing tested to promote -- and silently building one here would
+          # reintroduce exactly the defect this job exists to remove.
+          code=$(curl -s -o /tmp/src.json -w '%{http_code}' \
+            -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+            "$API/manifests/${{ github.sha }}")
+          if [ "$code" != "200" ]; then
+            echo "::error::${{ env.IMAGE }}:${{ github.sha }} is not in the"
+            echo "::error::registry (HTTP $code). Push the commit to main"
+            echo "::error::first so it is built and tested, then push the tag."
+            echo "::error::This job promotes an existing manifest and"
+            echo "::error::deliberately never builds one."
+            exit 1
+          fi
+
+          # The source manifest's exact bytes, media type and digest.
+          CT=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                 "$API/manifests/${{ github.sha }}" \
+               | tr -d '\r' | awk 'tolower($1)=="content-type:"{print $2}')
+          BEFORE=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                     "$API/manifests/${{ github.sha }}" \
+                   | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}')
+          LOCAL="sha256:$(sha256sum /tmp/src.json | cut -d' ' -f1)"
+          echo "commit image digest:   $BEFORE"
+          echo "media type:            $CT"
+          echo "sha256 of those bytes: $LOCAL"
+
+          # The registry's digest must be the hash of the bytes it served. If
+          # not, something re-encoded them in transit and the PUT below would
+          # publish a different object.
+          if [ "$BEFORE" != "$LOCAL" ]; then
+            echo "::error::the registry reports $BEFORE for bytes that hash to"
+            echo "::error::$LOCAL; refusing to re-PUT a re-encoded manifest."
+            exit 1
+          fi
+
+          # Identical bytes, identical media type, new tag.
+          put=$(curl -s -o /tmp/put.out -w '%{http_code}' -X PUT \
+            -H "Authorization: Bearer $BEARER" -H "Content-Type: $CT" \
+            --data-binary @/tmp/src.json "$API/manifests/$REF_NAME")
+          case "$put" in
+            201|202) : ;;
+            *) echo "::error::PUT $REF_NAME returned HTTP $put"; cat /tmp/put.out; exit 1 ;;
+          esac
+
+          # RE-READ BOTH REFS AFTER THE WRITE.
+          #
+          # Reading only the destination proves the destination exists. It does
+          # not prove the SOURCE still resolves to what it did a moment ago --
+          # and a PUT that moved the source would be the worst possible
+          # outcome of a job whose promise is "the release is the tested
+          # image". Both are re-fetched, and the media types are compared too:
+          # v0.1.5 shipped a destination that was a manifest LIST while the
+          # source was a manifest, which a digest-only check would also have
+          # caught but a media-type check names immediately.
+          SRC_AFTER=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                        "$API/manifests/${{ github.sha }}" \
+                      | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}')
+          SRC_CT_AFTER=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                        "$API/manifests/${{ github.sha }}" \
+                      | tr -d '\r' | awk 'tolower($1)=="content-type:"{print $2}')
+          AFTER=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                    "$API/manifests/$REF_NAME" \
+                  | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}')
+          DST_CT=$(curl -sI -H "Authorization: Bearer $BEARER" -H "Accept: $ACCEPT" \
+                    "$API/manifests/$REF_NAME" \
+                  | tr -d '\r' | awk 'tolower($1)=="content-type:"{print $2}')
+          echo "source digest after:   $SRC_AFTER  ($SRC_CT_AFTER)"
+          echo "release tag digest:    $AFTER  ($DST_CT)"
+
+          # 1. The source must not have moved.
+          if [ "$SRC_AFTER" != "$BEFORE" ]; then
+            echo "::error::the commit image moved during promotion:"
+            echo "::error::was $BEFORE, now $SRC_AFTER"
+            exit 1
+          fi
+          # 2. THE ACCEPTANCE TEST. Same digest, or the release advertises an
+          #    image nobody tested.
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "::error::$REF_NAME resolves to $AFTER but the tested commit"
+            echo "::error::image is $BEFORE. The release tag must be the SAME"
+            echo "::error::manifest, not a wrapper around it and not a second"
+            echo "::error::build of the same source."
+            exit 1
+          fi
+          # 3. Same kind of object, not merely the same bytes by coincidence.
+          if [ "$DST_CT" != "$CT" ] || [ "$SRC_CT_AFTER" != "$CT" ]; then
+            echo "::error::media type changed: source was $CT, source is now"
+            echo "::error::$SRC_CT_AFTER, destination is $DST_CT"
+            exit 1
+          fi
+
+          echo "PUBLISHED DIGEST: ${{ env.IMAGE }}@$AFTER"
+          {
+            echo "### Release image"
+            echo
+            echo "\`${{ env.IMAGE }}@$AFTER\`"
+            echo
+            echo "Promoted from \`${{ github.sha }}\` without rebuilding."
+            echo "The release tag and the commit tag are the same manifest"
+            echo "bytes, so they are the same digest by construction."
+          } >> "$GITHUB_STEP_SUMMARY"

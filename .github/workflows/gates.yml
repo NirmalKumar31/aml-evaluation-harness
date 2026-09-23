@@ -1,0 +1,122 @@
+# The static gates: everything checkable without running the pipeline.
+#
+# pytest covers the Python. These cover what it cannot reach -- shell scripts
+# that provision infrastructure, workflow syntax, Bicep templates, Markdown
+# links and style, secrets in history, and the publishability of the tree
+# itself.
+name: gates
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # WHAT MAY BE PUBLISHED. This repository is the published artifact, so the
+  # check runs against the checkout itself: denied paths (restricted data,
+  # build residue, development records), editorial metadata, and the same scan
+  # over every commit message in the history being published.
+  public-surface:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: The checkout must be publishable
+        run: |
+          python aml-platform/scripts/check_public_surface.py . --all-commits
+
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0          # gitleaks scans history, not the worktree
+
+      # A shell script that provisions a VM and formats a disk is production
+      # code, and no unit test reaches it.
+      - name: ShellCheck
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          find . -name '*.sh' -not -path './.git/*' \
+                 -not -path '*/.venv/*' -not -path '*/node_modules/*' -print0 \
+            | xargs -0 -r shellcheck -S warning
+
+      # Workflow files are the one kind of code that cannot be run locally.
+      - name: actionlint
+        run: |
+          # PINNED TO A COMMIT, NOT A TAG: this installer is piped into bash,
+          # so the ref it is fetched from has to be immutable.
+          curl -fsSL -o /tmp/download-actionlint.bash \
+            https://raw.githubusercontent.com/rhysd/actionlint/5db9d9cde2f3deb5035dea3e45f0a9fff2f29448/scripts/download-actionlint.bash
+          bash /tmp/download-actionlint.bash 1.7.4
+          ./actionlint -color
+
+      # A mutable tag means the workflow that passed is not necessarily the
+      # workflow that runs next time. The check requires a 40-hex SHA rather
+      # than enumerating the unpinned forms, which is the version that holds
+      # against a trailing comment, @HEAD, @latest or a bare version.
+      - name: Actions must be pinned to a commit SHA
+        run: python3 aml-platform/scripts/check_pinned_actions.py
+
+      - name: Bicep build
+        run: |
+          az bicep install
+          az bicep build --file aml-platform/infra/main.bicep --stdout > /dev/null
+          echo "bicep compiles"
+
+      # `.gitignore` is not a privacy control: a file that was ever committed
+      # stays reachable in history. THE BINARY, PINNED AND CHECKSUMMED -- the
+      # JavaScript action pulls an old scanner through the Actions cache and
+      # the GitHub API, which is three network dependencies for a gate that
+      # needs none.
+      - name: Secret scan (full history)
+        run: |
+          V=8.21.2
+          SHA=5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba
+          curl -fsSL -o /tmp/gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz"
+          echo "${SHA}  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks git --no-banner --redact --exit-code 1 .
+
+      # SAST against a triaged baseline: HIGH fails outright, and the
+      # medium-and-above set is compared against the recorded findings in
+      # aml-platform/docs/SAST_TRIAGE.md so a new one cannot arrive silently.
+      # The version is pinned because bandit scores the same code differently
+      # between releases, and a gate whose verdict depends on the build day is
+      # not a gate. `scripts/` is in scope: it provisions cloud resources,
+      # formats disks and generates every published artifact.
+      - name: Bandit
+        run: |
+          pip install -q 'bandit==1.9.4'
+          bandit -r aml-platform/src/ aml-platform/scripts/ -lll -q
+          python3 aml-platform/scripts/check_sast.py
+
+      - name: Local Markdown links and table structure
+        run: python3 aml-platform/scripts/check_links.py .
+
+      # Markdown STYLE, configured on purpose. A default run returns thousands
+      # of findings, most of them long lines, and wrapping the results tables
+      # to satisfy a line-length rule would make them harder to read. So
+      # .markdownlint-cli2.jsonc turns off what does not apply here and
+      # enforces what does: heading structure, fenced-code languages, list
+      # consistency and trailing whitespace. Pinned, for the same reason
+      # bandit is.
+      - name: Markdown style
+        run: npx --yes markdownlint-cli2@0.14.0
