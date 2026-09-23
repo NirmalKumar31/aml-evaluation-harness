@@ -235,7 +235,7 @@ measured and published rather than assumed.
 ```bash
 cd aml-platform
 make setup
-make test                                       # 496 collected
+make test                                       # 499 collected
 python scripts/make_tables.py --check --gate    # every published number
 python scripts/release_facts.py --check --gate  # every published count
 ```

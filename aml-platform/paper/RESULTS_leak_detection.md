@@ -39,16 +39,16 @@ population so no ranking is tested. See
 
 ### 1. The positive control separates under both designs
 
-| channel | real AP ratio | placebo mean | placebo range | separates? |
+| channel | real AP ratio | placebo mean | placebo range | verdict |
 |---|---:|---:|---|:--:|
 | **1.1.0 — global permutation, 8 seeds, superseded** | | | | |
-| reversed_window | 1.0066 | 0.9400 | [0.854, 0.999] | ❌ <!-- historical --> |
-| future_counterparty | 1.2014 | 0.9945 | [0.982, 1.022] | ✅ <!-- historical --> |
-| target *(positive control)* | 3.5525 | 0.9931 | [0.882, 1.069] | ✅ <!-- historical --> |
+| reversed_window | 1.0066 | 0.9400 | [0.854, 0.999] | not detected <!-- historical --> |
+| future_counterparty | 1.2014 | 0.9945 | [0.982, 1.022] | detected <!-- historical --> |
+| target *(positive control)* | 3.5525 | 0.9931 | [0.882, 1.069] | detected <!-- historical --> |
 | **2.0.0 — within (side, day), 5 seeds, canonical** | | | | |
-| reversed_window | 0.9951 | 0.8834 | [0.832, 0.936] | ✅ |
-| future_counterparty | 1.1920 | 0.9841 | [0.904, 1.099] | ❌ |
-| target *(positive control)* | 3.4508 | 0.7713 | [0.693, 0.834] | ✅ |
+| reversed_window | 0.9951 | 0.8834 | [0.832, 0.936] | detected |
+| future_counterparty | 1.1920 | 0.9841 | [0.904, 1.099] | not detected |
+| target *(positive control)* | 3.4508 | 0.7713 | [0.693, 0.834] | detected |
 
 The positive control survives both designs by a wide margin — 3.45 against a
 0.77 placebo under the canonical scheme. **The harness is not blind to a gross

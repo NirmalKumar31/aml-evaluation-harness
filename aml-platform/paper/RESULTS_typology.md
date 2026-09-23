@@ -128,12 +128,12 @@ as *"under this model of how the data were generated"*.
 
 | claim | status |
 |---|---|
-| "Detection varies substantially across laundering structures" | ❌ **withdrawn, and not replaced.** The published test assumed one detection probability per ring, which after-cliff exposure of 0.2131 to 1.0 falsifies. No like-for-like ensemble null has been computed, and the single-seed diagnostic does not stand in for one. On HI-Small the spread was never distinguishable from chance either (p = 0.170) |
+| "Detection varies substantially across laundering structures" | **withdrawn, and not replaced.** The published test assumed one detection probability per ring, which after-cliff exposure of 0.2131 to 1.0 falsifies. No like-for-like ensemble null has been computed, and the single-seed diagnostic does not stand in for one. On HI-Small the spread was never distinguishable from chance either (p = 0.170) |
 | "The per-structure ordering does not transfer between datasets" | **holds, model-conditionally.** rho 0.286 against a perfect-replication interval of [0.347, 0.976] |
 | "GATHER-SCATTER is the easiest to detect" | **suggestive, not established.** Rank 1 on both runs, but rank 1 twice by chance among 8 structures is p ≈ 1/64 before multiplicity, ≈ 0.13 after — and it was chosen *because* it topped both lists |
-| "FAN-IN is the blind spot" | ❌ **withdrawn.** Hardest on HI-Medium, third easiest on HI-Small |
-| "The per-structure profile is a property of the typology" | ❌ **no evidence.** rho = 0.286, p = 0.49 |
-| any single-seed per-structure number | ❌ **not a measurement.** BIPARTITE spans [0.098, 0.328] across seeds — a 3.3× range *within one structure* <!-- derived: 0.328/0.098 --> |
+| "FAN-IN is the blind spot" | **withdrawn.** Hardest on HI-Medium, third easiest on HI-Small |
+| "The per-structure profile is a property of the typology" | **no evidence.** rho = 0.286, p = 0.49 |
+| any single-seed per-structure number | **not a measurement.** BIPARTITE spans [0.098, 0.328] across seeds — a 3.3× range *within one structure* <!-- derived: 0.328/0.098 --> |
 
 What this means for a per-typology breakdown:
 

@@ -20,7 +20,7 @@ is scoped to a targeted search, which cannot establish absence.
 
 ---
 
-## 1b. Test-window validity — **the closest prior work, and it was uncited**
+## 1b. Test-window validity
 
 This project's actual subject is that an evaluation interval can be invalid
 because the data-generating process changes *inside* it. The interval here is
@@ -40,9 +40,9 @@ prior work.
   repository's §1 is that argument, in a different domain, arrived at
   independently and later.
 
-What remains this project's own is the **instance**: that the AMLworld
+What this project contributes here is the **instance**: that the AMLworld
 HI-Medium file contains the generator's wind-down inside the interval this
-project evaluates. We did not identify a prior report of it among the sources
+project evaluates. A prior report of it was not identified among the sources
 reviewed as of 2026-09-20 — web search plus the dataset's own documentation
 and the AML-benchmark papers cited in this file. That is a statement about a
 targeted search, not a systematic review, and it cannot establish absence. An
@@ -50,7 +50,7 @@ instance is in any case an observation about one dataset, not a method.
 
 ---
 
-## 2. Budget-constrained evaluation — **not novel, and the claim is withdrawn**
+## 2. Budget-constrained evaluation
 
 The README's framing device is that reviewers see a fixed number of alerts a
 day, so `recall@k` must be reported beside `recall_ceiling@k`. This is
@@ -84,7 +84,7 @@ harness and the measurements, not the concept.
 
 ---
 
-## 3. Seeds, variance and reporting ranges — **prior art exists**
+## 3. Seeds, variance and reporting ranges
 
 The finding that budget metrics swing 30–37% across seeds, and that a
 single-run number is not a result, sits on top of an existing literature:
@@ -115,7 +115,7 @@ is stated as a finding, not as a novelty claim.
 
 ---
 
-## 4. Negative controls — **an established method this project reinvented**
+## 4. Negative controls and conditional permutation tests
 
 The strongest methodological claim here is that *a null without a negative
 control is an assertion*: the ring-recall null was replaced only after a
@@ -157,7 +157,7 @@ rigorous reproducibility pipeline.
 
 ---
 
-## 5. Reproducibility and provenance tooling — **the thing being argued against**
+## 5. Provenance tooling and estimand validation
 
 - **Experiment trackers**: MLflow, Weights & Biases, DVC, Sacred. All track
   runs, parameters and artifacts.
@@ -166,9 +166,9 @@ rigorous reproducibility pipeline.
 - **Reproducibility checklists**: Pineau et al. (2021), *Improving
   Reproducibility in Machine Learning Research*.
 
-**The argument this project makes:** among the tools reviewed, none detects a
-wrong estimand — and that is a statement about the tools reviewed, not about
-the literature. A ring-recall lift of 1.43 was emitted by code, from <!-- historical -->
+**Scope of the comparison.** None of the tools reviewed here checks whether
+a metric measures the estimand its surrounding sentence names. That is a
+statement about the tools reviewed, not about the literature. A ring-recall lift of 1.43 was emitted by code, from <!-- historical -->
 artifacts, at a recorded commit, under a checker that verified it traced to a
 manifest, and it was wrong by a sign. Provenance answers *"did this number
 come from that code and that data?"*. It cannot answer *"is this number
@@ -192,9 +192,9 @@ measuring the thing the sentence says it measures?"*. Only a control can.
 | `recall_ceiling@k` is a new quantity | **withdrawn** — Boyd, Davis, Page & Santos Costa (ICML 2012) give the unachievable region of PR space in closed form, as a function of skew alone. The budgeted, per-day-stratified form is a restatement |
 | `recall_efficiency@k` is a new metric | **withdrawn** — normalising by the best attainable value is IDCG's idea (Järvelin & Kekäläinen 2002) and the credit-risk Accuracy Ratio's. This project's own metric-stability page shows it is an affine restatement of `precision@50` within a run |
 | The within-day permutation null is a new construction | **withdrawn** — it is a conditional permutation test (Berrett et al. 2020), and its misspecification is Goeman & Bühlmann's (2007) competitive/self-contained distinction |
-| `nonbinding_days@k` as a precondition for the estimand existing | **the least-covered primitive.** A referee survey found no named diagnostic for it in top-k evaluation. Small, and stated narrowly |
-| A non-binding stratum biases a lift TOWARD 1 and a spread UPWARD | **the one candidate methodological result.** Two paragraphs of arithmetic; not found stated elsewhere. No survey is exhaustive, so this is a claim about a search, not a proof of absence |
-| The AMLworld test window contains the generator's shutdown | **this project's finding**, and apparently unreported. An erratum about one dataset, not a method |
+| `nonbinding_days@k` as a precondition for the estimand existing | **the least-covered primitive here.** A named diagnostic for it in top-k evaluation was not identified in the limited literature review described in this file. Small, and stated narrowly |
+| A non-binding stratum biases a lift TOWARD 1 and a spread UPWARD | **the one candidate methodological result.** Two paragraphs of arithmetic. Not identified in the limited literature review described here, which is a statement about that review rather than about the literature |
+| The AMLworld test window contains the generator's shutdown | **observed here.** Not identified in the limited literature review described in §1b. An observation about one dataset, not a method |
 | Seed variance matters and ranges should be reported | **not new** — Bouthillier 2021, Dodge 2019, Reimers 2017 |
 | *Which* nuisance factor drives it here, reproduced across two libraries | **this project's finding**, stated narrowly. No systematic search was run, so novelty is not asserted |
 | Negative controls detect bias | **not new** — Lipsitch 2010 |

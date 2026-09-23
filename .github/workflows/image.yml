@@ -274,6 +274,7 @@ jobs:
               "no superseded lineages registered",
               "no superseded manifest publishes a divergent precision@50",
               "not a git checkout, so there is no real sha to prefer",
+              "not a git checkout, so object reachability cannot be established",
               "not a git checkout, so tag state cannot be established",
               "no workflows directory or no make, so overrides cannot be expanded",
               "package source not present",

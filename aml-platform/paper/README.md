@@ -19,7 +19,7 @@ there.
 | [`RESULTS_graph_features.md`](RESULTS_graph_features.md) | paired A/B rounds on added count and ratio features | **not established — regeneration required.** The four `graph_ab*` arms share one `config_hash`, record no feature set, have null `run_key`s, and two have byte-identical `stability.json`. Directory names are their only identity, so the archive cannot show which treatment produced which numbers |
 | [`RESULTS_typology.md`](RESULTS_typology.md) | per-structure detection, and the **withdrawal** of the spread published from it: its H0 was false, and the ensemble result has never been tested under a like-for-like null. A single-seed diagnostic is reported as a diagnostic only. **No claim about laundering structure is made from this benchmark** | current, headline withdrawn |
 | [`RESULTS_split_inflation.md`](RESULTS_split_inflation.md) | what a naive temporal split reports, decomposed into prevalence and detectability under an exchangeability assumption | current |
-| [`PREREGISTRATION_split_inflation.md`](PREREGISTRATION_split_inflation.md) | the above, written before it was run | record |
+| [`PREREGISTRATION_split_inflation.md`](PREREGISTRATION_split_inflation.md) | the protocol and predictions for the above, written before it was run | historical protocol record |
 
 ## Two things to know before reading any number here
 
