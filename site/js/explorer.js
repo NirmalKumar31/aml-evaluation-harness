@@ -68,7 +68,10 @@ function drawChart(svg, descNode, rows, metricLabel) {
   shown.forEach((r, i) => {
     const y = padT + i * rowH + 4;
     const h = rowH - 14;
-    const name = `${r.model}${r.seed === null ? "" : ` · seed ${r.seed}`} @${r.budget}`;
+    // The label the GENERATOR emitted. Two different artifacts can both be
+    // "GBDT seed 0"; which one a row is comes from the run table, not from
+    // anything this file can work out.
+    const name = `${r.run_label} @${r.budget}`;
     svg.append(svgEl("text", { x: padL - 10, y: y + h - 1, class: "axis-text",
                                "text-anchor": "end", text: name }));
 
@@ -91,7 +94,8 @@ function drawChart(svg, descNode, rows, metricLabel) {
       const cx = padL + scale(r.ceiling);
       const line = svgEl("line", { x1: cx, y1: y - 3, x2: cx, y2: y + h + 3,
                                    class: "ceiling-mark" });
-      line.append(svgEl("title", { text: `attainable ceiling ${fmt(r.ceiling, 5)}` }));
+      line.append(svgEl("title", {
+        text: `attainable ceiling ${fmt(r.ceiling, 5)} — ${r.ceiling_kind}` }));
       svg.append(line);
     }
 
@@ -100,11 +104,13 @@ function drawChart(svg, descNode, rows, metricLabel) {
   });
 
   const withNull = shown.filter(r => r.null_high !== null).length;
+  const kinds = [...new Set(shown.map(r => r.ceiling_kind).filter(Boolean))];
   descNode.textContent =
     `${metricLabel} for ${shown.length} run${shown.length === 1 ? "" : "s"}` +
     `${rows.length > shown.length ? ` (first ${shown.length} of ${rows.length})` : ""}. ` +
     `Bars are the observed value; the grey band, where present, is the published ` +
-    `random-ranker interval and the dashed rule is the attainable ceiling. ` +
+    `random-ranker interval; the dashed rule is the attainable ceiling OF THE METRIC ` +
+    `PLOTTED — ${kinds.join("; ")}. ` +
     `${withNull} of ${shown.length} rows have a published band; the rest have none, ` +
     `because a random-ranker band is published for precision and only for the rungs ` +
     `budget_null covers.`;
@@ -124,7 +130,7 @@ function renderTable(tbody, rows) {
   clear(tbody);
   for (const r of rows.slice(0, 200)) {
     const tr = el("tr");
-    tr.append(el("th", { scope: "row", text: r.run }));
+    tr.append(el("th", { scope: "row", text: r.run_label }));
     tr.append(el("td", { text: r.seed === null ? "—" : String(r.seed) }));
     tr.append(el("td", { text: r.metric_label }));
     tr.append(el("td", { class: "num", text: String(r.budget) }));

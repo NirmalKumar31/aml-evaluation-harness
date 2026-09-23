@@ -426,11 +426,14 @@ def test_simulator_formulas_and_boundaries():
         s = entry["s"]
         reviewed = min(k, N)
         assert abs(s["randomPrecision"] - P / N) < 1e-12
-        assert abs(s["randomRecall"] - reviewed / N) < 1e-12
         assert abs(s["precisionCeiling"] - min(P, k) / reviewed) < 1e-12
         if P == 0:
-            assert s["recallCeiling"] is None, "recall ceiling is undefined with no positives"
+            # 0/0 in both. Reporting min(k,N)/N as "recall" on a day with
+            # nothing to find states a rate for an empty set.
+            assert s["randomRecall"] is None, "recall is undefined with no positives"
+            assert s["recallCeiling"] is None, "the recall ceiling is undefined too"
         else:
+            assert abs(s["randomRecall"] - reviewed / N) < 1e-12
             assert abs(s["recallCeiling"] - min(P, k) / P) < 1e-12
         assert s["binds"] is (k < N)
 
@@ -514,3 +517,256 @@ def test_the_surface_checker_does_not_report_clean_over_an_unread_tree(tmp_path)
         assert cps.scan_tree(untracked), "a denied path in the upload was not caught"
     finally:
         planted.unlink(missing_ok=True)
+
+
+# ── the ceiling belongs to the metric being plotted ───────────────────────
+
+def test_recall_efficiency_rows_carry_a_ceiling_of_one():
+    """Efficiency is recall over its own ceiling, so its maximum IS one.
+
+    Carrying `recall_ceiling@k` on an efficiency row put the RECALL ceiling on
+    a chart whose bars are efficiencies -- a dashed rule at 0.05 beside a bar
+    at 0.63, which reads as an impossible overshoot rather than as two
+    different quantities.
+    """
+    d = _data()
+    eff = [r for r in d["results"] if r["metric"] == "recall_efficiency"]
+    assert eff, "no recall_efficiency rows; this test would be vacuous"
+    for r in eff:
+        assert r["ceiling"] == 1.0, (
+            f"{r['id']}: efficiency ceiling is {r['ceiling']}, not 1.0")
+        assert "construction" in r["ceiling_kind"]
+
+
+def test_recall_rows_keep_the_artifact_backed_recall_ceiling():
+    d = _data()
+    rec = [r for r in d["results"] if r["metric"] == "recall"]
+    assert rec, "no recall rows"
+    cache: dict[str, dict] = {}
+    for r in rec:
+        doc = cache.setdefault(
+            r["source"], json.loads((ROOT / r["source"]).read_text(encoding="utf-8")))
+        m = doc.get("metrics", doc)
+        want = m.get(f"recall_ceiling@{r['budget']}")
+        assert want is not None, f"{r['id']}: the artifact has no recall_ceiling"
+        assert abs(float(want) - r["ceiling"]) < 5e-6, (
+            f"{r['id']}: ceiling {r['ceiling']} but the artifact holds {want}")
+        assert r["ceiling"] != 1.0 or float(want) == 1.0, (
+            f"{r['id']}: a recall ceiling of exactly 1.0 must come from the artifact")
+        assert "read from the artifact" in r["ceiling_kind"]
+
+
+def test_a_metric_with_no_published_ceiling_carries_none():
+    d = _data()
+    for r in d["results"]:
+        if r["metric"] in ("precision", "ring_recall"):
+            assert r["ceiling"] is None, (
+                f"{r['id']}: {r['metric']} has no published attainable ceiling, "
+                f"but the row carries {r['ceiling']}")
+
+
+def test_the_chart_describes_the_ceiling_of_the_metric_it_plots():
+    _need_site()
+    js = (SITE / "js" / "explorer.js").read_text(encoding="utf-8")
+    assert "ceiling_kind" in js, "the chart never explains which ceiling it drew"
+    assert "METRIC" in js and "PLOTTED" in js, (
+        "the chart description does not say the rule is the plotted metric's ceiling")
+
+
+# ── unique, generator-emitted chart labels ────────────────────────────────
+
+def test_every_filterable_result_set_has_a_unique_chart_label():
+    """`canonical_Medium_gbdt` and `eval_Medium/seed0` are both "GBDT, seed 0".
+
+    They are different artifacts on different lineages, and a chart that
+    renders both as `GBDT · seed 0` makes them indistinguishable at the one
+    moment a reader is comparing them.
+    """
+    d = _data()
+    by_run = {}
+    for r in d["results"]:
+        by_run.setdefault(r["run"], set()).add(r["run_label"])
+    for run, labels in by_run.items():
+        assert len(labels) == 1, f"{run} renders under several labels: {labels}"
+    labels = [next(iter(v)) for v in by_run.values()]
+    dupes = {lab for lab in labels if labels.count(lab) > 1}
+    assert not dupes, f"different runs share a chart label: {sorted(dupes)}"
+    assert len(labels) == len(by_run) >= 10
+
+
+def test_the_label_is_emitted_by_the_generator_not_inferred_in_the_browser():
+    _need_site()
+    js = (SITE / "js" / "explorer.js").read_text(encoding="utf-8")
+    assert "r.run_label" in js, "the chart does not use the emitted label"
+    assert "canonical" not in js and "sweep" not in js, (
+        "the browser is inferring a lineage discriminator; that distinction "
+        "belongs to the registry and must travel with the row")
+
+
+# ── the P = 0 boundary ────────────────────────────────────────────────────
+
+def test_simulator_recall_is_undefined_with_no_positives():
+    _need_site()
+    _node()
+    script = SIM % (str(SITE / "js" / "budget.js"), json.dumps([[1000, 0, 50], [10, 0, 10]]))
+    r = subprocess.run(["node", "--input-type=module", "-e", script],
+                       capture_output=True, text=True, cwd=SITE)
+    assert r.returncode == 0, r.stderr
+    for entry in json.loads(r.stdout):
+        s = entry["s"]
+        assert s is not None, f"{entry['in']} is a coherent day and must simulate"
+        assert s["randomRecall"] is None, (
+            f"{entry['in']}: random-ranker recall is 0/0 with no positives, not "
+            f"{s['randomRecall']}")
+        assert s["recallCeiling"] is None, (
+            f"{entry['in']}: the recall ceiling is 0/0 with no positives")
+        assert s["randomPrecision"] == 0, "precision stays defined and is zero"
+        assert s["precisionCeiling"] == 0, "the precision ceiling stays defined and is zero"
+
+
+def test_the_page_states_the_zero_positive_boundary():
+    _need_site()
+    html = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "With no positives, recall is undefined" in html
+    js = (SITE / "js" / "budget.js").read_text(encoding="utf-8")
+    assert "undefined — no positive account-days" in js, (
+        "the simulator does not label the undefined case")
+    assert "v !== null && v !== undefined" in js, (
+        "an undefined quantity would still be drawn as a zero-length bar")
+
+
+# ── the withdrawal distinction ────────────────────────────────────────────
+
+def test_the_page_distinguishes_a_withdrawn_claim_from_a_permitted_level():
+    """0.5706 is the worked example.
+
+    The registry withdraws the pooled logistic precision@50 *quoted as a
+    model-quality statement* and its own negative lookahead exempts the same
+    number beside its null. Saying "none of these appears anywhere else on
+    this site" was therefore false of the site's own results table, which
+    renders 0.5706 with its band.
+    """
+    _need_site()
+    html = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "No withdrawn claim is presented elsewhere as current" in html
+    assert "None of them appears anywhere else on this site" not in html, (
+        "the page still claims the numbers appear nowhere else, which is not true")
+    assert "random-ranker null" in html
+
+    d = _data()
+    rows = [r for r in d["results"]
+            if r["metric"] == "precision" and r["budget"] == 50
+            and r["model"] == "Logistic baseline"]
+    assert rows, "the worked example is no longer in the data"
+    r = rows[0]
+    assert abs(r["observed"] - 0.5706) < 1e-6, (
+        f"the example value moved to {r['observed']}; update this test deliberately")
+    assert r["null_high"] is not None, (
+        "0.5706 is rendered without its band, which IS the withdrawn presentation")
+
+
+# ── the current-tree label ────────────────────────────────────────────────
+
+def test_the_counts_are_labelled_as_the_current_tree_not_the_release():
+    d = _data()
+    rel = d["release"]
+    assert rel["scope"] == "current main tree"
+    assert rel["latest_software_release"] == "v0.2.1"
+    assert "v0.2.1 remains the latest signed" in rel["scope_note"]
+    assert "byte-identical between v0.2.1 and current main" in rel["scope_note"]
+
+    _need_site()
+    html = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "Current main-tree verification" in html
+    assert '<h3 id="release-h">Release</h3>' not in html, (
+        "the section still calls these counts a release, implying v0.2.1 "
+        "collected them")
+
+
+def test_result_artifact_links_are_pinned_and_the_pin_is_byte_identical():
+    """Links point at v0.2.1. That is only honest while the linked bytes there
+    are the bytes the numbers came from, so the equality is asserted."""
+    d = _data()
+    ref = d["release"]["artifact_link_ref"]
+    assert ref == "v0.2.1"
+    paths = sorted({r["source"] for r in d["results"]}
+                   | {r["null_source"] for r in d["results"] if r["null_source"]})
+    assert len(paths) >= 15
+    r = subprocess.run(["git", "-C", str(ROOT), "rev-parse", f"{ref}^{{commit}}"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        pytest.skip("the v0.2.1 tag is not present in this checkout")
+    diff = subprocess.run(
+        ["git", "-C", str(ROOT), "diff", "--name-only", ref, "HEAD", "--", *paths],
+        capture_output=True, text=True)
+    assert diff.returncode == 0
+    assert not diff.stdout.split(), (
+        f"these linked artifacts differ between {ref} and HEAD, so pinning the "
+        f"links to {ref} would show different bytes than the numbers came "
+        f"from: {diff.stdout.split()}")
+
+    js = (SITE / "js" / "util.js").read_text(encoding="utf-8")
+    assert 'ref = "v0.2.1"' in js, "the link helper no longer pins to the release"
+
+
+# ── the Pages workflow ────────────────────────────────────────────────────
+
+def _pages_yml() -> str:
+    p = ROOT / ".github" / "workflows" / "pages.yml"
+    if not p.is_file():
+        pytest.skip("pages.yml not present (running inside the image)")
+    return p.read_text(encoding="utf-8")
+
+
+def test_pages_installs_from_the_hashed_lock_not_an_unpinned_pytest():
+    body = _pages_yml()
+    assert re.search(r"--require-hashes\s*\\?\s*\n?\s*-r requirements-dev\.linux-amd64\.lock", body), (
+        "pages.yml does not install the dev suite from the hashed lock")
+    # COMMENTS ARE NOT COMMANDS. The workflow explains in prose why an
+    # unpinned `pip install pytest` is forbidden, and matching that sentence
+    # would make the guard fire on its own rationale. Strip comment lines and
+    # test what the runner would execute.
+    commands = "\n".join(ln for ln in body.splitlines()
+                         if not ln.lstrip().startswith("#"))
+    assert not re.search(r"pip install[^\n]*\bpytest\b(?![-.\w=])", commands), (
+        "an unpinned `pip install pytest` is back in pages.yml; the suite "
+        "gating a published website would run on whatever the index serves")
+
+
+def test_pages_pins_the_interpreter_to_the_version_ci_verifies():
+    body = _pages_yml()
+    m = re.search(r'python-version:\s*"([^"]+)"', body)
+    assert m and m.group(1) == "3.12.14", (
+        f"pages.yml pins python {m.group(1) if m else 'nothing'}; CI and the "
+        f"container pin 3.12.14")
+    ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "3.12.14" in ci, "ci.yml no longer pins 3.12.14; keep the two together"
+
+
+def test_pages_uses_the_current_action_versions_pinned_by_sha():
+    body = _pages_yml()
+    assert "actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9" in body
+    assert "actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346" in body
+    for m in re.finditer(r"uses:\s*([^\s@]+)@([^\s]+)", body):
+        assert re.fullmatch(r"[0-9a-f]{40}", m.group(2)), (
+            f"{m.group(1)} is not pinned to a commit SHA: {m.group(2)}")
+
+
+def test_the_pages_build_job_has_its_own_status_name():
+    body = _pages_yml()
+    assert re.search(r"^  build:\n    name: site-build$", body, re.M), (
+        "the Pages build job does not declare the distinct name `site-build`; "
+        "reusing the `build` context would collide with the image workflow's")
+
+
+def test_a_pull_request_can_never_deploy():
+    body = _pages_yml()
+    deploy = body[body.index("  deploy:"):]
+    guard = deploy[:deploy.index("steps:")]
+    assert "github.event_name != 'pull_request'" in guard
+    assert "github.ref == 'refs/heads/main'" in guard
+    # The elevated scopes exist only in the deploy job.
+    build = body[body.index("  build:"):body.index("  deploy:")]
+    for scope in ("pages: write", "id-token: write"):
+        assert scope not in build, f"{scope} is granted to the build job"
+        assert scope in deploy, f"{scope} is missing from the deploy job"

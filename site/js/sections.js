@@ -1,7 +1,7 @@
 // Seed stability, provenance, window structure and the withdrawal register.
 // All rendered from site-data.json; no value is written into this file.
 
-import { el, svgEl, clear, fmt, pct, artifactUrl } from "./util.js";
+import { el, svgEl, clear, fmt, pct, artifactUrl, REPO } from "./util.js";
 
 export function renderStability(data, root = document) {
   const s = data.stability;
@@ -80,10 +80,20 @@ export function renderStability(data, root = document) {
 export function renderRelease(data, root = document) {
   const box = root.querySelector("#release-facts");
   const r = data.release;
+
+  const scope = root.querySelector("#release-scope");
+  if (scope) {
+    clear(scope);
+    scope.append(document.createTextNode(r.scope_note + " "));
+    scope.append(el("a", {
+      href: `${REPO}/releases/tag/${r.latest_software_release}`,
+      text: `Release ${r.latest_software_release}`, rel: "noopener" }));
+    scope.append(document.createTextNode("."));
+  }
   if (box) {
     clear(box);
     const items = [
-      ["Tests collected", r.tests_collected.toLocaleString("en"),
+      ["Tests collected (current main)", r.tests_collected.toLocaleString("en"),
        "Documents quote the collected total, because how many pass or skip depends on which data the machine holds."],
       ["Published values gated", r.published_values_checked.toLocaleString("en"),
        `Checked across ${r.published_documents} documents by the publication gate; ${r.published_values_exempted} carry a written exemption.`],

@@ -272,7 +272,11 @@ jobs:
               # context is aml-platform/, so site/ is absent there by
               # construction, and the image ships no node runtime.
               "node is not available",
+              "pages.yml not present (running inside the image)",
               "site/ not present (running inside the image)",
+              # A shallow or tagless checkout cannot resolve the release
+              # the site pins its artifact links to.
+              "the v0.2.1 tag is not present in this checkout",
               "no exposure measured in this checkout",
               "no gold archive in this checkout",
               "no replay bundles in this checkout",

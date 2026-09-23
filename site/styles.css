@@ -344,7 +344,12 @@ svg { display: block; max-width: 100%; height: auto; }
             grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
 .sim-grid div { min-width: 0; }
 .sim-grid dt { font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
-               color: var(--ink-3); font-weight: 600; }
+               color: var(--ink-2); font-weight: 600; }
+/* A code span inside a small uppercase label sat at 4.4:1 against its own
+   tinted background. The label already carries the monospace cue through its
+   parent, so the tint goes and the text inherits --ink-2. */
+.sim-grid dt code { background: none; padding: 0; color: inherit;
+                    font-size: 1em; text-transform: none; }
 .sim-grid dd { margin: .15rem 0 0; font: 620 1.05rem/1.3 var(--mono);
                font-variant-numeric: tabular-nums; }
 
