@@ -379,10 +379,10 @@ def test_no_assistant_attribution_or_development_record_in_the_site():
 def test_no_external_runtime_script_or_stylesheet():
     _need_site()
     for rel, html in _pages().items():
-        for m in re.finditer(r"<script\b[^>]*\bsrc=[\"']([^\"']+)", html):
+        for m in re.finditer(r"<script\b[^>]*\bsrc=[\"']([^\"']+)", html, re.I):
             assert not re.match(r"https?:|//", m.group(1)), (
                 f"{rel} loads an external script: {m.group(1)}")
-        for m in re.finditer(r"<link\b[^>]*\bhref=[\"']([^\"']+)[\"'][^>]*>", html):
+        for m in re.finditer(r"<link\b[^>]*\bhref=[\"']([^\"']+)[\"'][^>]*>", html, re.I):
             if "stylesheet" in m.group(0) and re.match(r"https?:|//", m.group(1)):
                 pytest.fail(f"{rel} loads an external stylesheet: {m.group(1)}")
         # THE CALL, NOT THE WORD. The footer says in prose that the site
@@ -395,12 +395,17 @@ def test_no_external_runtime_script_or_stylesheet():
 
 
 def test_no_inline_script_and_no_dangerous_sink():
+    """CASE-INSENSITIVELY. HTML tag names are not case sensitive, so a guard
+    that only knows `<script>` is a guard that `<SCRIPT>` walks past. The
+    builder only ever writes lower case, which is exactly why a reader would
+    never notice the hole -- and why it is closed here rather than argued
+    away."""
     _need_site()
     for rel, html in _pages().items():
-        for m in re.finditer(r"<script\b([^>]*)>(.*?)</script>", html, re.S):
-            assert "src=" in m.group(1) and not m.group(2).strip(), (
+        for m in re.finditer(r"<script\b([^>]*)>(.*?)</script\s*>", html, re.S | re.I):
+            assert "src=" in m.group(1).lower() and not m.group(2).strip(), (
                 f"{rel} carries an inline script, which the policy forbids")
-        assert not re.search(r"\bon[a-z]+=\"", html), (
+        assert not re.search(r"\son[a-z]+\s*=", html, re.I), (
             f"{rel} has an inline event handler attribute")
     for js in _js_files():
         body = _strip_js_comments(js.read_text(encoding="utf-8"))
