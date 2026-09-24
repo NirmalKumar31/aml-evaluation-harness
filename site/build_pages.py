@@ -177,7 +177,7 @@ def figure(fig_id: str, title: str, desc: str, svg_body: str, view: str,
          aria-labelledby="{E(fig_id)}-t" aria-describedby="{E(fig_id)}-d"
          preserveAspectRatio="xMidYMid meet">{svg_body}</svg>
   </div>
-  <figcaption>{caption}</figcaption>
+  {f'<figcaption>{caption}</figcaption>' if caption else ''}
 </figure>"""
 
 
@@ -268,39 +268,117 @@ def seed_dots_chart(story: dict) -> str:
 
 
 def scaling_chart(story: dict) -> str:
-    """Two rungs at one budget, on one axis, explicitly not a paired test."""
-    groups = []
-    for g in ("HI-Medium", "HI-Large"):
-        pts = [s for s in story["series"] if s["group"] == g]
-        if pts:
-            groups.append((g, pts))
+    """One rung, one budget, one dot per seed.
+
+    This used to carry a second rung on the same axis. Two rows invite a
+    comparison the caption then has to spend four sentences refusing, and the
+    finding is about the scale the protocol reached -- not about which learner
+    scored higher on data it was never run against.
+    """
+    pts = sorted(story["series"], key=lambda p: p["value"])
     # A round top, so the ticks read 0.05 / 0.10 / 0.15 rather than 0.04 / 0.09.
-    hi = math.ceil(max(s["value"] for s in story["series"]) * 1.3 / 0.05) * 0.05
-    lo, x0, x1, r = 0.0, 40.0, 720.0, 12.0
+    hi = math.ceil(max(p["value"] for p in pts) * 1.35 / 0.05) * 0.05
+    lo, x0, x1, r, cy = 0.0, 40.0, 720.0, 13.0, 66.0
+    learner = sorted({p["model"] for p in pts})[0]
+    group = sorted({p["group"] for p in pts})[0]
+    out = [f'<text class="row-label" x="20" y="{cy - 34}">{E(group)} · '
+           f'{E(learner)} · {len(pts)} seeds</text>',
+           f'<line class="row-rule" x1="{x0}" y1="{cy}" x2="{x1}" y2="{cy}"/>']
+    for j, ((x, y), p) in enumerate(
+            zip(beeswarm([q["value"] for q in pts], lo, hi, x0, x1, cy, r),
+                pts, strict=True)):
+        # Alternating sides: three seeds within a percentage point of each
+        # other would otherwise print their values on top of one another.
+        ly = round(y - r - 8, 2) if j % 2 == 0 else round(y + r + 16, 2)
+        out.append(f'<g class="scale-dot scale-1"><circle cx="{x}" cy="{y}" r="{r}">'
+                   f'<title>{E(p["label"])}: {E(story["metric"])} '
+                   f'{E(fmt(p["value"]))}</title></circle>'
+                   f'<text x="{x}" y="{ly}" text-anchor="middle">'
+                   f'{E(fmt(p["value"]))}</text></g>')
+    out.append(axis(lo, hi, x0, x1, 130,
+                    tuple(round(hi * f, 3) for f in (0, 0.25, 0.5, 0.75, 1.0))))
+    out.append(f'<text class="axis-title" x="{(x0 + x1) / 2}" y="170" text-anchor="middle">'
+               f'{E(story["metric"])} (account-day)</text>')
+    return "".join(out)
+
+
+def split_chart(story: dict) -> str:
+    """Two protocols, two metrics, each metric on its own scale.
+
+    A SHARED AXIS WOULD BE THE WRONG PICTURE. Average precision sits near
+    0.2 and recall@50 near 0.09, so one axis makes the second pair a stub and
+    hides the only thing the chart is for -- that the two metrics move in
+    OPPOSITE directions when the split changes. Each pair is therefore drawn
+    against its own maximum, and the printed values carry the real numbers.
+    """
+    x0, x1 = 20.0, 560.0
     out = []
-    for i, (g, pts) in enumerate(groups):
-        cy = 58.0 + i * 92
-        learner = sorted({p["model"] for p in pts})[0]
-        out.append(f'<text class="row-label" x="20" y="{cy - 30}">{E(g)} · '
-                   f'{E(learner)}</text>')
-        out.append(f'<line class="row-rule" x1="{x0}" y1="{cy}" x2="{x1}" y2="{cy}"/>')
-        ordered = sorted(pts, key=lambda p: p["value"])
-        places = beeswarm([pt["value"] for pt in ordered], lo, hi, x0, x1, cy, r)
-        for j, ((x, y), p) in enumerate(zip(places, ordered, strict=True)):
-            # Alternating sides: three seeds within a percentage point of
-            # each other would otherwise print their values on top of one
-            # another.
-            ly = round(y - r - 8, 2) if j % 2 == 0 else round(y + r + 16, 2)
-            out.append(f'<g class="scale-dot scale-{i}"><circle cx="{x}" cy="{y}" r="{r}">'
-                       f'<title>{E(p["label"])}: {E(story["metric"])} '
-                       f'{E(fmt(p["value"]))}</title></circle>'
-                       f'<text x="{x}" y="{ly}" text-anchor="middle">'
-                       f'{E(fmt(p["value"]))}</text></g>')
-    out.append('<line class="lane-split" x1="20" y1="106" x2="740" y2="106"/>')
-    out.append(axis(lo, hi, x0, x1, 208, tuple(round(hi * f, 3) for f in (0, 0.25, 0.5, 0.75, 1.0))))
-    out.append(f'<text class="axis-title" x="{(x0 + x1) / 2}" y="248" text-anchor="middle">'
-               f'{E(story["metric"])} — separate runs on separate data, not a '
-               f'paired comparison</text>')
+    for i, pair in enumerate(story["pairs"]):
+        top = 30 + i * 112
+        hi = max(pair["ring_aware"], pair["naive"]) * 1.15
+        out.append(f'<text class="bar-label" x="20" y="{top}">{E(pair["metric"])} '
+                   f'<tspan class="row-unit">({E(pair["unit"])} unit)</tspan></text>')
+        for j, (who, key) in enumerate((("ring-aware split", "ring_aware"),
+                                        ("naive split", "naive"))):
+            y = top + 10 + j * 30
+            w = round(sx(pair[key], 0.0, hi, x0, x1) - x0, 2)
+            out.append(f'<rect class="bar bar-{j}" x="{x0}" y="{y}" width="{w}" '
+                       f'height="20" rx="3"><title>{E(who)}: {E(pair["metric"])} '
+                       f'{E(fmt(pair[key]))}, mean of {pair["n_seeds"]} seeds'
+                       f'</title></rect>')
+            out.append(f'<text class="bar-inline" x="{x0 + 8}" y="{y + 14}">'
+                       f'{E(who)}</text>')
+            out.append(value_label(x0 + w, y + 14, fmt(pair[key])))
+        arrow = "higher" if pair["pct"] > 0 else "lower"
+        out.append(f'<text class="ratio-note" x="20" y="{top + 84}">'
+                   f'naive reads {E(fmt(abs(pair["pct"]), 1))}% {arrow} '
+                   f'(ratio {E(fmt(pair["ratio"], 4))}, '
+                   f'{E(fmt(pair["ci_lo"], 4))}–{E(fmt(pair["ci_hi"], 4))} '
+                   f'across {pair["n_seeds"]} seeds)</text>')
+    return "".join(out)
+
+
+def review_funnel(win: dict, budget: int, null_lo, null_hi) -> str:
+    """What happens to a day's transactions before anyone looks at one.
+
+    Four stages, narrowing. The numbers on the right are the ones that make
+    the last stage the interesting one: a fixed budget, and a base rate high
+    enough that filling the queue at random already scores well.
+    """
+    stages = (
+        ("Transactions scored", "millions per day, every account touched", "w0"),
+        ("Ranked account-days", "one score per account per calendar day", "w1"),
+        (f"Top {budget} reviewed", "the queue an investigation team can actually open", "w2"),
+        ("Confirmed laundering", "what the review finds", "w3"),
+    )
+    widths = (700.0, 540.0, 320.0, 150.0)
+    out = []
+    for i, ((name, note, cls), w) in enumerate(zip(stages, widths, strict=True)):
+        y = 14 + i * 74
+        x = round((740 - w) / 2, 2)
+        last = i == len(stages) - 1
+        out.append(f'<rect class="funnel-band funnel-{i}" x="{x}" y="{y}" '
+                   f'width="{w}" height="46" rx="6"/>')
+        # The last band is filled solid, so its labels invert.
+        ink = " funnel-on-fill" if last else ""
+        out.append(f'<text class="funnel-name{ink}" x="370" y="{y + 21}" '
+                   f'text-anchor="middle">{E(name)}</text>')
+        out.append(f'<text class="funnel-note{ink}" x="370" y="{y + 37}" '
+                   f'text-anchor="middle">{E(note)}</text>')
+        if not last:
+            out.append(f'<path class="funnel-arrow" d="M370 {y + 50} l 0 16 '
+                       f'm -6 -6 l 6 6 l 6 -6"/>')
+    # TWO LINES, MEASURED. SVG does not wrap text, so a single long line runs
+    # past the viewBox and is simply cut off -- which is how the first version
+    # of this figure lost the second half of its own point.
+    foot = (f'On the evaluated {win["rung"]} window, {win["tail_days"]} of '
+            f'{win["days"]} days are thin enough that',
+            f'filling the queue at random already scores '
+            f'{fmt(null_lo)}–{fmt(null_hi)} precision')
+    base = 14 + 4 * 74 + 10
+    for j, line in enumerate(foot):
+        out.append(f'<text class="funnel-foot" x="370" y="{base + j * 15}" '
+                   f'text-anchor="middle">{E(line)}</text>')
     return "".join(out)
 
 
@@ -506,11 +584,19 @@ def coverage_matrix(data: dict, route_id: str, *, level: str = "h3") -> str:
 
 def architecture_section(route_id: str, *, level: str = "h2",
                          heading: str = "Architecture",
-                         intro: str = "") -> str:
-    """Three preview cards that open one accessible dialog at full size."""
+                         intro: str = "", only: "tuple[str, ...] | None" = None,
+                         after: str = "", captions: bool = True) -> str:
+    """Preview cards that open one accessible dialog at full size.
+
+    `only` narrows the previews to named diagrams. The homepage shows one and
+    sends the reader to the engineering page for the rest; three full-width
+    pictures on a page that is meant to be read in three minutes is a
+    documentation dump, not an introduction.
+    """
     base = ROUTE[route_id]["base"]
+    shown = [d for d in DIAGRAMS if only is None or d["id"] in only]
     cards, panels = [], []
-    for d in DIAGRAMS:
+    for d in shown:
         src = f"{base}{d['deployed']}"
         cards.append(f"""
 <li class="arch-card reveal">
@@ -524,7 +610,7 @@ def architecture_section(route_id: str, *, level: str = "h2",
       <span class="arch-cue">Open full size</span>
     </span>
   </button>
-  <p class="arch-caption">{E(d['caption'])}</p>
+  {'' if not captions else f'<p class="arch-caption">{E(d["caption"])}</p>'}
 </li>""")
         panels.append(f"""
 <figure class="arch-panel" id="arch-panel-{E(d['id'])}" hidden>
@@ -536,7 +622,7 @@ def architecture_section(route_id: str, *, level: str = "h2",
     return f"""
 <{level} id="architecture">{E(heading)}</{level}>
 {intro}
-<ul class="arch-grid plain">{''.join(cards)}</ul>
+<ul class="{'arch-grid arch-grid-one plain' if len(shown) == 1 else 'arch-grid plain'}">{''.join(cards)}</ul>{after}
 <p class="fineprint">Diagrams are generated from
    <code>aml-platform/docs/architecture/</code> and copied into this site at
    build time; there is no second copy to fall out of date. Technology icons
@@ -718,14 +804,19 @@ def hero_network(width: int = 1200, height: int = 520, n: int = 34) -> str:
 def story_links(story: dict) -> str:
     items = [f'<li>{art_link(a["path"], a["label"])}</li>' for a in story["links"]]
     seen, srcs = set(), []
-    for s in story["series"]:
+    # A story built from per-run rows carries `series`, each row naming the
+    # manifest it came from. One built from a single derived artifact carries
+    # no series at all -- its source is already in `links`.
+    for s in story.get("series", ()):
         for key in ("source", "null_source"):
             p = s.get(key)
             if p and p not in seen:
                 seen.add(p)
                 srcs.append(f'<li>{art_link(p, Path(p).parent.name + "/" + Path(p).name)}</li>')
-    return (f'<div class="prov"><h4 class="prov-h">Read from</h4>'
-            f'<ul class="prov-list plain">{"".join(srcs + items)}</ul></div>')
+    n = len(srcs + items)
+    return (f'<details class="prov"><summary class="prov-h">Read from '
+            f'{n} artifact{"" if n == 1 else "s"}</summary>'
+            f'<ul class="prov-list plain">{"".join(srcs + items)}</ul></details>')
 
 
 def story_body(story: dict, chart: str) -> str:
@@ -741,202 +832,331 @@ def story_body(story: dict, chart: str) -> str:
 <div class="story-figure">{chart}{story_links(story)}</div>"""
 
 
-def home_page(data: dict) -> str:
-    rel_ = data["release"]
-    st = {s["id"]: s for s in data["stories"]}
-    nb, ss, sc = st["null-band"], st["seed-spread"], st["scaling"]
-    win = nb["window"]
+PIPELINE = (
+    ("Data and temporal split", "account-days, a cut date, rings kept whole"),
+    ("Model training", "the families that fit, at a fixed row order"),
+    ("Daily top-k evaluation", "rank the day, score the k alerts"),
+    ("Seed and leakage stress tests", "rerun, permute, re-split"),
+    ("Verified artifact and publication", "every value linked, gate-checked"),
+)
 
-    panels = []
-    for b in nb["budgets"]:
-        panels.append(f"""
-<div class="switch-panel" data-for="nb-{b}">
-  {figure(f'nullband-{b}',
-          f'Observed precision@{b} against the random-ranker band',
-          f'Horizontal bars for each run at k={b}. The shaded region is the '
-          f'range a uniformly random ranker attains on this split, so the '
-          f'distance between a bar and the right-hand edge of that region is '
-          f'the part of the level the model is responsible for.',
-          null_band_chart(nb, b), '0 0 760 200',
-          'Both levels and the band are read from the committed artifacts. '
-          'The band belongs to the split, not to any model.',
-          level='h4')}
-</div>""")
 
-    switcher = f"""
-<div class="switcher" role="group" aria-label="Daily review budget">
-  <input class="vis-radio" type="radio" id="nb-{nb['budgets'][0]}" name="nullband" checked>
-  <input class="vis-radio" type="radio" id="nb-{nb['budgets'][1]}" name="nullband">
-  <div class="switch-tabs">
-    <span class="switch-legend" aria-hidden="true">Daily review budget</span>
-    <label for="nb-{nb['budgets'][0]}">k = {nb['budgets'][0]}</label>
-    <label for="nb-{nb['budgets'][1]}">k = {nb['budgets'][1]}</label>
-  </div>
-  <div class="switch-panels">{''.join(panels)}</div>
+def pipeline_html() -> str:
+    """The five stages, as an ordered list rather than a picture.
+
+    A list reads to a screen reader, reflows on a phone and needs no
+    JavaScript; the chevrons between stages are decoration added in CSS.
+    """
+    items = "".join(
+        f'<li class="stage"><span class="stage-n" aria-hidden="true">{i}</span>'
+        f'<span class="stage-body"><span class="stage-name">{E(name)}</span>'
+        f'<span class="stage-note">{E(note)}</span></span></li>'
+        for i, (name, note) in enumerate(PIPELINE, 1))
+    return f'<ol class="pipeline">{items}</ol>'
+
+
+def rung_summary(data: dict, route_id: str) -> str:
+    """Three rungs, one line each. The full matrix lives on the explorer.
+
+    Derived from the same coverage table, so this cannot claim a measurement
+    the matrix does not have.
+    """
+    label = {f["id"]: f["label"] for f in data["coverage"]["families"]}
+    rows = []
+    for r in data["coverage"]["rungs"]:
+        measured = [label[c["family"]] for c in r["cells"] if c["state"] == "measured"]
+        diag = [label[c["family"]] for c in r["cells"] if c["state"] == "diagnostic"]
+        parts = []
+        if measured:
+            parts.append(", ".join(measured))
+        if diag:
+            parts.append(f"{', '.join(diag)} (diagnostic only)")
+        rows.append(
+            f'<li><span class="rung-name">{E(r["rung"])}</span>'
+            f'<span class="rung-what">{E("; ".join(parts) or "nothing measured")}'
+            f'</span></li>')
+    return f"""
+<div class="rungs">
+  <h3 id="rungs-h">What was actually run, by rung</h3>
+  <ul class="rung-list plain">{''.join(rows)}</ul>
+  <p class="fineprint">Not every model was run at every scale, and a gap is
+     not a loss. The full matrix — including why each empty cell is empty, with
+     a link to the record — is on the
+     <a href="{E(rel(route_id, 'explorer'))}#coverage">results explorer</a>.</p>
 </div>"""
 
-    lane = current_lane(data)
-    chips = "".join(f'<li><img src="{E(icon(s["icon"]))}" alt="" width="20" height="20" '
-                    f'loading="lazy" decoding="async"><span>{E(s["name"])}</span></li>'
-                    for s in lane)
+
+def finding_card(story: dict, chart: str, route_id: str, *,
+                 conclusion: str, link_label: str, link_href: str) -> str:
+    """One finding: the plain conclusion, the measured number, the boundary,
+    the picture, and where to check it."""
+    return f"""
+<article class="story reveal" id="story-{E(story['id'])}">
+  <div class="story-text">
+    <p class="eyebrow">{E(story['eyebrow'])}</p>
+    <h3>{E(story['title'])}</h3>
+    <p class="finding-says">{E(conclusion)}</p>
+    <p class="lede">{E(story['lede'])}</p>
+    <p class="reads reads-no"><strong>Boundary.</strong> {E(story['cannot'])}</p>
+    <p class="more"><a class="btn btn-quiet" href="{E(link_href)}">{E(link_label)}</a></p>
+  </div>
+  <div class="story-figure">{chart}{story_links(story)}</div>
+</article>"""
+
+
+def home_page(data: dict) -> str:
+    st = {s["id"]: s for s in data["stories"]}
+    split, seeds, scale_story = st["split-sensitivity"], st["seed-spread"], st["scaling"]
+    nb = st["null-band"]
+    win = nb["window"]
+    band = win["bands"][0]
+    rel_ = data["release"]
+    scale = data["scale"]
+    models = sorted({m for e in data["experiments"] for m in e["models"]})
+    explorer, engineering = rel("home", "explorer"), rel("home", "engineering")
+
+    proof = (
+        (f"{scale['transactions_display']} transactions",
+         f"at the largest evaluated rung, {scale['rung']}"),
+        ("3 dataset rungs", "HI-Small, HI-Medium and HI-Large"),
+        (f"{len(models)} model families", "where each was actually measured"),
+        (f"{data['n_results']} published values", "each linked to a committed artifact"),
+    )
+    proof_html = "".join(
+        f"<div><dt>{E(a)}</dt><dd>{E(b)}</dd></div>" for a, b in proof)
 
     return f"""
 <section class="hero" aria-labelledby="hero-h">
 {hero_network()}
   <div class="wrap hero-inner">
-    <p class="eyebrow">Evaluation methodology · synthetic IBM AMLworld data</p>
-    <h1 id="hero-h">Measuring a transaction-monitoring ranker under a daily
-      review budget</h1>
-    <p class="hero-lede">An alert is one account on one calendar day, and a
-      review team can open only so many of them before the day ends. This
-      project measures what a ranker is actually worth under that constraint:
-      against the random-ranker null for the same window, across seeds, at
-      three dataset scales — with every number on this site traceable to the
-      committed artifact it was read from.</p>
+    <p class="eyebrow">AML model evaluation under real review limits</p>
+    <h1 id="hero-h">A model can rank millions of transactions. Investigators
+      can review only a few alerts.</h1>
+    <p class="hero-lede">This project evaluates transaction-monitoring models
+      under that constraint. It measures which suspicious account-days reach a
+      fixed daily review queue, how much the answer moves across data windows
+      and random seeds, and whether apparent performance survives leakage and
+      provenance checks.</p>
     <p class="hero-actions">
-      <a class="btn btn-primary" href="{E(rel('home', 'explorer'))}">Explore the results</a>
-      <a class="btn" href="{E(rel('home', 'engineering'))}">Inspect the engineering</a>
-      <a class="btn btn-quiet" href="{E(REPO)}" rel="noopener">Open the repository</a>
+      <a class="btn btn-primary" href="{E(explorer)}">Explore the findings</a>
+      <a class="btn" href="{E(engineering)}">See how it was engineered</a>
     </p>
-    <dl class="hero-facts">
-      <div><dt>Dataset rungs</dt><dd>3 <span>Small, Medium, Large</span></dd></div>
-      <div><dt>Archived evaluation rows</dt><dd>{data['n_results']}
-        <span>every one linked to its manifest</span></dd></div>
-      <div><dt>Result manifests</dt><dd>{rel_['manifests_archived']}
-        <span>across {rel_['result_sets']} result sets</span></dd></div>
-      <div><dt>Tests on the current tree</dt><dd>{rel_['tests_collected']}
-        <span>publication gate at zero findings</span></dd></div>
-    </dl>
+    <p class="hero-tertiary"><a href="{E(REPO)}" rel="noopener">Repository on
+      GitHub</a></p>
+    <dl class="hero-facts hero-proof">{proof_html}</dl>
   </div>
 </section>
 
-<section class="band band-light" aria-labelledby="story-h">
-  <div class="wrap narrow">
-    <h2 id="story-h">The measurement problem, in three minutes</h2>
-    <p class="lede">Transaction-monitoring results are usually quoted as a
-      single number on a single run. Almost every part of that sentence hides
-      a decision.</p>
-    <p>The unit matters: this harness scores an <strong>account-day</strong>,
-      and takes the maximum score and the maximum label within the day, because
-      that is the object a reviewer actually opens. The budget matters: at
-      k=50 the same model is graded on a different quantity than at k=1000. The
-      window matters: on the evaluated HI-Medium split there are
-      {win['tail_days']} thin days from {E(win['thin_from'])} on which nearly
-      every surviving account-day is a positive, so a uniformly random ranker
-      already reaches precision@50 of
-      {E(fmt(win['bands'][0]['pooled_low']))}–{E(fmt(win['bands'][0]['pooled_high']))}.
-      And the seed matters: eight seeds of one configuration move precision@50
-      by {E(fmt(ss['spread_pct'], 2))}% of its own mean.</p>
-    <p>So the deliverable here is not a detector. It is the apparatus that
-      makes a claim checkable — alert units, budgets, nulls, ceilings,
-      stability, a lineage registry that records which runs are canonical, a
-      register of every value that was withdrawn, and a publication gate that
-      refuses to let a document quote a number the artifacts no longer
-      support.</p>
-    <div class="callout callout-warn">
-      <h3 class="callout-h">What these numbers are not</h3>
-      <p>They come from one synthetic generator. There is no bank, no customer
-        outcome and no investigator feedback anywhere in this repository, so
-        nothing here is evidence about detection in production, and no result
-        should be read as a benchmark ranking of one learner against another.</p>
+<section class="band band-light" aria-labelledby="problem-h">
+  <div class="wrap">
+    <h2 id="problem-h">Why ordinary model scores are not enough</h2>
+    <div class="split-cols">
+      <div>
+        <p class="lede">A bank can score millions of transactions. An
+          investigation team can open only a fixed number of alerts a day, so a
+          model can look strong on an aggregate metric and add little inside
+          the queue people actually work.</p>
+        <p>The unit is what most summaries skip. This project scores an
+          <strong>account-day</strong> — one account on one calendar day —
+          because that is what a reviewer opens. Rank them, take the day's top
+          k, and the question is concrete: of the alerts someone actually
+          reads, how many were worth reading?</p>
+        <p>Three things then move the headline without the model changing at
+          all: how many suspicious account-days the day holds, where the split
+          is drawn, and which seed the run used.</p>
+      </div>
+      <div>
+        {figure('funnel', 'From scored transactions to a reviewed queue',
+                'Four stages, each narrower than the last. The third is the '
+                'constraint everything here is measured against.',
+                review_funnel(win, band['budget'], band['pooled_low'],
+                              band['pooled_high']),
+                '0 0 740 345',
+                'Window structure read from '
+                + art_link('aml-platform/results_archive/derived/budget_null.json',
+                           'budget_null.json') + '.',
+                level='h3')}
+      </div>
     </div>
   </div>
 </section>
 
-<section class="band band-tint" aria-labelledby="findings-h">
+<section class="band band-tint" aria-labelledby="solution-h">
   <div class="wrap">
-    <h2 id="findings-h">Three findings</h2>
-    <p class="lede">Each one is a picture first, with what it licenses and
-      what it does not written underneath it.</p>
+    <h2 id="solution-h">An evaluation harness built around the decision that
+      matters</h2>
+    <p class="lede">The deliverable is not a detector. It is a reproducible
+      evaluation system that measures a ranker the way a review team would
+      meet it, and refuses to publish a number it cannot trace.</p>
+    {pipeline_html()}
+    <ul class="solution-list">
+      <li>Time-aware splits that keep laundering rings whole across the cut.</li>
+      <li>A linear baseline beside tree models, so the gain over something
+        simple stays visible.</li>
+      <li>Precision, recall and attainable recall at daily budgets, each
+        compared with what a random ranker scores on the same window.</li>
+      <li>Reruns across seeds, with leakage controls injected and permuted
+        rather than assumed away.</li>
+      <li>Every published value linked to its artifact and generator.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="band band-light" aria-labelledby="findings-h">
+  <div class="wrap">
+    <h2 id="findings-h">What the evaluation changed</h2>
+    <p class="lede">Three results, each with its number and its boundary.</p>
     {noscript_block()}
-    <article class="story story-interactive reveal" id="story-null-band">
-      {story_body(nb, switcher)}
-    </article>
-    <article class="story reveal" id="story-seed-spread">
-      {story_body(ss, figure('seed-spread',
-        'precision@50 for each of the eight seeds',
-        'One dot per seed on a single axis, with the mean marked and the full '
-        'observed range bracketed. The numeral inside each dot is its seed.',
-        seed_dots_chart(ss), '0 0 760 190',
-        'Eight seeds of one configuration on HI-Medium, changing nothing else.',
-        level='h4'))}
-    </article>
-    <article class="story reveal" id="story-scaling">
-      {story_body(sc, figure('scaling',
-        'recall@200 at two dataset scales',
-        'Two rows on one axis. The upper row is the canonical HI-Medium run; '
-        'the lower row is the three HI-Large cloud seeds. The rows use '
-        'different learners and different splits and are separated for that '
-        'reason.',
-        scaling_chart(sc), '0 0 760 262',
-        'Two separate runs shown together. Not a paired comparison, and not a '
-        'ranking of one learner against another.',
-        level='h4'))}
-    </article>
-    <p class="more"><a class="btn" href="{E(rel('home', 'explorer'))}">Open the
-      results explorer</a></p>
+    {finding_card(split,
+        figure('split-sensitivity',
+               'The same runs under two temporal protocols',
+               f"Each metric against its own maximum; bars are means across "
+               f"{split['pairs'][0]['n_seeds']} seeds.",
+               split_chart(split), '0 0 760 250',
+               '', level='h4'),
+        'home',
+        conclusion="“Performance improved” is not a statement this data supports "
+                   "on its own; it depends which metric you read.",
+        link_label='Read the split-sensitivity report',
+        link_href=artifact('aml-platform/paper/RESULTS_split_inflation.md'))}
+    {finding_card(seeds,
+        figure('seed-spread', 'precision@50 for each of the eight seeds',
+               'One dot per seed, with the mean marked and the range '
+               'bracketed. The numeral in each dot is its seed.',
+               seed_dots_chart(seeds), '0 0 760 190',
+               '', level='h4'),
+        'home',
+        conclusion="A decision taken from one run could rest mostly on which "
+                   "seed that run used.",
+        link_label='Open the seed sweep in the explorer',
+        link_href=explorer)}
+    {finding_card(scale_story,
+        figure('scaling', 'recall@200 for each HI-Large seed',
+               'Three seeds at one budget on the largest rung.',
+               scaling_chart(scale_story), '0 0 760 190',
+               '', level='h4'),
+        'home',
+        conclusion="Scale did not need a different method, which is what makes "
+                   "the smaller rungs comparable to this one.",
+        link_label='Read the HI-Large report',
+        link_href=artifact('aml-platform/paper/RESULTS_hi_large.md'))}
+    {rung_summary(data, 'home')}
   </div>
 </section>
 
-<section class="band band-light" aria-labelledby="coverage-h">
+<section class="band band-tint" aria-labelledby="useful-h">
   <div class="wrap">
-    <h2 id="coverage-h">Not every model met every rung</h2>
-    {coverage_matrix(data, 'home', level='h3')}
+    <h2 id="useful-h">What this is useful for</h2>
+    <p class="lede">It is aimed at decisions a team makes before anything
+      ships.</p>
+    <ul class="solution-list">
+      <li>Choosing a model against the review capacity a team really has.</li>
+      <li>Separating model signal from prevalence, seed and split effects.</li>
+      <li>Finding evaluation leakage while it is still cheap to find.</li>
+      <li>Comparing runs whose inputs, code and artifacts are traceable.</li>
+      <li>Reporting uncertainty openly instead of behind one number.</li>
+    </ul>
+    <p class="fineprint">Nothing here was measured against real customers,
+      investigator outcomes or losses, so no claim about detecting financial
+      crime in production follows from it.</p>
   </div>
 </section>
 
-<section class="band band-dark" aria-labelledby="mlops-h">
+<section class="band band-light" aria-labelledby="who-h">
   <div class="wrap">
-    <h2 id="mlops-h">The delivery path is part of the result</h2>
-    <p class="lede">A number is only reproducible if the thing that produced it
-      can be named exactly. The current lane below builds one image, tests
-      inside it, scans it, publishes it by digest and deploys this website from
-      the exact artifact that passed.</p>
-    <ol class="lane-chips">{chips}</ol>
-    <p class="note-sep">The HI-Large result did not come from that lane. It was
-      produced once on Azure from a verified source archive, in a container
-      built on the machine itself — so it has source provenance but not
-      container reproducibility, and the two paths are kept apart everywhere on
-      this site.</p>
-    <p class="more"><a class="btn btn-on-dark" href="{E(rel('home', 'engineering'))}">
-      See both lanes in full</a></p>
+    <h2 id="who-h">Who it is for, where it fits, how to use it</h2>
+    <div class="cards">
+      <article class="card reveal"><h3>Who</h3>
+        <p>Data scientists, ML engineers, analysts and model-risk reviewers
+          working on ranked-alert systems.</p></article>
+      <article class="card reveal"><h3>Where it fits</h3>
+        <p>Pre-deployment benchmarking, evaluation design, reproducibility
+          review and model governance.</p></article>
+      <article class="card reveal"><h3>How to use it</h3>
+        <p>Start with the findings above, then the
+          <a href="{E(explorer)}">results explorer</a>, then
+          <a href="{E(engineering)}">engineering &amp; MLOps</a> for the cloud
+          run, CI and release controls.</p></article>
+    </div>
+    <div class="callout callout-warn">
+      <h3 class="callout-h">Where this does not fit</h3>
+      <p>An evaluation and research harness on the synthetic IBM AMLworld
+        dataset — not a live monitoring service, an investigation interface
+        or a validated banking model. The review queue is modelled; no
+        investigator ever worked one of these alerts.</p>
+    </div>
   </div>
 </section>
 
-<section class="band band-light" aria-labelledby="arch-h">
+<section class="band band-tint" aria-labelledby="methods-h">
   <div class="wrap">
-    {architecture_section('home', level='h2', heading='Architecture at a glance',
-      intro='<p class="lede">Three diagrams: how a result is produced, how the '
-            'cloud run actually happened, and how the software is released. '
-            'Select one to open it full size.</p>')}
+    <h2 id="methods-h">How the evidence was produced</h2>
+    <div class="split-cols">
+      <div>
+        <ol class="methods">
+          <li>Build temporal, ring-aware evaluation windows.</li>
+          <li>Train the families supported at each scale: a
+            logistic-regression baseline and scikit-learn gradient boosting on
+            HI-Medium, LightGBM on HI-Large.</li>
+          <li>Rank account-days and evaluate the top k alerts per day.</li>
+          <li>Repeat across seeds and compare against the null for that
+            window.</li>
+          <li>Run leakage, split and provenance checks.</li>
+          <li>Publish only artifact-backed values, through automated gates.</li>
+        </ol>
+        <p class="fineprint">{E(rel_['tests_collected'])} automated checks run
+          on the current tree, and the gate re-reads
+          {E(rel_['published_values_checked'])} published values against the
+          artifacts on every run.</p>
+      </div>
+      <div>
+        {architecture_section('home', level='h3',
+          heading='The evaluation pipeline, end to end',
+          intro='<p class="fineprint">Select it to open full size.</p>',
+          only=('pipeline',), captions=False,
+          after=f'<p class="more"><a class="btn" href="{E(engineering)}">'
+                f'See the cloud-execution and CI diagrams</a></p>')}
+      </div>
+    </div>
   </div>
 </section>
 
-<section class="band band-tint" aria-labelledby="lim-h">
+<section class="band band-light" aria-labelledby="lim-h">
   <div class="wrap narrow">
     <h2 id="lim-h">Four limitations that bound everything above</h2>
     <ol class="lim-list">
       <li><h3>One synthetic generator</h3>
-        <p>All data comes from IBM AMLworld. Its laundering patterns are
-          generated by rules, so a model can learn the generator rather than
-          the behaviour, and no result here transfers to a real portfolio.</p></li>
+        <p>AMLworld's laundering patterns are produced by rules, so a model can
+          learn the generator rather than the behaviour.</p></li>
       <li><h3>No bank, customer or case validation</h3>
-        <p>There is no investigator outcome, no confirmed SAR and no false
-          positive cost anywhere in the pipeline. “Precision” here means the
-          share of alerted account-days carrying a synthetic label.</p></li>
-      <li><h3>The split is label-aware, and the ring filter is not neutral</h3>
-        <p>Test days are chosen with knowledge of ring membership so that rings
-          are not torn across the boundary. That protects against one leak and
-          introduces a selection effect of its own, which the split-inflation
-          work measures rather than assumes away.</p></li>
+        <p>No investigator outcome and no false-positive cost exists here;
+          precision means the share of alerted account-days carrying a
+          synthetic label.</p></li>
+      <li><h3>The split is label-aware</h3>
+        <p>Test days are chosen knowing ring membership, which removes one leak
+          and introduces a selection effect that Finding 1 measures.</p></li>
       <li><h3>Provenance verifies lineage, not correctness</h3>
-        <p>The gates prove that a published number came from the artifact it
-          claims, produced by the code it names. They cannot prove that the
-          estimand was the right one to measure.</p></li>
+        <p>The gates prove a number came from the artifact and code it names,
+          not that the quantity was the right one to measure.</p></li>
     </ol>
-    <p class="more">The full limitations list, the lineage registry and the
-      withdrawal register are on the
-      <a href="{E(rel('home', 'engineering'))}">engineering page</a>.</p>
+    <p class="more">The full list, the lineage registry and the register of
+      withdrawn values are on the
+      <a href="{E(engineering)}">engineering page</a>.</p>
+  </div>
+</section>
+
+<section class="band band-dark" aria-labelledby="next-h">
+  <div class="wrap">
+    <h2 id="next-h">Where to go next</h2>
+    <ul class="next-fork plain">
+      <li><p class="next-q">Want the evidence?</p>
+        <a class="btn btn-on-dark" href="{E(explorer)}">Open the results
+          explorer</a></li>
+      <li><p class="next-q">Want the system design?</p>
+        <a class="btn" href="{E(engineering)}">Open engineering &amp; MLOps</a></li>
+      <li><p class="next-q">Want the implementation?</p>
+        <a class="btn" href="{E(REPO)}" rel="noopener">Open the repository</a></li>
+    </ul>
   </div>
 </section>"""
 

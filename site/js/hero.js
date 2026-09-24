@@ -62,14 +62,34 @@ export function initHero(root = document) {
     cancelAnimationFrame(raf);
   }
 
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) start(); else stop();
-    }, { threshold: 0 });
-    io.observe(svg);
-  } else {
-    start();
+  // NOT UNTIL THE PAGE HAS SETTLED. Motion that begins during first paint
+  // keeps the viewport changing while the browser is still laying the page
+  // out -- it competes with the text for the reader's attention at exactly
+  // the wrong moment, and it is the reason this page measured a slow visual
+  // settle while every other metric was already perfect. The picture is in
+  // the HTML either way; this only decides when it starts moving.
+  let armed = false;
+  function arm() {
+    if (armed) return;
+    armed = true;
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(([entry]) => {
+        if (entry.isIntersecting) start(); else stop();
+      }, { threshold: 0 });
+      io.observe(svg);
+    } else {
+      start();
+    }
   }
+  const settle = () => {
+    if ("requestIdleCallback" in window) {
+      requestIdleCallback(arm, { timeout: 2500 });
+    } else {
+      setTimeout(arm, 1200);
+    }
+  };
+  if (document.readyState === "complete") settle();
+  else window.addEventListener("load", settle, { once: true });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) stop(); else start();
   });

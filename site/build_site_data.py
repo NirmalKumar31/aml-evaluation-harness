@@ -130,8 +130,8 @@ SWEEPS = (
 EXPERIMENTS = (
     dict(id="large-cloud",
          title="HI-Large · LightGBM · cloud-scale run",
-         summary="Three seeds on 179.7M transactions, fitted on an Azure VM with a "
-                 "deterministic training row order.",
+         summary="Three seeds on {hi_large_txns} transactions, fitted on an Azure VM "
+                 "with a deterministic training row order.",
          detail="The only model family represented at this rung. On the 31 GB machine the "
                 "training matrix measured 14.9 GB under LightGBM and 33.5 GB under "
                 "scikit-learn, so only LightGBM completed. That is a memory measurement, "
@@ -193,6 +193,27 @@ def load(rel: str) -> dict:
     if not p.is_file():
         die(f"missing artifact: results_archive/{rel}")
     return json.loads(p.read_text(encoding="utf-8"))
+
+
+def published_int(rel: str, pattern: str, what: str) -> "tuple[int, str]":
+    """A figure read from a published document, not typed in here.
+
+    A few quantities the site wants -- the size of the HI-Large corpus, for
+    one -- are stated in a report and stored in no artifact, because they
+    describe the input rather than a result. Copying such a number into this
+    file would put an unchecked constant on a page whose whole claim is that
+    it has none, so it is read instead, from a document the publication gate
+    already covers. The pattern is anchored and the read is fatal if it stops
+    matching, which is the property a copied constant does not have.
+    """
+    p = ROOT / rel
+    if not p.is_file():
+        die(f"{what}: {rel} is not in this checkout")
+    m = re.search(pattern, p.read_text(encoding="utf-8"))
+    if not m:
+        die(f"{what}: {pattern!r} no longer matches anything in {rel}; the "
+            f"figure moved or was reworded, and it may not be guessed")
+    return int(m.group(1).replace(",", "")), rel
 
 
 def registry() -> dict:
@@ -793,23 +814,110 @@ def build() -> dict:
     seed_series = [{"seed": s["seed"], "value": s["precision@50"]}
                    for s in stability["per_seed"]]
 
-    med_scale = story_row("medium-gbdt-canonical", "recall", 200)
+    # HI-LARGE ALONE. Putting a second rung on the same axis invites exactly
+    # the reading the caveat below spends four sentences refusing, and the
+    # finding is about the scale the protocol reached, not about which
+    # learner scored higher on data it was never run against.
     scale_series = [
-        {"group": med_scale["rung"], "label": med_scale["run_label"],
-         "model": med_scale["model"], "seed": med_scale["seed"],
-         "value": med_scale["observed"], "source": med_scale["source"]},
-    ] + [
         {"group": "HI-Large", "label": f"LightGBM · cloud run · seed {s['seed']}",
          "model": "LightGBM", "seed": s["seed"], "value": s["value"],
          "source": s["source"]}
         for s in large_seeds
     ]
 
+    # ---- the scale the protocol was carried to ---------------------------
+    #
+    # Stored in no artifact: it describes the input, not a result. Read from
+    # the report that publishes it rather than copied, so it cannot drift.
+    hi_large_txns, hi_large_src = published_int(
+        "aml-platform/paper/RESULTS_hi_large.md",
+        r"top rung of AMLworld[^\n]*?([\d,]{9,})\s*\n?\s*transactions",
+        "HI-Large transaction count")
+    scale = {
+        "rung": "HI-Large",
+        "transactions": hi_large_txns,
+        "transactions_display": f"{hi_large_txns / 1e6:.1f}M",
+        "source": hi_large_src,
+        "note": ("the size of the largest corpus the evaluation protocol was "
+                 "carried to, published in the HI-Large report"),
+    }
+    # The experiment summaries are prose, but a number inside prose is still a
+    # number, so the one figure they quote is filled in from the read above.
+    for e in experiments:
+        e["summary"] = e["summary"].format(
+            hi_large_txns=scale["transactions_display"])
+
+    # ---- split sensitivity, the preregistered HI-Small comparison ---------
+    #
+    # Two temporal protocols over the same cut produce two test sets. The
+    # naive one readmits rings whose accounts were seen in training; the
+    # ring-aware one drops them. Every ratio below is naive over ring-aware,
+    # so a value above 1 means the naive protocol reported MORE.
+    infl = load("derived/split_inflation.json")
+    infl_src = "aml-platform/results_archive/derived/split_inflation.json"
+    split_pairs = []
+    for key, label, unit in (
+        ("average_precision__txn", "average precision", "transaction"),
+        ("recall@50", "recall@50", "account-day"),
+    ):
+        e = infl["experiment_a"].get(key)
+        if not e:
+            die(f"split_inflation publishes no {key}; the home page's first "
+                f"finding is read from it")
+        split_pairs.append({
+            "metric": label, "key": key, "unit": unit,
+            "ring_aware": rnd(e["ring_aware_mean"]),
+            "naive": rnd(e["naive_mean"]),
+            "ratio": rnd(e["ratio_mean"], 4),
+            "ci_lo": rnd(e["ratio_ci_lo"], 4), "ci_hi": rnd(e["ratio_ci_hi"], 4),
+            "n_seeds": e["n_seeds"],
+            "pct": rnd((e["ratio_mean"] - 1.0) * 100, 1),
+        })
+    sf = infl["split_facts"]
+
     stories = [
+        {
+            "id": "split-sensitivity",
+            "chart": "split-sensitivity",
+            "eyebrow": "Finding 1",
+            "title": "Change how the test set is drawn and the metrics disagree",
+            "lede": (f"Two temporal protocols on HI-Small, same cut date, "
+                     f"{split_pairs[0]['n_seeds']} seeds each. The naive one readmits "
+                     f"{sf['naive']['test_positives'] - sf['ring-aware']['test_positives']:,} "
+                     f"positive transactions whose rings were already seen in training. "
+                     f"Average precision then reads {split_pairs[0]['pct']}% higher, "
+                     f"recall at a 50-alert budget {abs(split_pairs[1]['pct'])}% lower."),
+            "shows": ("Both protocols on each metric's own scale; the two metrics "
+                      "move in opposite directions."),
+            "cannot": ("A preregistered sensitivity analysis on HI-Small, not "
+                       "evidence of leakage: part of the move comes from the naive "
+                       "split's higher prevalence, and nothing here claims the effect "
+                       "holds on another dataset."),
+            "rung": "HI-Small",
+            "pairs": split_pairs,
+            "split_facts": {
+                "cut_time": sf["ring-aware"]["cut_time"],
+                "naive_test_positives": sf["naive"]["test_positives"],
+                "ring_aware_test_positives": sf["ring-aware"]["test_positives"],
+                "straddling_rows_readmitted": sf["naive"]["straddling_ring_tail_rows_in_test"],
+            },
+            "links": [
+                {"label": "split_inflation.json", "path": infl_src},
+                {"label": "RESULTS_split_inflation.md",
+                 "path": "aml-platform/paper/RESULTS_split_inflation.md"},
+                {"label": "PREREGISTRATION_split_inflation.md",
+                 "path": "aml-platform/paper/PREREGISTRATION_split_inflation.md"},
+            ],
+        },
         {
             "id": "null-band",
             "chart": "null-band",
-            "eyebrow": "Finding 1",
+            # NOT one of the homepage's three findings any more. It is the
+            # worked example the problem section quotes -- the number that
+            # makes "an aggregate score is not enough" concrete -- and the
+            # place the withdrawn logistic level is allowed to appear, beside
+            # its null. Kept generated so that permission stays checked.
+            "eyebrow": "Worked example",
             "title": "The same ranker is strong or ordinary depending on the day it is scored on",
             "lede": (f"On the evaluated HI-Medium split a uniformly random ranker already "
                      f"attains precision@50 of {med_window['bands'][0]['pooled_low']}"
@@ -838,15 +946,14 @@ def build() -> dict:
             "chart": "seed-spread",
             "eyebrow": "Finding 2",
             "title": f"One seed is not a result: precision@50 spans {stab_p50['spread_pct']}% of its own mean",
-            "lede": (f"{stability['n_seeds']} seeds of the same {stability['model']} "
-                     f"configuration on {stability['rung']}, changing nothing but the seed. "
-                     f"precision@50 runs from {stab_p50['min']} to {stab_p50['max']} around a "
-                     f"mean of {stab_p50['mean']}."),
+            "lede": (f"{stability['n_seeds']} seeds of one {stability['model']} "
+                     f"configuration on {stability['rung']}, changing nothing but the "
+                     f"seed. precision@50 runs {stab_p50['min']} to {stab_p50['max']}, "
+                     f"a span worth {stab_p50['spread_pct']}% of the mean."),
             "shows": ("Every seed as its own point, with the mean and the full observed range. "
                       "A single-seed headline could have landed anywhere in this span."),
-            "cannot": ("Eight seeds bound what was observed; they are not a confidence "
-                       "interval, and the range is not an error bar. Nothing here separates "
-                       "seed sensitivity from the split's own thin-day structure."),
+            "cannot": ("Eight seeds bound what was observed rather than estimate a "
+                       "distribution, so the range is not a confidence interval."),
             "rung": stability["rung"],
             "metric": "precision@50",
             "mean": stab_p50["mean"], "min": stab_p50["min"], "max": stab_p50["max"],
@@ -862,17 +969,17 @@ def build() -> dict:
             "id": "scaling",
             "chart": "scaling",
             "eyebrow": "Finding 3",
-            "title": "Scale changes what the metric can reach, and this is not a model comparison",
-            "lede": ("recall@200 on the canonical HI-Medium run against the three HI-Large "
-                     "cloud seeds. The rungs differ in learner, in split, in window and in "
-                     "the number of account-days competing for the same 200 daily slots."),
-            "shows": ("Two rungs side by side at one budget, each point linked to the manifest "
-                      "it was read from."),
-            "cannot": ("NOT a comparison of GBDT against LightGBM. Only LightGBM was run at "
-                       "HI-Large: scikit-learn gradient boosting needed a 33.5 GB training "
-                       "matrix against LightGBM's 14.9 GB on a roughly 31 GB machine, so it "
-                       "did not complete. That is a memory measurement. It says nothing about "
-                       "how either learner would have scored."),
+            "title": f"The same protocol ran at {scale['transactions_display']} transactions",
+            "lede": (f"The top rung of AMLworld is {scale['transactions']:,} "
+                     f"transactions. The evaluation ran there on one 31 GB machine, "
+                     f"three seeds, at a fixed training row order, under the same "
+                     f"units, budgets and publication gate as the smaller rungs."),
+            "shows": ("recall@200 for each HI-Large seed, linked to its manifest."),
+            "cannot": ("Not a comparison of learners: scikit-learn gradient boosting "
+                       "needed a 33.5 GB training matrix against LightGBM's 14.9 GB on "
+                       "the roughly 31 GB machine and did not complete, which is a "
+                       "memory measurement and says nothing about how either learner "
+                       "would have scored."),
             "metric": "recall@200",
             "series": scale_series,
             "links": [
@@ -888,6 +995,7 @@ def build() -> dict:
         "schema": 2,
         "experiments": experiments,
         "coverage": coverage,
+        "scale": scale,
         "stories": stories,
         "generator": "site/build_site_data.py",
         "note": ("Every number here is read from a committed artifact under "

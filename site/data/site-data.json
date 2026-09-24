@@ -1293,6 +1293,13 @@
     "tests_collected": 568
   },
   "results_file": "results.json",
+  "scale": {
+    "note": "the size of the largest corpus the evaluation protocol was carried to, published in the HI-Large report",
+    "rung": "HI-Large",
+    "source": "aml-platform/paper/RESULTS_hi_large.md",
+    "transactions": 179702229,
+    "transactions_display": "179.7M"
+  },
   "schema": 2,
   "stability": {
     "lineage": "stability_Medium",
@@ -1411,13 +1418,69 @@
   },
   "stories": [
     {
+      "cannot": "A preregistered sensitivity analysis on HI-Small, not evidence of leakage: part of the move comes from the naive split's higher prevalence, and nothing here claims the effect holds on another dataset.",
+      "chart": "split-sensitivity",
+      "eyebrow": "Finding 1",
+      "id": "split-sensitivity",
+      "lede": "Two temporal protocols on HI-Small, same cut date, 5 seeds each. The naive one readmits 966 positive transactions whose rings were already seen in training. Average precision then reads 40.0% higher, recall at a 50-alert budget 4.1% lower.",
+      "links": [
+        {
+          "label": "split_inflation.json",
+          "path": "aml-platform/results_archive/derived/split_inflation.json"
+        },
+        {
+          "label": "RESULTS_split_inflation.md",
+          "path": "aml-platform/paper/RESULTS_split_inflation.md"
+        },
+        {
+          "label": "PREREGISTRATION_split_inflation.md",
+          "path": "aml-platform/paper/PREREGISTRATION_split_inflation.md"
+        }
+      ],
+      "pairs": [
+        {
+          "ci_hi": 1.4363,
+          "ci_lo": 1.3634,
+          "key": "average_precision__txn",
+          "metric": "average precision",
+          "n_seeds": 5,
+          "naive": 0.26846,
+          "pct": 40.0,
+          "ratio": 1.3999,
+          "ring_aware": 0.19192,
+          "unit": "transaction"
+        },
+        {
+          "ci_hi": 0.9894,
+          "ci_lo": 0.928,
+          "key": "recall@50",
+          "metric": "recall@50",
+          "n_seeds": 5,
+          "naive": 0.0906,
+          "pct": -4.1,
+          "ratio": 0.9587,
+          "ring_aware": 0.09452,
+          "unit": "account-day"
+        }
+      ],
+      "rung": "HI-Small",
+      "shows": "Both protocols on each metric's own scale; the two metrics move in opposite directions.",
+      "split_facts": {
+        "cut_time": "2022-09-05",
+        "naive_test_positives": 3649,
+        "ring_aware_test_positives": 2683,
+        "straddling_rows_readmitted": 533
+      },
+      "title": "Change how the test set is drawn and the metrics disagree"
+    },
+    {
       "budgets": [
         50,
         200
       ],
       "cannot": "The band is a property of the SPLIT, not of any model, so it does not transfer to another window, another rung or a production portfolio. The logistic level shown here is a withdrawn figure that the registry permits only in this qualified form: beside its null.",
       "chart": "null-band",
-      "eyebrow": "Finding 1",
+      "eyebrow": "Worked example",
       "id": "null-band",
       "lede": "On the evaluated HI-Medium split a uniformly random ranker already attains precision@50 of 0.45392-0.49147 pooled, because the window has 12 thin days from 2022-09-17 on which almost every account-day is a positive. A level quoted without that band is unreadable.",
       "links": [
@@ -1520,11 +1583,11 @@
       }
     },
     {
-      "cannot": "Eight seeds bound what was observed; they are not a confidence interval, and the range is not an error bar. Nothing here separates seed sensitivity from the split's own thin-day structure.",
+      "cannot": "Eight seeds bound what was observed rather than estimate a distribution, so the range is not a confidence interval.",
       "chart": "seed-spread",
       "eyebrow": "Finding 2",
       "id": "seed-spread",
-      "lede": "8 seeds of the same GBDT configuration on HI-Medium, changing nothing but the seed. precision@50 runs from 0.59144 to 0.89815 around a mean of 0.8248.",
+      "lede": "8 seeds of one GBDT configuration on HI-Medium, changing nothing but the seed. precision@50 runs 0.59144 to 0.89815, a span worth 37.19% of the mean.",
       "links": [
         {
           "label": "stability.json",
@@ -1580,11 +1643,11 @@
       "title": "One seed is not a result: precision@50 spans 37.19% of its own mean"
     },
     {
-      "cannot": "NOT a comparison of GBDT against LightGBM. Only LightGBM was run at HI-Large: scikit-learn gradient boosting needed a 33.5 GB training matrix against LightGBM's 14.9 GB on a roughly 31 GB machine, so it did not complete. That is a memory measurement. It says nothing about how either learner would have scored.",
+      "cannot": "Not a comparison of learners: scikit-learn gradient boosting needed a 33.5 GB training matrix against LightGBM's 14.9 GB on the roughly 31 GB machine and did not complete, which is a memory measurement and says nothing about how either learner would have scored.",
       "chart": "scaling",
       "eyebrow": "Finding 3",
       "id": "scaling",
-      "lede": "recall@200 on the canonical HI-Medium run against the three HI-Large cloud seeds. The rungs differ in learner, in split, in window and in the number of account-days competing for the same 200 daily slots.",
+      "lede": "The top rung of AMLworld is 179,702,229 transactions. The evaluation ran there on one 31 GB machine, three seeds, at a fixed training row order, under the same units, budgets and publication gate as the smaller rungs.",
       "links": [
         {
           "label": "RESULTS_hi_large.md",
@@ -1597,14 +1660,6 @@
       ],
       "metric": "recall@200",
       "series": [
-        {
-          "group": "HI-Medium",
-          "label": "GBDT · canonical · seed 0",
-          "model": "GBDT",
-          "seed": 0,
-          "source": "aml-platform/results_archive/gold/canonical_Medium_gbdt/manifest.json",
-          "value": 0.12482
-        },
         {
           "group": "HI-Large",
           "label": "LightGBM · cloud run · seed 0",
@@ -1630,8 +1685,8 @@
           "value": 0.08982
         }
       ],
-      "shows": "Two rungs side by side at one budget, each point linked to the manifest it was read from.",
-      "title": "Scale changes what the metric can reach, and this is not a model comparison"
+      "shows": "recall@200 for each HI-Large seed, linked to its manifest.",
+      "title": "The same protocol ran at 179.7M transactions"
     }
   ],
   "windows": [
