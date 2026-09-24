@@ -372,36 +372,12 @@ svg .empty-note { font-size: 13px; fill: var(--ink-soft); font-family: var(--fon
   .read-grid { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); }
 }
 
-/* ---------- the CSS-only budget switcher ---------- */
-.switcher { position: relative; }
+/* ---------- visually hidden controls ---------- */
+/* The radio is the accessible control and the card is its label, so it is
+   hidden from sight but never from the keyboard: 1px and transparent, not
+   `display: none`. */
 .vis-radio { position: absolute; width: 1px; height: 1px; opacity: 0;
              pointer-events: none; }
-.switch-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem;
-               margin-bottom: 1rem; }
-.switch-legend { font-size: .78rem; text-transform: uppercase;
-                 letter-spacing: .08em; color: var(--ink-mute);
-                 margin-right: .4rem; }
-.switch-tabs label { font-size: .9rem; font-weight: 600; padding: .45rem .95rem;
-                     border: 1px solid var(--line); border-radius: 999px;
-                     cursor: pointer; background: var(--paper);
-                     color: var(--ink-soft); }
-.switch-tabs label:hover { border-color: var(--accent); color: var(--accent-ink); }
-.switch-panel { display: none; }
-.vis-radio:nth-of-type(1):checked ~ .switch-panels > .switch-panel:nth-of-type(1),
-.vis-radio:nth-of-type(2):checked ~ .switch-panels > .switch-panel:nth-of-type(2),
-.vis-radio:nth-of-type(3):checked ~ .switch-panels > .switch-panel:nth-of-type(3),
-.vis-radio:nth-of-type(4):checked ~ .switch-panels > .switch-panel:nth-of-type(4)
-  { display: block; }
-.vis-radio:nth-of-type(1):checked ~ .switch-tabs > label:nth-of-type(1),
-.vis-radio:nth-of-type(2):checked ~ .switch-tabs > label:nth-of-type(2),
-.vis-radio:nth-of-type(3):checked ~ .switch-tabs > label:nth-of-type(3),
-.vis-radio:nth-of-type(4):checked ~ .switch-tabs > label:nth-of-type(4)
-  { background: var(--navy-800); border-color: var(--navy-800); color: #fff; }
-.vis-radio:nth-of-type(1):focus-visible ~ .switch-tabs > label:nth-of-type(1),
-.vis-radio:nth-of-type(2):focus-visible ~ .switch-tabs > label:nth-of-type(2),
-.vis-radio:nth-of-type(3):focus-visible ~ .switch-tabs > label:nth-of-type(3),
-.vis-radio:nth-of-type(4):focus-visible ~ .switch-tabs > label:nth-of-type(4)
-  { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- coverage matrix ---------- */
 .scroller { overflow-x: auto; border: 1px solid var(--line);
@@ -652,3 +628,91 @@ select, input[type="number"] { font: inherit; font-size: .95rem;
 /* The chart's current selection, marked in words as well as in colour. */
 tr.is-current > td { background: var(--note-bg); }
 tr.is-current .chip { margin-left: .5rem; }
+
+/* ---------- home: hero proof strip and tertiary link ---------- */
+.hero-tertiary { margin: -1.4rem 0 2rem; font-size: .92rem; }
+.hero-tertiary a { color: var(--cyan-soft); }
+.hero-proof > div { padding: .9rem 1.05rem; }
+.hero-proof dt { font-size: 1.12rem; font-weight: 650; color: #fff;
+                 text-transform: none; letter-spacing: -.01em; }
+.hero-proof dd { margin: .2rem 0 0; font-size: .84rem; font-weight: 400;
+                 color: var(--muted-on-dark); line-height: 1.45; }
+
+/* ---------- home: two-column text-and-figure blocks ---------- */
+.split-cols { display: grid; gap: 1.75rem; align-items: start; }
+@media (min-width: 62rem) {
+  .split-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.75rem; }
+}
+
+/* ---------- home: the five-stage pipeline ---------- */
+.pipeline { list-style: none; counter-reset: stage; margin: 2rem 0 1.75rem;
+            padding: 0; display: grid; gap: .75rem;
+            grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr)); }
+.stage { position: relative; background: var(--paper); padding: 1rem 1.1rem;
+         border: 1px solid var(--line); border-radius: var(--radius);
+         box-shadow: var(--shadow); display: flex; gap: .7rem;
+         align-items: flex-start; }
+.stage-n { flex: 0 0 auto; width: 1.6rem; height: 1.6rem; border-radius: 50%;
+           display: grid; place-items: center; font-size: .78rem;
+           font-weight: 700; background: var(--note-bg); color: var(--accent-ink); }
+.stage-body { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.stage-name { font-weight: 640; font-size: .95rem; line-height: 1.25; }
+.stage-note { font-size: .83rem; color: var(--ink-soft); }
+
+.solution-list { margin: 0; padding-left: 1.15rem; max-width: 62ch; }
+.solution-list li { margin-bottom: .5em; color: var(--ink-soft); }
+.methods { margin: 0 0 1rem; padding-left: 1.3rem; max-width: 60ch; }
+.methods li { margin-bottom: .5em; color: var(--ink-soft); }
+
+/* ---------- home: findings ---------- */
+.finding-says { font-size: 1.05rem; font-weight: 600; color: var(--ink);
+                max-width: 44ch; }
+.story-text .lede { font-size: .97rem; }
+
+/* Provenance is a disclosure now: present on every finding, opened by the
+   reader who wants it rather than filling the page for the one who does not. */
+details.prov { margin-top: 1.1rem; padding-top: .9rem;
+               border-top: 1px dashed var(--line); }
+details.prov > summary.prov-h { cursor: pointer; font-size: .74rem;
+    text-transform: uppercase; letter-spacing: .09em; color: var(--ink-mute);
+    margin-bottom: .5em; }
+details.prov > summary.prov-h:hover { color: var(--accent-ink); }
+details.prov[open] > summary.prov-h { margin-bottom: .6em; }
+
+/* ---------- home: the compact rung summary ---------- */
+.rungs { margin-top: 2.5rem; padding-top: 1.75rem;
+         border-top: 1px solid var(--line-soft); }
+.rung-list { display: grid; gap: .6rem; margin: 1rem 0 1rem;
+             grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+.rung-list li { background: var(--paper); border: 1px solid var(--line);
+                border-left: 3px solid var(--accent); border-radius: var(--radius);
+                padding: .8rem 1rem; }
+.rung-name { display: block; font-weight: 650; font-size: .95rem; }
+.rung-what { display: block; font-size: .85rem; color: var(--ink-soft);
+             margin-top: .2rem; }
+
+/* ---------- home: the closing fork ---------- */
+.next-fork { display: grid; gap: 1rem; margin-top: 1.75rem;
+             grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.next-fork li { display: flex; flex-direction: column; align-items: flex-start;
+                gap: .7rem; }
+.next-q { margin: 0; font-weight: 600; color: #fff; }
+
+.arch-grid-one { grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- home: chart primitives added for this page ---------- */
+svg .funnel-band { fill: var(--paper-2); stroke: var(--line); stroke-width: 1; }
+svg .funnel-1 { fill: #e4eef6; }
+svg .funnel-2 { fill: #cfe4f3; }
+svg .funnel-3 { fill: var(--accent); stroke: var(--accent); }
+svg .funnel-name { font-size: 14px; font-weight: 650; fill: var(--ink);
+                   font-family: var(--font); }
+svg .funnel-note { font-size: 11.5px; fill: var(--ink-soft); font-family: var(--font); }
+svg .funnel-on-fill { fill: #ffffff; }
+svg .funnel-arrow { stroke: #8ba3b7; stroke-width: 1.6; fill: none;
+                    stroke-linecap: round; stroke-linejoin: round; }
+svg .funnel-foot { font-size: 11.5px; fill: var(--ink-mute); font-family: var(--font); }
+svg .bar-inline { font-size: 11.5px; fill: #ffffff; font-family: var(--font);
+                  font-weight: 600; }
+svg .ratio-note { font-size: 12px; fill: var(--ink-soft); font-family: var(--font); }
+svg .row-unit { font-size: 11px; fill: var(--ink-mute); font-weight: 400; }

@@ -220,17 +220,31 @@ test("the coverage matrix says the same thing the data does", async ({ page }) =
   }
 });
 
-test("the budget switcher on the homepage works without JavaScript", async ({ browser }) => {
-  const ctx = await browser.newContext({ javaScriptEnabled: false });
-  const page = await ctx.newPage();
-  await page.goto("/_build/");
-  await expect(page.locator("#nullband-50-svg")).toBeVisible();
-  await expect(page.locator("#nullband-200-svg")).toBeHidden();
-  await page.locator('label[for="nb-200"]').click();
-  await expect(page.locator("#nullband-200-svg")).toBeVisible();
-  await expect(page.locator("#nullband-50-svg")).toBeHidden();
-  // The three findings are in the HTML, not fetched.
-  await expect(page.locator("#story-seed-spread svg")).toBeVisible();
-  await expect(page.locator("#story-scaling svg")).toBeVisible();
-  await ctx.close();
-});
+test("a withdrawn level appears only beside its null, and never on the home page",
+  async ({ page, browser }) => {
+    // 0.5706 is the worked example: the registry withdraws the pooled
+    // logistic precision@50 quoted as a model-quality statement, and exempts
+    // the same number presented beside its random-ranker band.
+    await page.goto("", { waitUntil: "networkidle" });
+    expect(await page.locator("main").innerText()).not.toContain("0.5706");
+
+    await open(page);
+    await pick(page, "medium-baseline");
+    await page.locator("#f-metric").selectOption("precision");
+    await page.locator("#f-budget").selectOption("50");
+    const chart = page.locator("#rc-svg");
+    await expect(chart).toContainText("0.5706");
+    // The band is drawn behind it, and the reading beside it is the lift.
+    await expect(page.locator("#rc-svg .null-band")).toHaveCount(1);
+    await expect(page.locator("#rc-reads")).toContainText("random ranker");
+
+    // And with scripting off the home page is still complete.
+    const ctx = await browser.newContext({ javaScriptEnabled: false });
+    const noJs = await ctx.newPage();
+    await noJs.goto("/_build/");
+    await expect(noJs.locator("#split-sensitivity-svg")).toBeVisible();
+    await expect(noJs.locator("#seed-spread-svg")).toBeVisible();
+    await expect(noJs.locator("#scaling-svg")).toBeVisible();
+    expect(await noJs.locator("main").innerText()).not.toContain("0.5706");
+    await ctx.close();
+  });

@@ -600,12 +600,22 @@ def test_the_small_screen_navigation_is_a_real_disclosure():
 
 
 def test_the_architecture_dialog_is_keyboard_operable():
+    """One preview on the homepage, all three on the engineering page.
+
+    Three full-width diagrams stacked on a page meant to be read in three
+    minutes is a documentation dump; the homepage shows the evaluation
+    pipeline and sends the reader on for the rest.
+    """
     _need_site()
-    for rel in ("index.html", "engineering/index.html"):
+    for rel, previews in (("index.html", 1), ("engineering/index.html", 3)):
         html = _pages()[rel]
         assert '<dialog class="arch-dialog"' in html, f"{rel} has no diagram dialog"
         assert 'aria-haspopup="dialog"' in html
-        assert html.count('class="arch-open"') == 3, f"{rel} does not preview all three diagrams"
+        assert html.count('class="arch-open"') == previews, (
+            f"{rel} previews {html.count('class=\"arch-open\"')} diagrams, expected "
+            f"{previews}")
+    assert "engineering/" in _pages()["index.html"], (
+        "the homepage previews one diagram and never links to the rest")
     js = (SITE / "js" / "lightbox.js").read_text(encoding="utf-8")
     assert "showModal()" in js, "the dialog is not modal, so Escape and the focus trap are lost"
     assert "opener.focus()" in js, "focus is not restored to the control that opened it"
@@ -623,8 +633,9 @@ def test_the_site_is_readable_with_no_javascript():
         assert '<noscript><link rel="stylesheet"' in html, f"{rel} has no no-script stylesheet"
         assert "<noscript>" in html
     home = _pages()["index.html"]
-    # The three findings are in the markup, not fetched.
-    for fig in ("nullband-50-svg", "seed-spread-svg", "scaling-svg"):
+    # The three findings and the review funnel are in the markup, not fetched.
+    for fig in ("funnel-svg", "split-sensitivity-svg", "seed-spread-svg",
+                "scaling-svg"):
         assert f'id="{fig}"' in home, f"the homepage chart {fig} is not rendered at build time"
 
 
@@ -861,22 +872,77 @@ def test_the_page_states_the_zero_positive_boundary():
 
 # -- the page states its own boundaries ------------------------------------
 
-def test_the_home_page_says_what_the_project_is_not():
-    html = _pages()["index.html"]
-    for phrase in (
-        "What these numbers are not",
-        "one synthetic generator",
-        "account-day",
-        "no investigator feedback",
-    ):
-        assert phrase in html, f"the homepage no longer says {phrase!r}"
-    assert "It is the apparatus that" in html, (
-        "the homepage no longer says the deliverable is the measurement apparatus")
+def test_the_home_page_tells_one_story_and_claims_nothing_it_did_not_measure():
+    """The homepage contract, in one place.
 
+    ONE TEST, NOT THREE. Splitting this into a function per property would
+    change the collected count, and that count is a published figure this
+    repository checks against four documents -- so a cosmetic refactor of the
+    test file would ripple into `release_facts.json` and, through it, into
+    prose. The properties are related anyway: they are all "does this page
+    still tell the story it promises, and nothing more".
+    """
+    html = _pages()["index.html"]
+    flat = re.sub(r"\s+", " ", html)
+
+    # -- what it must say -------------------------------------------------
+    for phrase in (
+        "Where this does not fit",
+        "not a live monitoring service",
+        "no investigator ever worked one of these alerts",
+        "synthetic IBM AMLworld",
+        "account-day",
+        "The deliverable is not a detector",
+    ):
+        assert phrase in flat, f"the homepage no longer says {phrase!r}"
+
+    # -- what it may never say --------------------------------------------
     low = "".join(_pages().values()).lower()
     for word in ("production-ready", "cutting-edge", "revolutionary",
-                 "state-of-the-art", "world-class", "game-chang"):
+                 "state-of-the-art", "world-class", "game-chang",
+                 "ai-powered", "end-to-end solution"):
         assert word not in low, f"marketing language on the site: {word!r}"
+
+    banned = re.compile(
+        r"\b(?:prevents?|reduces?|stops?)\s+(?:financial crime|money laundering|losses)"
+        r"|\bused by (?:banks?|investigators?)\b"
+        r"|\bdetects? money laundering in production\b", re.I)
+    m = banned.search(flat)
+    assert not m, f"the homepage claims an outcome nothing here measured: {m.group(0)!r}"
+
+    # -- nine questions, answered once each, in the order a stranger asks --
+    order = ["hero-h", "problem-h", "solution-h", "findings-h", "useful-h",
+             "who-h", "methods-h", "lim-h", "next-h"]
+    at = []
+    for anchor in order:
+        i = html.find(f'id="{anchor}"')
+        assert i > 0, f"the homepage has no section anchored at {anchor}"
+        at.append(i)
+    assert at == sorted(at), f"the homepage sections are out of order: {order}"
+
+    # -- two ways in, and the repository demoted below them ----------------
+    assert '<a class="btn btn-primary" href="explorer/">Explore the findings</a>' in flat
+    assert "See how it was engineered" in html
+    assert 'class="hero-tertiary"' in html, (
+        "the repository link is not demoted below the two primary actions")
+
+    # -- three findings, each with a conclusion, a boundary and provenance --
+    assert html.count('class="finding-says"') == 3
+    assert html.count("<strong>Boundary.</strong>") == 3
+    assert html.count('<details class="prov">') >= 3, (
+        "provenance is not behind a disclosure on every finding")
+
+    # -- coverage summarised here, detailed on the explorer ----------------
+    d = _data()
+    assert 'class="matrix"' not in html, (
+        "the full coverage matrix is back on the homepage")
+    assert 'id="rungs-h"' in html, "the homepage has no compact rung summary"
+    for row in d["coverage"]["rungs"]:
+        assert f'class="rung-name">{row["rung"]}<' in html, (
+            f"{row['rung']} is missing from the rung summary")
+    assert "explorer/#coverage" in html, (
+        "the rung summary does not link to the full matrix")
+    assert 'class="matrix"' in _pages()["explorer/index.html"]
 
 
 def test_the_simulator_is_labelled_as_an_illustration_not_a_result():
@@ -1113,13 +1179,27 @@ def test_the_page_distinguishes_a_withdrawn_claim_from_a_permitted_level():
         "0.5706 is rendered without its band, which IS the withdrawn presentation")
 
 
-def test_the_home_story_shows_the_withdrawn_level_only_beside_its_null():
+def test_the_withdrawn_level_is_off_the_home_page_and_banded_where_it_appears():
+    """0.5706 is the worked example.
+
+    The homepage no longer carries the null-band figure at all, so the
+    strongest thing to assert there is absence. The story itself stays
+    generated -- its window block is what the review funnel is drawn from --
+    and every level in it still has to carry the band the registry requires.
+    """
     d = _data()
     story = next(s for s in d["stories"] if s["id"] == "null-band")
     for s in story["series"]:
         assert s["null_low"] is not None and s["null_high"] is not None, (
             f"{s['label']} at k={s['budget']} appears in the story without its band")
     assert "registry permits only in this qualified form" in story["cannot"]
+    assert story["window"]["rung"] and story["window"]["bands"], (
+        "the funnel is drawn from this window block; it may not be emptied")
+
+    home = _pages()["index.html"]
+    assert "0.5706" not in home, (
+        "the withdrawn logistic level is back on the homepage, where nothing "
+        "shows its null")
 
 
 # -- the current-tree label ------------------------------------------------
