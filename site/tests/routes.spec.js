@@ -118,6 +118,22 @@ for (const route of ["", "engineering/"]) {
       // Exactly one diagram is shown at a time.
       const visible = await page.locator(".arch-panel:not([hidden])").count();
       expect(visible).toBe(1);
+
+      // A DENSE DIAGRAM NEEDS A WAY OUT OF THE DIALOG. The dialog scales the
+      // picture to the viewport, which is not readable on a phone, so the
+      // panel links to the asset itself where the browser's zoom works.
+      const full = page.locator(".arch-panel:not([hidden]) a.arch-full");
+      await expect(full).toHaveCount(1);
+      const href = await full.getAttribute("href");
+      expect(href).toMatch(/assets\/0\d-[a-z-]+\.svg$/);
+      const asset = await page.request.get(new URL(href, page.url()).toString());
+      expect(asset.status()).toBe(200);
+      // The declared box must be the SVG's own, or the page shifts on load.
+      const img = page.locator(".arch-panel:not([hidden]) img");
+      const dims = await img.evaluate((n) => ({
+        w: n.getAttribute("width"), h: n.getAttribute("height"),
+        nw: n.naturalWidth, nh: n.naturalHeight }));
+      expect(`${dims.nw}x${dims.nh}`).toBe(`${dims.w}x${dims.h}`);
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
       await expect(opener).toBeFocused();
