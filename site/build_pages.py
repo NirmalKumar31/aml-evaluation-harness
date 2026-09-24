@@ -986,12 +986,14 @@ def explorer_page(data: dict) -> str:
 <section class="page-head band band-dark" aria-labelledby="ex-h">
   <div class="wrap">
     <p class="eyebrow">Results explorer</p>
-    <h1 id="ex-h">Every archived evaluation, by experiment</h1>
+    <h1 id="ex-h">Canonical model evaluations, by experiment</h1>
     <p class="hero-lede">Pick an experiment first. The metric, budget and seed
       choices that follow are built from what that experiment actually
       contains, so there is no combination to select that returns nothing.
       {data['n_results']} rows across {len(exps)} experiments, each one linked
-      to the manifest it was read from.</p>
+      to the manifest it was read from. Every lineage shown here is registered
+      as canonical or supporting; a superseded one is refused at build time
+      rather than filtered out in the browser.</p>
   </div>
 </section>
 
