@@ -348,10 +348,16 @@ def review_funnel(win: dict, budget: int, null_lo, null_hi) -> str:
     stages = (
         ("Transactions scored", "millions per day, every account touched", "w0"),
         ("Ranked account-days", "one score per account per calendar day", "w1"),
-        (f"Top {budget} reviewed", "the queue an investigation team can actually open", "w2"),
-        ("Confirmed laundering", "what the review finds", "w3"),
+        (f"Top {budget} selected for review",
+         "the queue an investigation team can actually open", "w2"),
+        ("Synthetic positives reached",
+         "labelled laundering activity inside the review queue", "w3"),
     )
-    widths = (700.0, 540.0, 320.0, 150.0)
+    # STILL NARROWING, BUT WIDE ENOUGH TO READ. The last two labels name what
+    # the stage actually is rather than what a reviewer concluded, and the
+    # longer of them needs about 300px; SVG does not wrap, so a band narrower
+    # than its own label would push the text out over the background.
+    widths = (700.0, 560.0, 420.0, 340.0)
     out = []
     for i, ((name, note, cls), w) in enumerate(zip(stages, widths, strict=True)):
         y = 14 + i * 74
@@ -920,7 +926,7 @@ def home_page(data: dict) -> str:
          f"at the largest evaluated rung, {scale['rung']}"),
         ("3 dataset rungs", "HI-Small, HI-Medium and HI-Large"),
         (f"{len(models)} model families", "where each was actually measured"),
-        (f"{data['n_results']} published values", "each linked to a committed artifact"),
+        (f"{data['n_results']} evaluation rows", "each linked to a committed artifact"),
     )
     proof_html = "".join(
         f"<div><dt>{E(a)}</dt><dd>{E(b)}</dd></div>" for a, b in proof)

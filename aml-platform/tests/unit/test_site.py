@@ -896,6 +896,35 @@ def test_the_home_page_tells_one_story_and_claims_nothing_it_did_not_measure():
     ):
         assert phrase in flat, f"the homepage no longer says {phrase!r}"
 
+    # -- the funnel names stages, not conclusions -------------------------
+    #
+    # "Confirmed laundering" describes a verdict somebody reached. Nothing
+    # here reaches one: the labels are the generator's, the queue is
+    # modelled, and the last stage is the labelled positives that surfaced
+    # inside it. Likewise the hero counts rows in the archive, not claims
+    # published in prose -- `published_values_checked` is a different
+    # quantity and keeps its own name on the engineering page.
+    d = _data()
+    for phrase in (
+        f"{d['n_results']} evaluation rows",
+        "each linked to a committed artifact",
+        "Top 50 selected for review",
+        "Synthetic positives reached",
+        "labelled laundering activity inside the review queue",
+    ):
+        assert phrase in flat, f"the homepage no longer says {phrase!r}"
+    for gone in (f"{d['n_results']} published values", "Top 50 reviewed",
+                 "Confirmed laundering", "what the review finds"):
+        assert gone not in flat, (
+            f"the homepage still says {gone!r}, which overstates what was measured")
+    # TWO DIFFERENT QUANTITIES, TWO DIFFERENT WORDS. The gate's count really
+    # is published values -- figures re-read out of documents -- and keeps
+    # that name on both pages. The hero counts rows in the archive.
+    for rel in ("index.html", "engineering/index.html"):
+        assert f"{d['release']['published_values_checked']} published values" in \
+            re.sub(r"\s+", " ", _pages()[rel]), (
+                f"{rel} no longer names the gate's own count")
+
     # -- what it may never say --------------------------------------------
     low = "".join(_pages().values()).lower()
     for word in ("production-ready", "cutting-edge", "revolutionary",
@@ -933,7 +962,6 @@ def test_the_home_page_tells_one_story_and_claims_nothing_it_did_not_measure():
         "provenance is not behind a disclosure on every finding")
 
     # -- coverage summarised here, detailed on the explorer ----------------
-    d = _data()
     assert 'class="matrix"' not in html, (
         "the full coverage matrix is back on the homepage")
     assert 'id="rungs-h"' in html, "the homepage has no compact rung summary"
