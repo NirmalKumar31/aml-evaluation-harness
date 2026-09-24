@@ -507,7 +507,14 @@ def test_the_assembler_produces_every_file_every_page_needs(tmp_path):
 
 def test_every_committed_icon_is_actually_shown():
     """An icon copied into the artifact but never rendered is an unexplained
-    third-party asset in a published tree."""
+    third-party asset in a published tree.
+
+    AND EVERY DIAGRAM IS DECLARED AT ITS OWN SIZE. The three views are not
+    crops of one canvas -- 1800x1290, 1800x1370 and 1800x1490 -- so one
+    hard-coded width/height pair gives the browser the wrong box to reserve
+    and the page jumps when the picture arrives. The declared numbers are
+    checked against the viewBox of the committed SVG, not trusted.
+    """
     _need_site()
     sys.path.insert(0, str(SITE))
     import assets as site_assets
@@ -516,8 +523,30 @@ def test_every_committed_icon_is_actually_shown():
     for name in site_assets.ICONS:
         assert f"icons/{name}" in html, (
             f"{name} is copied into the artifact but no page shows it")
+
+    seen = set()
     for d in site_assets.DIAGRAMS:
         assert d["deployed"] in html, f"{d['src']} is copied but never displayed"
+
+        svg = (site_assets.SOURCE_DIR / d["src"]).read_text(encoding="utf-8")
+        m = re.search(r'viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"', svg)
+        assert m, f"{d['src']} declares no viewBox, so it has no intrinsic size"
+        w, h = int(float(m.group(1))), int(float(m.group(2)))
+        assert (d["width"], d["height"]) == (w, h), (
+            f"{d['src']} is {w}x{h} but assets.py declares "
+            f"{d['width']}x{d['height']}; the browser would reserve the wrong "
+            f"aspect ratio and the page would shift when it loads")
+        assert f'width="{w}" height="{h}"' in html, (
+            f"{d['src']} is rendered without its own dimensions")
+        seen.add((w, h))
+
+        # SELF-CONTAINED. A diagram that reaches out to a network asset would
+        # break the content security policy and the offline promise at once.
+        assert "xlink:href=\"http" not in svg and 'href="http' not in svg, (
+            f"{d['src']} references a remote asset")
+    assert len(seen) == len(site_assets.DIAGRAMS), (
+        "two diagrams share one declared size; check they were not copied from "
+        "each other")
 
 
 # -- accessibility surface -------------------------------------------------

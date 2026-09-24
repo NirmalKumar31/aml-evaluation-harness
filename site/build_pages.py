@@ -609,7 +609,7 @@ def architecture_section(route_id: str, *, level: str = "h2",
   <button class="arch-open" type="button" data-diagram="{E(d['id'])}"
           aria-haspopup="dialog">
     <img src="{E(src)}" alt="{E(d['alt'])}" loading="lazy" decoding="async"
-         width="1600" height="900">
+         width="{d['width']}" height="{d['height']}">
     <span class="arch-meta">
       <span class="arch-n">Diagram {d['n']}</span>
       <span class="arch-title">{E(d['title'])}</span>
@@ -618,12 +618,19 @@ def architecture_section(route_id: str, *, level: str = "h2",
   </button>
   {'' if not captions else f'<p class="arch-caption">{E(d["caption"])}</p>'}
 </li>""")
+        # A FULL-SIZE LINK, NOT JUST A BIGGER PREVIEW. The dialog scales the
+        # picture to the viewport, which is readable on a laptop and is not
+        # on a phone -- these carry a couple of hundred labels each. The link
+        # opens the SVG itself, where the browser's own zoom works.
         panels.append(f"""
 <figure class="arch-panel" id="arch-panel-{E(d['id'])}" hidden>
   <img src="{E(src)}" alt="{E(d['alt'])}" loading="lazy" decoding="async"
-       width="1600" height="900">
+       width="{d['width']}" height="{d['height']}">
   <figcaption><strong>Diagram {d['n']}. {E(d['title'])}</strong>
-    {E(d['caption'])}</figcaption>
+    {E(d['caption'])}
+    <a class="arch-full" href="{E(src)}">Open the full-size diagram<span
+      class="sr-only"> for {E(d['title'])}, {d['width']} by {d['height']}
+      pixels, in this tab</span></a></figcaption>
 </figure>""")
     return f"""
 <{level} id="architecture">{E(heading)}</{level}>
@@ -1117,11 +1124,11 @@ def home_page(data: dict) -> str:
       </div>
       <div>
         {architecture_section('home', level='h3',
-          heading='The evaluation pipeline, end to end',
+          heading='The complete flow, end to end',
           intro='<p class="fineprint">Select it to open full size.</p>',
           only=('pipeline',), captions=False,
           after=f'<p class="more"><a class="btn" href="{E(engineering)}">'
-                f'See the cloud-execution and CI diagrams</a></p>')}
+                f'See the cloud-execution and delivery diagrams</a></p>')}
       </div>
     </div>
   </div>
