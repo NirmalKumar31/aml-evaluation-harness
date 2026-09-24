@@ -279,22 +279,22 @@
       </div>
       <div>
         
-<h3 id="architecture">The evaluation pipeline, end to end</h3>
+<h3 id="architecture">The complete flow, end to end</h3>
 <p class="fineprint">Select it to open full size.</p>
 <ul class="arch-grid arch-grid-one plain">
 <li class="arch-card reveal">
   <button class="arch-open" type="button" data-diagram="pipeline"
           aria-haspopup="dialog">
-    <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
-         width="1600" height="900">
+    <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
+         width="1800" height="1290">
     <span class="arch-meta">
       <span class="arch-n">Diagram 1</span>
-      <span class="arch-title">Data, models and evaluation</span>
+      <span class="arch-title">From synthetic transactions to published evidence</span>
       <span class="arch-cue">Open full size</span>
     </span>
   </button>
   
-</li></ul><p class="more"><a class="btn" href="engineering/">See the cloud-execution and CI diagrams</a></p>
+</li></ul><p class="more"><a class="btn" href="engineering/">See the cloud-execution and delivery diagrams</a></p>
 <p class="fineprint">Diagrams are generated from
    <code>aml-platform/docs/architecture/</code> and copied into this site at
    build time; there is no second copy to fall out of date. Technology icons
@@ -308,10 +308,13 @@
   </div>
   <div class="arch-dialog-body" id="arch-dialog-body">
 <figure class="arch-panel" id="arch-panel-pipeline" hidden>
-  <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
-       width="1600" height="900">
-  <figcaption><strong>Diagram 1. Data, models and evaluation</strong>
-    Kaggle download through DuckDB feature construction, the ring-aware split, model fits and the account-day evaluation that produces a manifest.</figcaption>
+  <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
+       width="1800" height="1290">
+  <figcaption><strong>Diagram 1. From synthetic transactions to published evidence</strong>
+    The complete flow: Kaggle download, DuckDB feature construction, the ring-aware split, per-seed fits, the account-day evaluation, the archived evidence and the website you are reading.
+    <a class="arch-full" href="assets/01-evaluation-pipeline.svg">Open the full-size diagram<span
+      class="sr-only"> for From synthetic transactions to published evidence, 1800 by 1290
+      pixels, in this tab</span></a></figcaption>
 </figure></div>
 </dialog>
       </div>

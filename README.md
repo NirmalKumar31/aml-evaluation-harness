@@ -26,16 +26,16 @@ no artifact supports.
 
 ## Architecture
 
-[![Evaluation pipeline](aml-platform/docs/architecture/01-evaluation-pipeline.svg)](aml-platform/docs/architecture/01-evaluation-pipeline.svg)
+[![From synthetic transactions to published evidence](aml-platform/docs/architecture/01-evaluation-pipeline.svg)](aml-platform/docs/architecture/01-evaluation-pipeline.svg)
 
 Three views, each a separate diagram, because they describe three different
 things and conflating them has caused real errors here:
 
 | view | what it shows |
 |---|---|
-| [Data, models and evaluation](aml-platform/docs/architecture/01-evaluation-pipeline.svg) | the pipeline above: raw transactions through features, the ring-aware split, the fits, and the account-day budget metrics |
-| [Recorded Azure execution](aml-platform/docs/architecture/02-azure-execution.svg) | the topology the HI-Large run actually used |
-| [CI and release](aml-platform/docs/architecture/03-ci-release.svg) | how the container is built, scanned, published and promoted today |
+| [From synthetic transactions to published evidence](aml-platform/docs/architecture/01-evaluation-pipeline.svg) | the complete flow above: raw transactions through features, the ring-aware split, the per-seed fits, the account-day budget metrics, the archived evidence and the published website |
+| [HI-Large: the recorded Azure execution](aml-platform/docs/architecture/02-azure-execution.svg) | the topology the HI-Large run actually used |
+| [From a source change to software and a website](aml-platform/docs/architecture/03-ci-release.svg) | how the container is built, scanned, published and promoted today, and how the website is delivered |
 
 Sources, PNG versions and the icon attribution are in
 [`aml-platform/docs/architecture/`](aml-platform/docs/architecture/README.md).

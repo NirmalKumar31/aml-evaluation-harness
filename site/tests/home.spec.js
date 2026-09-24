@@ -129,7 +129,7 @@ test("one architecture preview here, the rest on the engineering page", async ({
   await expect(page.locator("#arch-dialog")).toBeHidden();
   await expect(opener).toBeFocused();
 
-  await page.getByRole("link", { name: /cloud-execution and CI diagrams/ }).click();
+  await page.getByRole("link", { name: /cloud-execution and delivery diagrams/ }).click();
   await expect(page).toHaveURL(/engineering\/$/);
   await expect(page.locator(".arch-open")).toHaveCount(3);
 });

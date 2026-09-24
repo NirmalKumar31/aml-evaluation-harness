@@ -1,14 +1,17 @@
-// Render offline after installing @resvg/resvg-js outside the project.
-// NODE_PATH=/path/to/node_modules node render.cjs
+/* SVG is the editable master. PNGs are 3600 px wide presentation exports.
+ * Dependency: @resvg/resvg-js 2.6.2; no browser or remote assets required.
+ * Run: node render.cjs
+ */
 const fs = require('node:fs');
 const path = require('node:path');
 const { Resvg } = require('@resvg/resvg-js');
-for (const name of ['01-evaluation-pipeline', '02-azure-execution', '03-ci-release']) {
-  const input = fs.readFileSync(path.join(__dirname, `${name}.svg`));
-  const renderer = new Resvg(input, {
+const stems = ['01-evaluation-pipeline', '02-azure-execution', '03-ci-release'];
+for (const stem of stems) {
+  const source = fs.readFileSync(path.join(__dirname, `${stem}.svg`));
+  const png = new Resvg(source, {
     fitTo: { mode: 'width', value: 3600 },
     font: { loadSystemFonts: true, defaultFontFamily: 'Arial' },
-  });
-  fs.writeFileSync(path.join(__dirname, `${name}.png`), renderer.render().asPng());
-  console.log(`${name}.png`);
+  }).render().asPng();
+  fs.writeFileSync(path.join(__dirname, `${stem}.png`), png);
+  console.log(`${stem}.png`);
 }

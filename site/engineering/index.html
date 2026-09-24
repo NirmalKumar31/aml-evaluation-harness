@@ -388,41 +388,41 @@
 <li class="arch-card reveal">
   <button class="arch-open" type="button" data-diagram="pipeline"
           aria-haspopup="dialog">
-    <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
-         width="1600" height="900">
+    <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
+         width="1800" height="1290">
     <span class="arch-meta">
       <span class="arch-n">Diagram 1</span>
-      <span class="arch-title">Data, models and evaluation</span>
+      <span class="arch-title">From synthetic transactions to published evidence</span>
       <span class="arch-cue">Open full size</span>
     </span>
   </button>
-  <p class="arch-caption">Kaggle download through DuckDB feature construction, the ring-aware split, model fits and the account-day evaluation that produces a manifest.</p>
+  <p class="arch-caption">The complete flow: Kaggle download, DuckDB feature construction, the ring-aware split, per-seed fits, the account-day evaluation, the archived evidence and the website you are reading.</p>
 </li>
 <li class="arch-card reveal">
   <button class="arch-open" type="button" data-diagram="azure"
           aria-haspopup="dialog">
-    <img src="../assets/02-azure-execution.svg" alt="Flow diagram: a git archive of a fixed commit is checksummed and uploaded to ADLS Gen2, an Azure virtual machine authenticates with a managed identity, builds a container locally and runs the HI-Large evaluation, writing manifests back to storage." loading="lazy" decoding="async"
-         width="1600" height="900">
+    <img src="../assets/02-azure-execution.svg" alt="Topology diagram of the recorded HI-Large run. The application source is uploaded to ADLS Gen2 and downloaded on the host, which builds a Docker image locally on a four-vCPU Azure virtual machine with about 31 GB of memory; the image was not pulled from GHCR. The HI-Large input, 179.7 million transactions, downloads directly to local scratch. Inside Docker, DuckDB normalises and splits the data and LightGBM fits a 124,992,128 by 32 matrix at seeds 0, 1 and 2, and JSON results are returned to storage by the host Azure CLI. Local NVMe scratch, a separate managed spill disk and a managed identity are shown beneath. A note records that archived fits preserve source and matrix provenance but no registry image digest, so a byte-for-byte container rebuild is not established." loading="lazy" decoding="async"
+         width="1800" height="1370">
     <span class="arch-meta">
       <span class="arch-n">Diagram 2</span>
-      <span class="arch-title">Recorded Azure execution</span>
+      <span class="arch-title">HI-Large: the recorded Azure execution</span>
       <span class="arch-cue">Open full size</span>
     </span>
   </button>
-  <p class="arch-caption">How the HI-Large run actually happened: a verified source archive into storage, a managed identity, and a container built on the virtual machine itself.</p>
+  <p class="arch-caption">How the HI-Large run actually happened: a source archive through storage, a managed identity, and a container built on the virtual machine itself rather than pulled from a registry.</p>
 </li>
 <li class="arch-card reveal">
   <button class="arch-open" type="button" data-diagram="ci"
           aria-haspopup="dialog">
-    <img src="../assets/03-ci-release.svg" alt="Flow diagram: a pull request runs unit, reproducibility and publication gates, builds a Docker image, runs the suite inside that image, scans it, pushes it to GHCR by digest, and promotes the same manifest bytes to a signed release tag." loading="lazy" decoding="async"
-         width="1600" height="900">
+    <img src="../assets/03-ci-release.svg" alt="Flow diagram of the current delivery path, in three lanes. First, a pull request runs tests and reproducibility checks, security and static analysis, and publication checks over artifact-backed values. Second, a Docker image is built once, the suite runs inside it, Trivy scans for fixable high and critical findings, the tested image is pushed to GHCR on main and pulled back by immutable digest. A signed release tag is then verified and the identical manifest bytes are copied to a release image without rebuilding, with both digests and media types compared before the owner publishes release notes. Third, the website is generated from archived JSON, checked for determinism and contracts by the site-build job, uploaded once and deployed to GitHub Pages on main only. The three lanes are separate workflows; the arrows show artifact flow rather than a single dependency chain." loading="lazy" decoding="async"
+         width="1800" height="1490">
     <span class="arch-meta">
       <span class="arch-n">Diagram 3</span>
-      <span class="arch-title">CI and release</span>
+      <span class="arch-title">From a source change to software and a website</span>
       <span class="arch-cue">Open full size</span>
     </span>
   </button>
-  <p class="arch-caption">Pull request gates, the image that the suite runs inside, the scanners, and promotion of identical manifest bytes to a signed release.</p>
+  <p class="arch-caption">Three independent paths out of one pull request: the source and evidence checks, the container that is built once and promoted by manifest bytes, and the website artifact that is tested then deployed.</p>
 </li></ul>
 <p class="fineprint">Diagrams are generated from
    <code>aml-platform/docs/architecture/</code> and copied into this site at
@@ -437,22 +437,31 @@
   </div>
   <div class="arch-dialog-body" id="arch-dialog-body">
 <figure class="arch-panel" id="arch-panel-pipeline" hidden>
-  <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram: the AMLworld CSV is ingested into DuckDB, features are built per account-day, a ring-aware split is taken, models are fitted per seed, and evaluation writes a result manifest." loading="lazy" decoding="async"
-       width="1600" height="900">
-  <figcaption><strong>Diagram 1. Data, models and evaluation</strong>
-    Kaggle download through DuckDB feature construction, the ring-aware split, model fits and the account-day evaluation that produces a manifest.</figcaption>
+  <img src="../assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
+       width="1800" height="1290">
+  <figcaption><strong>Diagram 1. From synthetic transactions to published evidence</strong>
+    The complete flow: Kaggle download, DuckDB feature construction, the ring-aware split, per-seed fits, the account-day evaluation, the archived evidence and the website you are reading.
+    <a class="arch-full" href="../assets/01-evaluation-pipeline.svg">Open the full-size diagram<span
+      class="sr-only"> for From synthetic transactions to published evidence, 1800 by 1290
+      pixels, in this tab</span></a></figcaption>
 </figure>
 <figure class="arch-panel" id="arch-panel-azure" hidden>
-  <img src="../assets/02-azure-execution.svg" alt="Flow diagram: a git archive of a fixed commit is checksummed and uploaded to ADLS Gen2, an Azure virtual machine authenticates with a managed identity, builds a container locally and runs the HI-Large evaluation, writing manifests back to storage." loading="lazy" decoding="async"
-       width="1600" height="900">
-  <figcaption><strong>Diagram 2. Recorded Azure execution</strong>
-    How the HI-Large run actually happened: a verified source archive into storage, a managed identity, and a container built on the virtual machine itself.</figcaption>
+  <img src="../assets/02-azure-execution.svg" alt="Topology diagram of the recorded HI-Large run. The application source is uploaded to ADLS Gen2 and downloaded on the host, which builds a Docker image locally on a four-vCPU Azure virtual machine with about 31 GB of memory; the image was not pulled from GHCR. The HI-Large input, 179.7 million transactions, downloads directly to local scratch. Inside Docker, DuckDB normalises and splits the data and LightGBM fits a 124,992,128 by 32 matrix at seeds 0, 1 and 2, and JSON results are returned to storage by the host Azure CLI. Local NVMe scratch, a separate managed spill disk and a managed identity are shown beneath. A note records that archived fits preserve source and matrix provenance but no registry image digest, so a byte-for-byte container rebuild is not established." loading="lazy" decoding="async"
+       width="1800" height="1370">
+  <figcaption><strong>Diagram 2. HI-Large: the recorded Azure execution</strong>
+    How the HI-Large run actually happened: a source archive through storage, a managed identity, and a container built on the virtual machine itself rather than pulled from a registry.
+    <a class="arch-full" href="../assets/02-azure-execution.svg">Open the full-size diagram<span
+      class="sr-only"> for HI-Large: the recorded Azure execution, 1800 by 1370
+      pixels, in this tab</span></a></figcaption>
 </figure>
 <figure class="arch-panel" id="arch-panel-ci" hidden>
-  <img src="../assets/03-ci-release.svg" alt="Flow diagram: a pull request runs unit, reproducibility and publication gates, builds a Docker image, runs the suite inside that image, scans it, pushes it to GHCR by digest, and promotes the same manifest bytes to a signed release tag." loading="lazy" decoding="async"
-       width="1600" height="900">
-  <figcaption><strong>Diagram 3. CI and release</strong>
-    Pull request gates, the image that the suite runs inside, the scanners, and promotion of identical manifest bytes to a signed release.</figcaption>
+  <img src="../assets/03-ci-release.svg" alt="Flow diagram of the current delivery path, in three lanes. First, a pull request runs tests and reproducibility checks, security and static analysis, and publication checks over artifact-backed values. Second, a Docker image is built once, the suite runs inside it, Trivy scans for fixable high and critical findings, the tested image is pushed to GHCR on main and pulled back by immutable digest. A signed release tag is then verified and the identical manifest bytes are copied to a release image without rebuilding, with both digests and media types compared before the owner publishes release notes. Third, the website is generated from archived JSON, checked for determinism and contracts by the site-build job, uploaded once and deployed to GitHub Pages on main only. The three lanes are separate workflows; the arrows show artifact flow rather than a single dependency chain." loading="lazy" decoding="async"
+       width="1800" height="1490">
+  <figcaption><strong>Diagram 3. From a source change to software and a website</strong>
+    Three independent paths out of one pull request: the source and evidence checks, the container that is built once and promoted by manifest bytes, and the website artifact that is tested then deployed.
+    <a class="arch-full" href="../assets/03-ci-release.svg">Open the full-size diagram<span
+      class="sr-only"> for From a source change to software and a website, 1800 by 1490
+      pixels, in this tab</span></a></figcaption>
 </figure></div>
 </dialog>
   </div>
