@@ -600,11 +600,65 @@ def test_published_counts_match_the_generated_release_facts():
 
     Same defect as a hand-typed metric, same remedy: generate it, then check
     the prose against it.
+
+    AND THE COMMIT IT NAMES HAS TO EXIST FOR THE READER, NOT ONLY FOR THE
+    MACHINE THAT WROTE IT. The published artifact once recorded
+    `code_git_sha: 24900ae19252` -- an intermediate commit on a feature
+    branch, discarded by the squash merge that landed it, surviving only in
+    one laptop's object store. `generator_matches_commit` and
+    `code_tree_matches_commit` both read `true` precisely because git was
+    asked where the object still existed; anonymously, GitHub answered 422.
+    Provenance that resolves nowhere but the machine that produced it is not
+    provenance, so the four properties below are now asserted here rather
+    than assumed.
     """
     root = Path(__file__).resolve().parents[3]
     facts = _archive_root() / "derived/release_facts.json"
     if not facts.exists():
         pytest.skip("release facts not generated in this checkout")
+
+    published = json.loads(facts.read_text())
+    sha = published.get("code_git_sha", "")
+
+    # 1. A full sha. An abbreviation is ambiguous by construction and cannot
+    #    be resolved in a clone that does not already hold the object.
+    assert re.fullmatch(r"[0-9a-f]{40}", sha or ""), (
+        f"release_facts records code_git_sha {sha!r}, which is not a full "
+        f"40-character SHA")
+
+    # 2. `--allow-red` writes the artifact over a failing suite. That is a
+    #    local bootstrap tool; the committed artifact must say the suite was
+    #    green when the numbers in it were taken.
+    allow_red = (published.get("parameters") or {}).get("allow_red")
+    assert allow_red is False, (
+        f"the published release facts record parameters.allow_red={allow_red!r}; "
+        f"a committed artifact must be generated from a green suite, not "
+        f"corrected afterwards")
+
+    # 3 and 4 need history. A shallow clone or the image has none, and failing
+    #    there would make this test a liar about what it verified -- but a FULL
+    #    clone that cannot resolve the commit is the defect itself, so the two
+    #    cases are distinguished instead of collapsed into one skip.
+    def _git(*args):
+        return subprocess.run(["git", "-C", str(root), *args],
+                              capture_output=True, text=True)
+
+    if _git("rev-parse", "--git-dir").returncode == 0:
+        shallow = _git("rev-parse", "--is-shallow-repository").stdout.strip()
+        if shallow == "false":
+            assert _git("cat-file", "-e", f"{sha}^{{commit}}").returncode == 0, (
+                f"release_facts names commit {sha[:12]}, which does not exist "
+                f"in this full clone -- so no reader can check the claim it "
+                f"makes")
+            # 4. Reachability, not just existence. The defect this guards
+            #    against was an object that EXISTED locally and was reachable
+            #    from nothing: an ancestor test is what separates a commit in
+            #    the published history from a commit in somebody's reflog.
+            assert _git("merge-base", "--is-ancestor", sha, "HEAD").returncode == 0, (
+                f"release_facts names commit {sha[:12]}, which is not an "
+                f"ancestor of HEAD -- it describes a tree that is not being "
+                f"published")
+
     # The ARTIFACT now ships in the image; the documents it is checked against
     # do not. This used to skip because the artifact was absent too, so making
     # the image carry the archive would have turned it red for the wrong
