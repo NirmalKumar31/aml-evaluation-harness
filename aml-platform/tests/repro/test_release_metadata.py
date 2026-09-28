@@ -787,9 +787,18 @@ def test_the_published_cost_table_matches_the_cost_artifact():
     # queried since. Each such statement has to carry the date it was taken,
     # or say plainly that it is not a statement about the present.
     state = re.compile(
+        # Two shapes. The first is an explicit "now"/"currently" beside a
+        # control-plane reading. The second needs no adverb at all: "the
+        # subscription no longer accepts writes" is a present-tense claim
+        # about a subscription nobody has queried since, and it read as
+        # current for as long as it stood.
         r"\b(?:now|currently)\b[^.\n]{0,80}?"
         r"(?:\bstopped\b|\bdeallocated\b|Warned|ReadOnlyDisabledSubscription|"
-        r"resources remain|still running)", re.I)
+        r"resources remain|still running)"
+        r"|\bno longer (?:accepts?|allows?|permits?)\s+(?:any\s+)?writes?\b"
+        r"|\bsubscription[^.\n]{0,60}?\bno longer\b"
+        r"|\bthe subscription (?:is|remains) (?:read-only|blocked)\b"
+        r"|\b(?:writes are|teardown is) (?:still )?blocked\b", re.I)
     dated = re.compile(r"20\d\d-\d\d-\d\d|observed|read(?:ing)?s? taken|"
                        r"as of|on that date", re.I)
     for doc in ("docs/RUNBOOK_cloud.md", "../README.md", "docs/LIMITATIONS.md"):

@@ -482,11 +482,13 @@ billed per meter, so no authoritative per-resource figure exists to read. What
 *is* exact is the elapsed resource time. Multiplying it by published list
 prices gives what this would have cost on a paid subscription.
 
-**TEARDOWN IS BLOCKED; BILLING STATUS IS UNRESOLVED.** The subscription state
-reads `Warned`, every write returns `ReadOnlyDisabledSubscription`, and the
-resources remain rather than being removed. `az vm deallocate` and
-`az group delete` both fail. This proves the control plane is read-only; it does
-not prove that storage, IP, registry, disk, or VM meters have stopped. Do not
+**TEARDOWN WAS BLOCKED; BILLING STATUS IS UNRESOLVED.** At the September 2026
+observation the subscription state read `Warned`, every write returned
+`ReadOnlyDisabledSubscription`, and the resources remained rather than being
+removed; `az vm deallocate` and `az group delete` both failed. That proves the
+control plane was read-only when it was read. It does not prove that storage,
+IP, registry, disk, or VM meters had stopped, and nothing here describes the
+subscription's status since. Do not
 upgrade to pay-as-you-go merely to test that assumption. Ask Azure support to
 confirm the billing state and provide a deletion path that does not convert the
 trial to a paid subscription.
