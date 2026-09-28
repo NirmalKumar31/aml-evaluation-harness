@@ -1,10 +1,13 @@
 # Architecture diagrams
 
-Three complementary views of the evaluation harness, drawn with free-standing
-technology icons, labeled connectors and broad execution lanes. SVGs are
-editable and self-contained; PNGs are 3,600 pixels wide for slides and
-documents. Each view has its own height, so they are not interchangeable
-crops of one canvas.
+Four views, drawn with free-standing technology icons, labeled connectors and
+broad execution lanes. SVGs are editable and self-contained; PNGs are 3,600
+pixels wide for slides and documents. Each view has its own height, so they
+are not interchangeable crops of one canvas.
+
+Views 1 to 3 describe the system. **View 4 describes the process that changes
+it** and belongs to neither the evaluation pipeline nor the deployed software;
+it is kept separate for that reason.
 
 View 1 now covers the **complete** journey — inputs through evaluation and
 archived evidence to the published website — and views 2 and 3 expand the two
@@ -124,6 +127,46 @@ uploaded once and deployed on main without rebuilding. The site is static and
 interactive, **not a deployed prediction service**: a pull request never
 deploys, and Pages does not run the GHCR image.
 
+## 4. AI-assisted engineering and release governance
+
+[SVG](04-ai-governance.svg) · [PNG](04-ai-governance.png)
+
+![The development and release process in two bands: Nirmal states the problem
+and owns every judgement call, Claude and Codex draft and critique but approve
+nothing, automated checks run on every pull request and refuse the merge on
+failure, and Nirmal reads the evidence and accepts or returns the change;
+below, a protected pull request leads to a verified commit and signed release
+and then to the tested container and the tested website
+artifact](04-ai-governance.svg)
+
+**This view describes how the repository is changed, not how anything runs.**
+It is here because the project is built with AI assistance and saying so
+plainly is more useful than leaving it to be inferred.
+
+What it asserts, and what it does not:
+
+- One human owns the work. Nirmal states the problem, decides what is worth
+  doing, and accepts or rejects every change. Branch protection means no
+  change reaches `main` without passing the checks, and none is merged
+  unreviewed.
+- Claude and Codex are **assistants**. They draft implementations and tests
+  and critique code, and their output is a proposal that the same gates and
+  the same reviewer must clear. They approve nothing, publish nothing, and
+  decide nothing.
+- They are **not scientific authorities**. They are not authors of the claims
+  in `paper/`, and no number on the website or in a report is theirs: every
+  published value is read from a committed artifact by a generator.
+- They are **not runtime components**. No assistant runs in the evaluation
+  pipeline, in the container, or on the website. Nothing in `src/aml` calls a
+  model API, and the site ships no network call of any kind.
+
+The two people-and-process symbols in this view are neutral line drawings
+rather than vendor logos. That is deliberate: Simple Icons removed the OpenAI
+mark from its CC0 set, so redistributing it here would not be licensed, and
+giving only one assistant a logo would imply a standing the other does not
+have. The technology icons in the lower band are the same attributed files the
+other three views use.
+
 ## Source mapping
 
 | Diagram detail | Repository evidence |
@@ -143,6 +186,7 @@ deploys, and Pages does not run the GHCR image.
 | Tests, static and security checks | [CI](../../../.github/workflows/ci.yml), [gates](../../../.github/workflows/gates.yml), [security scan](../../../.github/workflows/security-scan.yml), [CodeQL](../../../.github/workflows/codeql.yml) |
 | Publishable surface | [check_public_surface.py](../../scripts/check_public_surface.py) |
 | Website build, test and deployment | [Pages workflow](../../../.github/workflows/pages.yml), [asset mapping](../../../site/assets.py) |
+| Governance: the checks a change must clear | [ci.yml](../../../.github/workflows/ci.yml), [gates.yml](../../../.github/workflows/gates.yml), [release.yml](../../../.github/workflows/release.yml) |
 
 The canonical Large model source reference recorded in the manifests is
 `b48ed9ff2b4a3d7da5f8440890eebba4114514fe`. It identifies application source,

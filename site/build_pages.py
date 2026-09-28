@@ -590,17 +590,33 @@ def coverage_matrix(data: dict, route_id: str, *, level: str = "h3") -> str:
 
 def architecture_section(route_id: str, *, level: str = "h2",
                          heading: str = "Architecture",
+                         anchor: str = "architecture",
                          intro: str = "", only: "tuple[str, ...] | None" = None,
-                         after: str = "", captions: bool = True) -> str:
+                         after: str = "", captions: bool = True,
+                         dialog: "tuple[str, ...] | None | bool" = True) -> str:
     """Preview cards that open one accessible dialog at full size.
 
     `only` narrows the previews to named diagrams. The homepage shows one and
     sends the reader to the engineering page for the rest; three full-width
     pictures on a page that is meant to be read in three minutes is a
     documentation dump, not an introduction.
+
+    ONE DIALOG PER PAGE, NOT ONE PER SECTION. The engineering page carries two
+    groups of cards -- the architecture views, and the governance view, which
+    is deliberately kept out of that group because it describes the
+    development process rather than anything that runs. Both sets of cards
+    open the same dialog, so the section that owns it declares which panels it
+    holds and the other passes `dialog=False`. Emitting the dialog twice would
+    duplicate `arch-dialog` and every panel id on one page.
     """
     base = ROUTE[route_id]["base"]
     shown = [d for d in DIAGRAMS if only is None or d["id"] in only]
+    if dialog is True:
+        panelled = list(shown)
+    elif dialog:
+        panelled = [d for d in DIAGRAMS if d["id"] in dialog]
+    else:
+        panelled = []
     cards, panels = [], []
     for d in shown:
         src = f"{base}{d['deployed']}"
@@ -618,10 +634,12 @@ def architecture_section(route_id: str, *, level: str = "h2",
   </button>
   {'' if not captions else f'<p class="arch-caption">{E(d["caption"])}</p>'}
 </li>""")
-        # A FULL-SIZE LINK, NOT JUST A BIGGER PREVIEW. The dialog scales the
-        # picture to the viewport, which is readable on a laptop and is not
-        # on a phone -- these carry a couple of hundred labels each. The link
-        # opens the SVG itself, where the browser's own zoom works.
+    # A FULL-SIZE LINK, NOT JUST A BIGGER PREVIEW. The dialog scales the
+    # picture to the viewport, which is readable on a laptop and is not on a
+    # phone -- these carry a couple of hundred labels each. The link opens the
+    # SVG itself, where the browser's own zoom works.
+    for d in panelled:
+        src = f"{base}{d['deployed']}"
         panels.append(f"""
 <figure class="arch-panel" id="arch-panel-{E(d['id'])}" hidden>
   <img src="{E(src)}" alt="{E(d['alt'])}" loading="lazy" decoding="async"
@@ -632,10 +650,7 @@ def architecture_section(route_id: str, *, level: str = "h2",
       class="sr-only"> for {E(d['title'])}, {d['width']} by {d['height']}
       pixels, in this tab</span></a></figcaption>
 </figure>""")
-    return f"""
-<{level} id="architecture">{E(heading)}</{level}>
-{intro}
-<ul class="{'arch-grid arch-grid-one plain' if len(shown) == 1 else 'arch-grid plain'}">{''.join(cards)}</ul>{after}
+    tail = "" if not panelled else f"""
 <p class="fineprint">Diagrams are generated from
    <code>aml-platform/docs/architecture/</code> and copied into this site at
    build time; there is no second copy to fall out of date. Technology icons
@@ -649,6 +664,10 @@ def architecture_section(route_id: str, *, level: str = "h2",
   </div>
   <div class="arch-dialog-body" id="arch-dialog-body">{''.join(panels)}</div>
 </dialog>"""
+    return f"""
+<{level} id="{E(anchor)}">{E(heading)}</{level}>
+{intro}
+<ul class="{'arch-grid arch-grid-one plain' if len(shown) == 1 else 'arch-grid plain'}">{''.join(cards)}</ul>{after}{tail}"""
 
 
 def noscript_block(extra: str = "") -> str:
@@ -1646,14 +1665,31 @@ def engineering_page(data: dict) -> str:
   </div>
 </section>
 
-<section class="band band-light" aria-labelledby="archfull-h">
+<section class="band band-light" aria-labelledby="architecture">
   <div class="wrap">
     {architecture_section('engineering', level='h2',
       heading='Architecture diagrams',
       intro='<p class="lede">The source of truth is '
             '<code>aml-platform/docs/architecture/</code>. These are previews; '
             'select one to open it full size in a dialog that closes with '
-            'Escape.</p>')}
+            'Escape.</p>',
+      only=('pipeline', 'azure', 'ci'),
+      dialog=('pipeline', 'azure', 'ci', 'governance'))}
+  </div>
+</section>
+
+<section class="band" aria-labelledby="governance">
+  <div class="wrap">
+    {architecture_section('engineering', level='h2', anchor='governance',
+      heading='How a change gets made and approved',
+      intro='<p class="lede">This project is built with AI assistance, and the '
+            'diagram below says exactly what that means. It is a picture of the '
+            '<strong>development process</strong> — who proposes a change, what '
+            'checks it must clear, and who accepts it. It is not part of the '
+            'evaluation pipeline, the container or this website: no assistant '
+            'runs in any of them, and none of them decides what is '
+            'published.</p>',
+      only=('governance',), dialog=False)}
   </div>
 </section>
 

@@ -359,15 +359,61 @@ def test_no_restricted_material_reaches_the_site():
 
 
 def test_no_assistant_attribution_or_development_record_in_the_site():
+    """Metadata never; a deliberate disclosure in exactly one place.
+
+    This guard was written to stop ghost attribution leaking onto the
+    published surface -- commit trailers, "generated with" boilerplate, a name
+    dropped into a caption by accident. It is not a reason the site may not
+    SAY, on purpose and in the owner's own words, that the project is built
+    with AI assistance: that disclosure is the honest thing to publish, and
+    hiding it would be the defect.
+
+    So the two halves are separated. The metadata forms stay banned
+    everywhere, with no exception. The assistant names are allowed only in the
+    files that carry the governance view, and only alongside the sentences
+    that bound what the assistants do -- so a mention cannot drift into a
+    page that has no business making one, and cannot appear without its
+    qualification.
+    """
     _need_site()
-    banned = re.compile(
-        r"\b(?:Cla" + "ude|Anthro" + "pic|Chat" + "GPT|Co" + "dex)\\b"
-        r"|Co-Authored-By|Generated with \[", re.I)
+    metadata = re.compile(r"Co-Authored-By|Generated with \[", re.I)
+    names = re.compile(r"\b(?:Cla" + "ude|Anthro" + "pic|Chat" + "GPT|Co" + "dex)\\b", re.I)
+    # The governance view and the two files that build it. Nothing else.
+    disclosure = {"assets.py", "build_pages.py", "engineering/index.html",
+                  "04-ai-governance.svg"}
     for p in _site_text_files():
         if p.name == "test_site.py":
             continue
-        m = banned.search(p.read_text(encoding="utf-8", errors="replace"))
-        assert not m, f"{p.relative_to(ROOT)} contains editorial metadata: {m.group(0)!r}"
+        body = p.read_text(encoding="utf-8", errors="replace")
+        rel = p.relative_to(ROOT)
+        m = metadata.search(body)
+        assert not m, f"{rel} contains editorial metadata: {m.group(0)!r}"
+        hit = names.search(body)
+        if hit:
+            key = "/".join(p.parts[-2:]) if p.parent.name == "engineering" else p.name
+            assert key in disclosure, (
+                f"{rel} names {hit.group(0)!r}. Only the governance view may, "
+                f"and it says what that means; anywhere else this is attribution "
+                f"that nobody decided to publish.")
+
+    # THE MENTION MAY NOT TRAVEL WITHOUT ITS BOUNDS.
+    eng = _pages()["engineering/index.html"]
+    if names.search(eng):
+        for required in ("propose only and approve nothing",
+                         "not authors of the scientific claims",
+                         "do not decide what is published"):
+            assert required in eng, (
+                f"the engineering page names an assistant without saying "
+                f"{required!r}")
+    for rel in ("index.html", "explorer/index.html"):
+        assert not names.search(_pages()[rel]), (
+            f"{rel} names an assistant; the disclosure belongs on the "
+            f"engineering page only")
+    for extra in ("data/site-data.json", "data/results.json", "styles.css"):
+        q = SITE / extra
+        if q.is_file():
+            assert not names.search(q.read_text(encoding="utf-8")), (
+                f"site/{extra} names an assistant")
 
     for p in SITE.rglob("*"):
         if p.is_file() and "node_modules" not in p.parts:
@@ -629,14 +675,16 @@ def test_the_small_screen_navigation_is_a_real_disclosure():
 
 
 def test_the_architecture_dialog_is_keyboard_operable():
-    """One preview on the homepage, all three on the engineering page.
+    """One preview on the homepage, all four on the engineering page.
 
-    Three full-width diagrams stacked on a page meant to be read in three
+    Four full-width diagrams stacked on a page meant to be read in three
     minutes is a documentation dump; the homepage shows the evaluation
-    pipeline and sends the reader on for the rest.
+    pipeline and sends the reader on for the rest. The engineering page shows
+    three architecture views and, in its own section, the governance view --
+    two card groups, ONE dialog, because two would duplicate every panel id.
     """
     _need_site()
-    for rel, previews in (("index.html", 1), ("engineering/index.html", 3)):
+    for rel, previews in (("index.html", 1), ("engineering/index.html", 4)):
         html = _pages()[rel]
         assert '<dialog class="arch-dialog"' in html, f"{rel} has no diagram dialog"
         assert 'aria-haspopup="dialog"' in html
@@ -645,6 +693,26 @@ def test_the_architecture_dialog_is_keyboard_operable():
             f"{previews}")
     assert "engineering/" in _pages()["index.html"], (
         "the homepage previews one diagram and never links to the rest")
+    # A LABEL THAT NAMES NOTHING IS NOT A LABEL. `aria-labelledby` pointed at
+    # `archfull-h`, an id no page ever had, so the section was announced with
+    # no accessible name at all -- and nothing noticed, because a dangling
+    # reference degrades silently.
+    for rel, html_ in _pages().items():
+        ids = set(re.findall(r'\sid="([^"]+)"', html_))
+        for attr in ("aria-labelledby", "aria-describedby"):
+            for ref in re.findall(rf'{attr}="([^"]+)"', html_):
+                for token in ref.split():
+                    assert token in ids, (
+                        f"{rel}: {attr}={token!r} names no element on the page")
+
+    eng = _pages()["engineering/index.html"]
+    assert eng.count('<dialog class="arch-dialog"') == 1, (
+        "the engineering page emits more than one diagram dialog; the panel "
+        "ids inside them would collide")
+    assert eng.count('class="arch-panel"') == 4, (
+        "a card on the engineering page opens a panel that is not there")
+    assert 'id="governance"' in eng and eng.index('id="architecture"') < eng.index('id="governance"'), (
+        "the governance view is not its own section after the architecture views")
     js = (SITE / "js" / "lightbox.js").read_text(encoding="utf-8")
     assert "showModal()" in js, "the dialog is not modal, so Escape and the focus trap are lost"
     assert "opener.focus()" in js, "focus is not restored to the control that opened it"

@@ -102,6 +102,39 @@ DIAGRAMS = (
                 "separate workflows; the arrows show artifact flow rather than a "
                 "single dependency chain."),
     },
+    {
+        "id": "governance",
+        "src": "04-ai-governance.svg",
+        "deployed": "assets/04-ai-governance.svg",
+        "n": 4,
+        "width": 1800, "height": 1400,
+        "title": "AI-assisted engineering and release governance",
+        "caption": ("How a change to this repository is proposed, checked and "
+                    "accepted. This is the development process, not the "
+                    "evaluation pipeline: no assistant runs in the harness, the "
+                    "container or this website, and none of them decides what "
+                    "gets published."),
+        "alt": ("Flow diagram of the development and release process, in two "
+                "bands. The upper band has four stages. Nirmal states the "
+                "problem, decides what is worth doing and owns every judgement "
+                "call. Claude and Codex then draft implementations and tests and "
+                "critique the code; the caption records that they propose only "
+                "and approve nothing. Automated verification runs on every pull "
+                "request and refuses the merge on failure. Nirmal reads the "
+                "evidence rather than the claim, rejects or returns the change "
+                "freely, and nothing merges unreviewed. A strip beneath names "
+                "the four check families: tests and reproducibility, provenance "
+                "gates tracing every published value to an artifact, security "
+                "scanning, and browser validation. The lower band has three "
+                "stages: a protected pull request whose branch protection "
+                "requires those checks, a GitHub-verified merge commit with "
+                "signed release tags published by the owner, and delivery of the "
+                "tested container and the tested website artifact. A closing "
+                "note states that Claude and Codex are development tools, are "
+                "not authors of the scientific claims, do not decide what is "
+                "published, and run in no part of the evaluation pipeline, the "
+                "container or the website."),
+    },
 )
 
 # Technology icons, already licensed and committed. `NOTICES.txt` travels with
