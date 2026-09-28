@@ -497,7 +497,12 @@ def test_provision_verifies_the_source_archive_before_extracting_it():
     claims = re.compile(
         r"verified source archive|sha256-verified source|checksummed archive|"
         r"archive digest was checked|verified by\s*\n?\s*SHA-256|"
-        r"source by commit SHA and archive checksum", re.I)
+        r"source by commit SHA and archive checksum|"
+        # "hashed" says a digest was taken and kept just as plainly as
+        # "checksummed" does, and it slipped through the first pass.
+        r"archive`?d at a fixed commit,\s*hashed|"
+        r"source was[^.]{0,80}?\bhashed\b|\bhashed\b[^.]{0,40}?source archive",
+        re.I)
     docs = [root / "docs/LIMITATIONS.md", root / "docs/RUNBOOK_cloud.md",
             root / "../README.md", root / "infra/README.md",
             root / "infra/main.bicep", root / "docs/architecture/README.md",
@@ -607,6 +612,48 @@ def test_the_seed_varies_only_the_bin_edges():
         assert "bin edge" in window or "bin-edge" in window, (
             "the seed caveat no longer names bin-edge estimation as the "
             "mechanism")
+
+        # THE SECTION MUST BE WHOLE. A bad edit left a stranded clause
+        # ("nothing but `random_state`; seven of the eight seeds land at
+        # 0.79398 or") and a sentence that stopped mid-word ("The published
+        # 0.00243-0.00244 bracket is on"). Both rendered as published prose.
+        j = body.find("## 3. Statistical uncertainty")
+        assert j >= 0, "the statistical-uncertainty section has gone missing"
+        sect = body[j:body.find("\n## ", j + 10)]
+        flat_sect = re.sub(r"\s+", " ", sect)
+        assert flat_sect.count("nothing but `random_state`") == 1, (
+            "the 'nothing but random_state' fragment is duplicated; an edit "
+            "stranded a clause in the middle of the section")
+        assert "bracket is on\n" not in sect and not sect.rstrip().endswith(
+            "bracket is on"), (
+            "the section still ends a sentence mid-clause at 'bracket is on'")
+        for line in sect.splitlines():
+            s = line.rstrip()
+            if s.startswith("  ") and s.endswith(("or", "and", "is on", "the")):
+                raise AssertionError(
+                    f"a stranded continuation line survives in the section: {s!r}")
+
+        # AND IT MUST NOT CLAIM AN INTERVAL IT CANNOT HAVE. The slots are the
+        # ranked top k of each day over seven days: they are chosen by a
+        # shared ranking and cluster by day, so they are not independent
+        # Bernoulli trials and a binomial interval does not describe
+        # uncertainty in the estimate.
+        low = sect.lower()
+        if "clopper" in low or "binomial" in low or "95%" in low:
+            assert re.search(r"no formal uncertainty interval is claimed", low), (
+                "the section discusses a binomial interval without saying that "
+                "no formal uncertainty interval is claimed")
+            assert re.search(r"not independent|independence fails", low), (
+                "a binomial interval is presented without stating that the "
+                "ranked, day-clustered alert slots are not independent trials")
+        assert not re.search(
+            r"the exact 95%\s*\n?\s*interval|"
+            r"(?<!not )a valid (?:formal )?(?:95% )?confidence interval", low), (
+            "a binomial interval is presented as a valid formal interval for "
+            "the model estimate")
+        assert re.search(r"0\.00243.{0,40}(?:null|random-ranker)", low, re.S), (
+            "the 0.00243-0.00244 bracket is no longer identified as the "
+            "random-ranker null")
 
 
 def test_holm_adjusted_p_values_are_monotone_and_from_unrounded_inputs():

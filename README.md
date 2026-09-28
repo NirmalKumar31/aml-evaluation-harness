@@ -43,8 +43,8 @@ Sources, PNG versions and the icon attribution are in
 **The Azure view and the CI view are not the same path, and the HI-Large
 result came from the first one.** That run predates the current release
 pipeline: its image was **not** pulled from GHCR. The source was `git
-archive`d at a fixed commit, hashed, uploaded to ADLS, and built into a
-container **on the VM itself**, tagged `aml:<git-sha>`.
+archive`d at a fixed commit, uploaded to ADLS, and built into a container **on
+the VM itself**, tagged `aml:<git-sha>`.
 
 The two give different provenance guarantees. Current CI identifies the
 published container by **registry digest**, and the release tag is the same

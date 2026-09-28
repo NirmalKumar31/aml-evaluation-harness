@@ -98,16 +98,30 @@ corroboration of the quantities they are computed from.
 
 **A single-seed `precision@50` on HI-Medium is not a result.** The same code,
 data and configuration yield 0.59144 or 0.89815 depending on nothing but
-`random_state`.
-  nothing but `random_state`; seven of the eight seeds land at 0.79398 or  <!-- derived: 0.79398 = the second-lowest of the eight per-seed precision@50 values in results_archive/gold/stability_Medium/stability.json; the run is reported as a range because of that spread, not summarised by a point -->
-Report the range, not a point.
+`random_state`; seven of the eight seeds land at or above 0.79398.  <!-- derived: 0.79398 = the second-lowest of the eight per-seed precision@50 values in results_archive/gold/stability_Medium/stability.json; the run is reported as a range because of that spread, not summarised by a point -->
+Report that whole range and not a point: one seed is the low end of it, not a
+result the others corroborate.
 
 **The surviving volume-segment lift is wide.** Against a random-ranker null
 of **0.00243–0.00244**, the linear baseline is **17.6×**.  <!-- derived: 0.04286/0.00244 -->
-That is a point estimate on 15 true positives in 350 slots. The exact 95%
-interval on 15/350 runs 0.02418-0.06970, <!-- derived: 0.02418 = Clopper-Pearson 95% lower bound on 15 successes in 350 trials --><!-- derived: 0.06970 = Clopper-Pearson 95% upper bound on 15 successes in 350 trials -->
-which is a lift of roughly **9.9×** <!-- derived: 9.9 = 0.02418/0.00244, the interval's lower end over the adverse null -->
-to **28.6×** against the same null. <!-- derived: 28.6 = 0.06970/0.00244, the interval's upper end over the adverse null --> The published 0.00243-0.00244 bracket is on
+That is a point estimate on 15 true positives in 350 slots.
+
+**No formal uncertainty interval is claimed for any model estimate here, and
+the binomial one this section used to report is withdrawn.** It was a
+Clopper-Pearson 95% interval on 15/350 running 0.02418-0.06970, <!-- derived: 0.02418 = Clopper-Pearson 95% lower bound on 15 successes in 350 trials --><!-- derived: 0.06970 = Clopper-Pearson 95% upper bound on 15 successes in 350 trials -->
+read as a lift of **9.9×** <!-- derived: 9.9 = 0.02418/0.00244, the interval's lower end over the adverse null -->
+to **28.6×** against the same null. <!-- derived: 28.6 = 0.06970/0.00244, the interval's upper end over the adverse null -->
+Those figures are kept here so the withdrawal is legible, not because they are
+reportable. A Clopper-Pearson interval assumes 350 independent Bernoulli
+trials, and these 350 are the ranked top k of each day across seven days:
+membership is decided by a shared ranking, the slots cluster by day, and one
+day's composition constrains the next. Independence fails on both counts, so
+the interval does not describe uncertainty in the estimate and must not be
+quoted as a confidence interval for the model.
+
+The published 0.00243-0.00244 bracket is the random-ranker null for this
+window — a property of the split, not an interval around the model estimate.
+Quote it as the null it is.
 
 **Seeds are not replicates, and they are narrower than "optimizer
 sensitivity".** In the shipped configuration `random_state` has exactly one
@@ -159,8 +173,10 @@ preserve no image digest, and no digest for the source archive. `provision_vm.sh
 does verify the archive against `SRC_SHA256` when one is supplied, but no such
 value from that run was recorded, so the archive check is a control the current
 script offers rather than evidence about the historical one. That is source
-provenance, not container reproducibility, and the subscription it ran under no
-longer accepts writes.
+provenance, not container reproducibility. At the recorded September 2026
+observation the subscription rejected writes with
+`ReadOnlyDisabledSubscription`; this repository makes no claim about its status
+since, and none of these records should be read as present subscription state.
 
 **Cost and scale figures describe one run.** They are measurements of that
 deployment, not a general estimate.
