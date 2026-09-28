@@ -1,4 +1,4 @@
-"""Render three source-grounded architecture diagrams; Python standard library only.
+"""Render four source-grounded architecture diagrams; Python standard library only.
 
 The SVGs embed the attributed icons in icons/. Run this file offline to rebuild.
 Evidence baseline: NirmalKumar31/aml-evaluation-harness at 64784288dda38bd104c6cd534d4e80b9ab48c818.
@@ -95,6 +95,13 @@ text{{font-family:Arial,Helvetica,sans-serif;fill:{INK}}}
             'tag':'<path d="M8 8 H34 L60 34 L34 60 L8 34 Z"/><circle cx="22" cy="22" r="5"/>',
             'operator':'<circle cx="32" cy="15" r="10"/><path d="M12 59 V44 Q12 30 32 30 Q52 30 52 44 V59 M22 59 V46 M42 59 V46"/>',
             'disk':'<ellipse cx="32" cy="12" rx="24" ry="9"/><path d="M8 12 V49 C8 61 56 61 56 49 V12 M8 30 C8 42 56 42 56 30"/>',
+            # Assistance, drawn as a suggestion rather than a brand. Simple
+            # Icons removed the OpenAI mark, so redistributing it here would
+            # not be licensed; showing only Claude's would imply one assistant
+            # carries a standing the other does not. Neither writes anything
+            # this project publishes, so neither gets a logo.
+            'assist':'<path d="M23 21 L9 33 L23 45 M41 21 L55 33 L41 45"/><path d="M32 3 L35 12 L44 15 L35 18 L32 27 L29 18 L20 15 L29 12 Z"/>',
+            'review':'<path d="M4 32 C13 17 26 10 32 10 C38 10 51 17 60 32 C51 47 38 54 32 54 C26 54 13 47 4 32 Z"/><circle cx="32" cy="32" r="10"/><path d="M28 32 L31 35 L37 29"/>',
         }
         self.p.append(shapes[name]+'</g>')
 
@@ -293,8 +300,74 @@ def delivery():
     d.save('03-ci-release.svg')
 
 
+def governance():
+    d = Diagram(4, 'AI-assisted engineering and release governance',
+                'How changes to this repository are proposed, checked and accepted • Development process only — not the AML runtime or the scientific pipeline', 1400)
+
+    d.area(45, 224, 1710, 648, '#F7FAFC')
+    d.text(80, 250, '01—04  /  PROPOSE, CHECK, ACCEPT', 'eyebrow')
+    d.text(1720, 250, 'ONE HUMAN OWNER', 'eyebrow', 'end', TEAL)
+
+    xs = [250, 680, 1110, 1540]
+    d.glyph('operator', xs[0], 380, TEAL)
+    d.text(xs[0], 380-63, '01  OWNER', 'eyebrow', 'middle')
+    d.text(xs[0], 380+67, 'Nirmal defines the work', 'node', 'middle')
+    d.lines(xs[0], 380+101, ['States the problem and the scope', 'Decides what is worth doing', 'Owns every judgement call'])
+
+    d.node(xs[1], 380, '@assist', 'Claude and Codex assist',
+           ['Draft implementations and tests', 'Critique each other and the code', 'Propose only — they approve nothing'], '02  ASSISTANTS')
+
+    d.node(xs[2], 380, '@shield', 'Automated verification',
+           ['Runs on every pull request', 'Refuses the merge on failure', 'Detail in the strip below'], '03  CHECKS')
+
+    d.glyph('review', xs[3], 380, TEAL)
+    d.text(xs[3], 380-63, '04  APPROVAL', 'eyebrow', 'middle')
+    d.text(xs[3], 380+67, 'Nirmal accepts the change', 'node', 'middle')
+    d.lines(xs[3], 380+101, ['Reads the evidence, not the claim', 'Rejects or sends it back freely', 'No change merges unreviewed'])
+
+    for a, b, label in zip(xs, xs[1:], ['a stated problem', 'a proposed change', 'evidence, or a failure']):
+        d.path(f'M{a+64} 379 H{b-64}')
+        d.text((a+b)/2, 363, label, 'link', 'middle')
+
+    d.path('M80 620 H1720', LINE, marker=False, width=1)
+    d.text(80, 596, 'WHAT THE CHECKS ARE', 'eyebrow')
+    strip = [('python', 'Tests and reproducibility', 'Unit, replay and determinism suites'),
+             ('@files', 'Provenance gates', 'Values traced to committed artifacts'),
+             ('trivy', 'Security scanning', 'CodeQL, Bandit, Gitleaks, pip-audit'),
+             ('@web', 'Browser validation', 'Playwright drives the built site')]
+    for i, (icon, name, note) in enumerate(strip):
+        x = 130 + i*410
+        if icon.startswith('@'):
+            d.glyph(icon[1:], x, 700)
+        else:
+            d.icon(icon, x, 700, 56)
+        d.text(x+48, 690, name, 'node')
+        d.text(x+48, 722, note, 'small')
+    d.text(80, 822, 'The assistants run inside this loop, never around it: their output is a proposal that the same checks and the same reviewer must clear.', 'note')
+
+    d.area(45, 906, 1710, 300, '#FBF8F1')
+    d.text(80, 944, '05—07  /  PROTECTED DELIVERY', 'eyebrow', color=GOLD)
+    ys = 1040
+    d.node(330, ys, 'github', 'Protected pull request',
+           ['Branch protection requires', 'the checks above to pass', 'No direct push to main'], '05  REVIEW')
+    d.node(900, ys, 'git', 'Verified commit, signed release',
+           ['Merge commit is GitHub-verified', 'Release tags are signed', 'Owner publishes the notes'], '06  RELEASE')
+    d.node(1470, ys, 'docker', 'Tested container and website',
+           ['The tested image is the image', 'promoted by manifest bytes', 'Pages deploys the tested artifact'], '07  DELIVERY')
+    d.icon('actions', 1470+72, ys, 46)
+    for a, b, label in zip([330, 900], [900, 1470], ['on approval', 'on a signed tag']):
+        d.path(f'M{a+64} {ys} H{b-64}', GOLD)
+        d.text((a+b)/2, ys-16, label, 'link', 'middle')
+
+    d.text(70, 1258, 'Claude and Codex are development tools. They are not authors of the scientific claims, they do not decide what is published, and no part of', 'note')
+    d.text(70, 1287, 'them runs in the evaluation pipeline, the container, or the website. Every number this project publishes is read from a committed artifact.', 'note')
+    d.footer('Governance of the repository, not of a model in production. Scientific execution is diagram 01; delivery mechanics are diagram 03.')
+    d.save('04-ai-governance.svg')
+
+
 if __name__ == '__main__':
     overview()
     cloud()
     delivery()
-    print('Built three self-contained SVGs.')
+    governance()
+    print('Built four self-contained SVGs.')

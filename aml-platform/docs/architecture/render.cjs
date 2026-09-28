@@ -5,7 +5,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { Resvg } = require('@resvg/resvg-js');
-const stems = ['01-evaluation-pipeline', '02-azure-execution', '03-ci-release'];
+const stems = ['01-evaluation-pipeline', '02-azure-execution', '03-ci-release', '04-ai-governance'];
 for (const stem of stems) {
   const source = fs.readFileSync(path.join(__dirname, `${stem}.svg`));
   const png = new Resvg(source, {
