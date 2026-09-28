@@ -77,13 +77,49 @@ _N = "Anthro" + "pic"
 _G = "Chat" + "GPT"
 _C = "Co" + "dex"
 _L = "LL" + "M"
-DENIED_CONTENT = (
+# NAMING AN ASSISTANT AND LEAKING METADATA ARE DIFFERENT DEFECTS.
+#
+# This check was written to stop attribution nobody chose from reaching the
+# published surface: a co-author trailer, a "generated with" line, a council
+# transcript. It was never an argument that the repository may not SAY, on
+# purpose, that it is built with AI assistance -- that disclosure is the
+# honest thing to publish, and a rule that forbids it pushes the project
+# towards concealing something true.
+#
+# So the name rules are separable and the metadata rules are not. The names
+# are allowed in the handful of files that carry the governance view, where
+# they appear beside the sentences that bound what the assistants do. The
+# metadata rules below apply everywhere, including those files, and no
+# exemption reaches commit messages at all.
+DENIED_NAMES = (
     # An assistant's name, as a WORD. `\b` matters: a name embedded in a
     # longer token -- "clause", "including" -- is not a hit.
     (re.compile(rf"\b{_A}\b", re.I), f"names the assistant ({_A})"),
     (re.compile(rf"\b{_N}\b", re.I), f"names the vendor ({_N})"),
     (re.compile(rf"\b{_G}\b", re.I), f"names an assistant ({_G})"),
     (re.compile(rf"\b{_C}\b(?!\s*of\s)", re.I), f"names an assistant ({_C})"),
+)
+
+# The files the owner decided may name an assistant: the governance diagram,
+# the generator that draws it, the README section that explains it, and the
+# table the website reads its caption and alt text from. Nothing else.
+DISCLOSURE_FILES = frozenset({
+    "aml-platform/docs/architecture/04-ai-governance.svg",
+    "aml-platform/docs/architecture/build_diagrams.py",
+    "aml-platform/docs/architecture/README.md",
+    "site/assets.py",
+    "site/build_pages.py",
+    "site/engineering/index.html",
+    "README.md",
+    # The same two files as the Pages workflow sees them: this checker runs
+    # against the assembled upload directory as well as the tree, and there
+    # the paths are relative to that directory's root.
+    "engineering/index.html",
+    "assets/04-ai-governance.svg",
+})
+
+DENIED_CONTENT = (
+    *DENIED_NAMES,
     # A co-author trailer naming any assistant, not just one.
     (re.compile(r"^\s*Co-Authored-By:.*(" + "|".join((_A, _N, _G, _C)) + ")",
                 re.I | re.M), "assistant co-author trailer"),
@@ -97,6 +133,13 @@ DENIED_CONTENT = (
 TEXT_SUFFIXES = {
     ".md", ".txt", ".py", ".sh", ".yml", ".yaml", ".toml", ".cfg", ".ini",
     ".json", ".cff", ".bicep", ".sql", ".ipynb", ".gitignore", ".dockerignore",
+    # THE WEBSITE IS TEXT TOO. These were absent, so 14 JavaScript files, 3
+    # generated pages, 2 stylesheets and 20 SVGs -- everything the site
+    # actually ships -- were never read by this checker. A trailer in
+    # `site/js/util.js` passed it cleanly, which a probe confirmed before
+    # these were added. The diagrams are scanned for the same reason: an SVG
+    # carries its text in the clear.
+    ".js", ".mjs", ".cjs", ".css", ".html", ".svg", ".lock", ".csv",
 }
 TEXT_NAMES = {"Dockerfile", "Makefile", "LICENSE", ".gitignore", ".dockerignore"}
 
@@ -177,11 +220,30 @@ def scan_tree(root: Path) -> list[str]:
             text = p.read_text(errors="ignore")
         except OSError:
             continue
-        for pat, why in DENIED_CONTENT:
+        rules = DENIED_CONTENT
+        if rel in DISCLOSURE_FILES:
+            # Only the naming rules are lifted. A trailer or a "generated
+            # with" line in one of these files is still a defect.
+            rules = tuple(r for r in DENIED_CONTENT if r not in DENIED_NAMES)
+        for pat, why in rules:
             m = pat.search(text)
             if m:
                 line = text[:m.start()].count("\n") + 1
                 problems.append(f"{rel}:{line}: {why} -- {m.group(0)[:60]!r}")
+
+    # A DISCLOSURE THAT DOES NOT DISCLOSE IS JUST A NAME. Wherever the
+    # governance view names the assistants, the bounds travel with it.
+    gov = root / "aml-platform/docs/architecture/04-ai-governance.svg"
+    if not gov.is_file():
+        gov = root / "assets/04-ai-governance.svg"
+    if gov.is_file():
+        body = gov.read_text(errors="ignore")
+        for required in ("approve nothing", "not authors of the scientific claims",
+                         "do not decide what is published"):
+            if required not in body:
+                problems.append(
+                    f"aml-platform/docs/architecture/04-ai-governance.svg: names "
+                    f"the assistants without saying {required!r}")
     return problems
 
 

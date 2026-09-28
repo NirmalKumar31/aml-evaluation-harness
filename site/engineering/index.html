@@ -388,7 +388,7 @@
   </div>
 </section>
 
-<section class="band band-light" aria-labelledby="archfull-h">
+<section class="band band-light" aria-labelledby="architecture">
   <div class="wrap">
     
 <h2 id="architecture">Architecture diagrams</h2>
@@ -471,8 +471,39 @@
     <a class="arch-full" href="../assets/03-ci-release.svg">Open the full-size diagram<span
       class="sr-only"> for From a source change to software and a website, 1800 by 1490
       pixels, in this tab</span></a></figcaption>
+</figure>
+<figure class="arch-panel" id="arch-panel-governance" hidden>
+  <img src="../assets/04-ai-governance.svg" alt="Flow diagram of the development and release process, in two bands. The upper band has four stages. Nirmal states the problem, decides what is worth doing and owns every judgement call. Claude and Codex then draft implementations and tests and critique the code; the caption records that they propose only and approve nothing. Automated verification runs on every pull request and refuses the merge on failure. Nirmal reads the evidence rather than the claim, rejects or returns the change freely, and nothing merges unreviewed. A strip beneath names the four check families: tests and reproducibility, provenance gates tracing every published value to an artifact, security scanning, and browser validation. The lower band has three stages: a protected pull request whose branch protection requires those checks, a GitHub-verified merge commit with signed release tags published by the owner, and delivery of the tested container and the tested website artifact. A closing note states that Claude and Codex are development tools, are not authors of the scientific claims, do not decide what is published, and run in no part of the evaluation pipeline, the container or the website." loading="lazy" decoding="async"
+       width="1800" height="1400">
+  <figcaption><strong>Diagram 4. AI-assisted engineering and release governance</strong>
+    How a change to this repository is proposed, checked and accepted. This is the development process, not the evaluation pipeline: no assistant runs in the harness, the container or this website, and none of them decides what gets published.
+    <a class="arch-full" href="../assets/04-ai-governance.svg">Open the full-size diagram<span
+      class="sr-only"> for AI-assisted engineering and release governance, 1800 by 1400
+      pixels, in this tab</span></a></figcaption>
 </figure></div>
 </dialog>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="governance">
+  <div class="wrap">
+    
+<h2 id="governance">How a change gets made and approved</h2>
+<p class="lede">This project is built with AI assistance, and the diagram below says exactly what that means. It is a picture of the <strong>development process</strong> — who proposes a change, what checks it must clear, and who accepts it. It is not part of the evaluation pipeline, the container or this website: no assistant runs in any of them, and none of them decides what is published.</p>
+<ul class="arch-grid arch-grid-one plain">
+<li class="arch-card reveal">
+  <button class="arch-open" type="button" data-diagram="governance"
+          aria-haspopup="dialog">
+    <img src="../assets/04-ai-governance.svg" alt="Flow diagram of the development and release process, in two bands. The upper band has four stages. Nirmal states the problem, decides what is worth doing and owns every judgement call. Claude and Codex then draft implementations and tests and critique the code; the caption records that they propose only and approve nothing. Automated verification runs on every pull request and refuses the merge on failure. Nirmal reads the evidence rather than the claim, rejects or returns the change freely, and nothing merges unreviewed. A strip beneath names the four check families: tests and reproducibility, provenance gates tracing every published value to an artifact, security scanning, and browser validation. The lower band has three stages: a protected pull request whose branch protection requires those checks, a GitHub-verified merge commit with signed release tags published by the owner, and delivery of the tested container and the tested website artifact. A closing note states that Claude and Codex are development tools, are not authors of the scientific claims, do not decide what is published, and run in no part of the evaluation pipeline, the container or the website." loading="lazy" decoding="async"
+         width="1800" height="1400">
+    <span class="arch-meta">
+      <span class="arch-n">Diagram 4</span>
+      <span class="arch-title">AI-assisted engineering and release governance</span>
+      <span class="arch-cue">Open full size</span>
+    </span>
+  </button>
+  <p class="arch-caption">How a change to this repository is proposed, checked and accepted. This is the development process, not the evaluation pipeline: no assistant runs in the harness, the container or this website, and none of them decides what gets published.</p>
+</li></ul>
   </div>
 </section>
 

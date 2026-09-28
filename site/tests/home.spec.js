@@ -131,7 +131,55 @@ test("one architecture preview here, the rest on the engineering page", async ({
 
   await page.getByRole("link", { name: /cloud-execution and delivery diagrams/ }).click();
   await expect(page).toHaveURL(/engineering\/$/);
-  await expect(page.locator(".arch-open")).toHaveCount(3);
+  // Three architecture views, plus the governance view in its own section.
+  await expect(page.locator(".arch-open")).toHaveCount(4);
+  await expect(page.locator("#architecture")).toBeVisible();
+  await expect(page.locator("#governance")).toBeVisible();
+  // ONE dialog for both card groups: two would duplicate every panel id.
+  await expect(page.locator("dialog.arch-dialog")).toHaveCount(1);
+  // The governance card opens, and says what the assistants do not do.
+  const gov = page.locator('.arch-open[data-diagram="governance"]');
+  await gov.scrollIntoViewIfNeeded();
+  await gov.click();
+  const panel = page.locator("#arch-panel-governance");
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("none of them decides what gets published");
+  await expect(panel).toContainText("development process");
+  // The bound that only the alt text carries, asserted where it lives.
+  await expect(panel.locator("img")).toHaveAttribute(
+    "alt", /propose only and approve nothing/);
+  await expect(panel.locator("a.arch-full")).toHaveAttribute(
+    "href", /04-ai-governance\.svg$/);
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#arch-dialog")).toBeHidden();
+  await expect(gov).toBeFocused();
+});
+
+test("the governance view is disclosure, not a runtime claim", async ({ page }) => {
+  await page.goto("engineering/", { waitUntil: "networkidle" });
+  const text = await page.locator("main").innerText();
+  // What a sighted reader sees without opening anything.
+  for (const bound of [/development process/i,
+                       /no assistant runs in any of them/i,
+                       /none of them decides what is published/i]) {
+    expect(text, `the governance section drops ${bound}`).toMatch(bound);
+  }
+  // And the fuller bounds, on the image description itself.
+  const alt = await page.locator('.arch-open[data-diagram="governance"] img')
+    .getAttribute("alt");
+  for (const bound of [/not authors of the scientific claims/i,
+                       /do not decide what is published/i,
+                       /propose only and approve nothing/i]) {
+    expect(alt, `the governance alt text drops ${bound}`).toMatch(bound);
+  }
+  // And it must not appear on the pages that describe the science.
+  for (const route of ["", "explorer/"]) {
+    const p2 = await page.context().newPage();
+    await p2.goto(route, { waitUntil: "networkidle" });
+    expect(await p2.locator("main").innerText())
+      .not.toMatch(new RegExp(["Cla","ude|Co","dex"].join(""), "i"));
+    await p2.close();
+  }
 });
 
 test("the five-stage method is readable without JavaScript", async ({ browser }) => {
