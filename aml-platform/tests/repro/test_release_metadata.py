@@ -780,6 +780,35 @@ def test_the_published_cost_table_matches_the_cost_artifact():
         assert "$0 actually charged" not in text, (
             f"{doc} states a billed amount as fact; no invoice was retrieved")
 
+    # A CONTROL-PLANE READING IS A READING, AND A READING HAS A DATE.
+    #
+    # "The VM now reports stopped" was written once and then aged silently:
+    # it is a claim about the present tense of a subscription nobody has
+    # queried since. Each such statement has to carry the date it was taken,
+    # or say plainly that it is not a statement about the present.
+    state = re.compile(
+        r"\b(?:now|currently)\b[^.\n]{0,80}?"
+        r"(?:\bstopped\b|\bdeallocated\b|Warned|ReadOnlyDisabledSubscription|"
+        r"resources remain|still running)", re.I)
+    dated = re.compile(r"20\d\d-\d\d-\d\d|observed|read(?:ing)?s? taken|"
+                       r"as of|on that date", re.I)
+    for doc in ("docs/RUNBOOK_cloud.md", "../README.md", "docs/LIMITATIONS.md"):
+        if not (root / doc).exists():
+            continue
+        for para in (root / doc).read_text().split("\n\n"):
+            hit = state.search(para)
+            if hit:
+                assert dated.search(para), (
+                    f"{doc} states Azure resource or subscription state as "
+                    f"current ({hit.group(0)!r}) without dating the reading")
+    runbook = (root / "docs/RUNBOOK_cloud.md").read_text()
+    assert "not a statement about the state now" in runbook, (
+        "the runbook no longer warns that its control-plane readings are not "
+        "the present state")
+    assert cost["snapshot_is_final"] is False, (
+        "cost.json claims a final snapshot; the runbook is written around a "
+        "provisional one")
+
 
 def test_every_demo_event_on_stdout_parses_strictly(tmp_path):
     """The stored manifest was fixed and the stdout events were not.

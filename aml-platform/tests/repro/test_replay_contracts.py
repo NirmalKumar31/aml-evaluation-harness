@@ -616,6 +616,29 @@ def test_cloud_runners_verify_raw_data_against_the_pin_before_computing():
                              body, re.M), \
             f"{name} still stages on existence alone"
 
+    # TWO RUNNERS, TWO INPUT PATHS, AND THEY ARE NOT INTERCHANGEABLE.
+    #
+    # HI-Large pulls the CSV and the pattern file straight from Kaggle over
+    # HTTPS into VM-local scratch, with no credential; HI-Medium stages the
+    # same pair out of blob storage. Describing the Large run as reading its
+    # data from ADLS credits a control it never used and misstates where the
+    # bytes came from, so the distinction is asserted rather than trusted.
+    large = (root / "scripts/run_hi_large.sh").read_text()
+    medium = (root / "scripts/run_cloud.sh").read_text()
+
+    assert re.search(r"curl(?:[^\n]|\\\n)*kaggle\.com/api/v1/datasets/download",
+                     large), (
+        "run_hi_large.sh no longer downloads its inputs from Kaggle; if the "
+        "input path really changed, the HI-Large report and the website lane "
+        "have to change with it")
+    assert re.search(r'-o "\$S/raw/', large), (
+        "run_hi_large.sh no longer lands its inputs in VM-local scratch")
+    assert not re.search(r"az storage blob download[^\n]*raw/HI-Large", large), (
+        "run_hi_large.sh now stages raw input from blob storage; that is the "
+        "HI-Medium path, and the documents say the two differ")
+    assert re.search(r"az storage blob download", medium), (
+        "run_cloud.sh no longer stages HI-Medium input from blob storage")
+
 
 def test_replay_bundles_identify_themselves_portably():
     """Bundle metadata claimed more than the repository's own analysis does.

@@ -678,9 +678,11 @@ def current_lane(data: dict) -> "tuple[dict, ...]":
         {"icon": "github.svg", "name": "Pull request",
          "note": "Branch protection requires every check below to pass before merge."},
         {"icon": "actions.svg", "name": "Unit, reproducibility and publication gates",
-         "note": f"{rel_['tests_collected']} tests on the current tree. The publication "
-                 f"gate re-reads {rel_['published_values_checked']} published values "
-                 f"against the artifacts and must report zero findings."},
+         "note": f"{rel_['tests_collected']} tests collected on the current tree; "
+                 f"tests that need restricted data skip when their inputs are "
+                 f"unavailable. The publication gate re-reads "
+                 f"{rel_['published_values_checked']} published values against the "
+                 f"artifacts and must report zero findings."},
         {"icon": "docker.svg", "name": "Docker build",
          "note": "One image, built once from a hash-pinned requirements lock."},
         {"icon": "docker.svg", "name": "Suite runs inside that image",
@@ -707,22 +709,31 @@ def current_lane(data: dict) -> "tuple[dict, ...]":
 
 
 HISTORICAL_LANE = (
+    {"icon": "kaggle.svg", "name": "AMLworld inputs, straight to the machine",
+     "note": "The transaction CSV and pattern file were pulled over HTTPS from "
+             "Kaggle into VM-local scratch, with no credential. They did not "
+             "pass through Azure storage. HI-Medium, separately, did stage its "
+             "inputs from blob storage."},
     {"icon": "git.svg", "name": "Fixed source commit",
      "note": "One commit id, recorded in every manifest the run produced."},
     {"icon": "git.svg", "name": "git archive",
      "note": "A source archive was shipped. No container image was shipped."},
-    {"icon": "python.svg", "name": "SHA-256 verification",
-     "note": "The archive digest was checked after upload and again on the machine."},
+    {"icon": "python.svg", "name": "Archive check available, not recorded",
+     "note": "provision_vm.sh verifies the archive against SRC_SHA256 when one is "
+             "supplied. No digest from this run was written down, so this is a "
+             "control the current script offers, not evidence about this one."},
     {"icon": "azure-storage.svg", "name": "ADLS Gen2",
-     "note": "Shared-key access disabled; the account was reachable by identity only."},
+     "note": "Carried the source archive out and the result JSON back — not the "
+             "raw data. Shared-key access disabled; the account was reachable by "
+             "identity only."},
     {"icon": "azure-identity.svg", "name": "Managed identity",
      "note": "No service principal was created and no secret was issued or stored."},
     {"icon": "azure-vm.svg", "name": "Azure virtual machine",
      "note": "Four vCPUs and roughly 31 GB. The quota could not be raised, which "
              "is why three HI-Large seeds were bought rather than eight."},
     {"icon": "docker.svg", "name": "Container built on the VM",
-     "note": "Built there, from the verified source archive. It was NOT pulled "
-             "from GHCR, so the exact image cannot be reconstructed by digest."},
+     "note": "Built there, from the source archive. It was NOT pulled from GHCR, "
+             "so the exact image cannot be reconstructed by digest."},
     {"icon": "duckdb.svg", "name": "DuckDB and LightGBM execution",
      "note": "About 26 minutes and 30 of 31 GB resident per fit. scikit-learn "
              "gradient boosting needed 33.5 GB and did not complete."},
@@ -1117,8 +1128,9 @@ def home_page(data: dict) -> str:
           <li>Run leakage, split and provenance checks.</li>
           <li>Publish only artifact-backed values, through automated gates.</li>
         </ol>
-        <p class="fineprint">{E(rel_['tests_collected'])} automated checks run
-          on the current tree, and the gate re-reads
+        <p class="fineprint">{E(rel_['tests_collected'])} tests collected on the
+          current tree; tests that need restricted data skip when their inputs
+          are unavailable. The gate re-reads
           {E(rel_['published_values_checked'])} published values against the
           artifacts on every run.</p>
       </div>
@@ -1448,7 +1460,8 @@ def engineering_page(data: dict) -> str:
 
     facts = [
         ("Tests collected", r["tests_collected"],
-         "on the current main tree, which is what this website is built from"),
+         "on the current main tree, which is what this website is built from; "
+         "tests needing restricted data skip when their inputs are unavailable"),
         ("Published values re-checked", r["published_values_checked"],
          f"{r['published_values_exempted']} exempted by an explicit marker; the "
          f"gate must report zero findings"),
@@ -1476,7 +1489,7 @@ def engineering_page(data: dict) -> str:
       single image, tests inside it, scans it, publishes it by digest and
       deploys this website from the exact artifact that passed. The other is
       the historical Azure run that produced the HI-Large result once, from a
-      verified source archive, in a container built on the machine itself. They
+      source archive, in a container built on the machine itself. They
       are kept apart here because conflating them would claim a
       reproducibility the second one does not have.</p>
   </div>
@@ -1518,14 +1531,20 @@ def engineering_page(data: dict) -> str:
                     'nothing on this site claims otherwise.',
                points=(
                  'The HI-Large image was <strong>not</strong> pulled from '
-                 'GHCR. It was built on the virtual machine from the verified '
-                 'source archive.',
+                 'GHCR. It was built on the virtual machine from the source '
+                 'archive.',
+                 'The AMLworld inputs came straight from Kaggle over HTTPS to '
+                 'VM-local scratch. Azure storage carried the source archive '
+                 'and the result JSON, not the raw data — HI-Medium is the run '
+                 'that staged its inputs from blob storage.',
                  'The Bicep templates in the repository are a current, '
                  'reviewed deployment — <strong>not</strong> an exact '
                  'reconstruction of the machine that ran the job.',
                  'What this lane establishes is <em>source</em> provenance: a '
-                 'fixed commit, a checksummed archive, and manifests that name '
-                 'both. It does not establish container reproducibility.',
+                 'full commit id, a recorded code-tree hash, and one training-'
+                 'matrix hash shared by all three seeds. It records no image '
+                 'digest and no archive digest, so it does not establish '
+                 'container reproducibility.',
                  'No service principal was created, no secret was issued, and '
                  'shared-key access to storage was disabled.'))}
     </div>

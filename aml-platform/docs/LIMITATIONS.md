@@ -152,10 +152,15 @@ with a release, not a tag.
 ## 5. Operational and cloud
 
 **The HI-Large run is historical and not currently reproducible on demand.**
-It ran on an Azure VM from a `git archive` of a fixed commit, verified by
-SHA-256 and built into a container on the VM. That is source provenance, not
-container reproducibility, and the subscription it ran under no longer accepts
-writes.
+It ran on an Azure VM from a `git archive` of a fixed commit, built into a
+container on the VM. The manifests preserve a full `code_git_sha`, a
+`code_tree_sha256` and one `train_matrix_sha256` across all three seeds; they
+preserve no image digest, and no digest for the source archive. `provision_vm.sh`
+does verify the archive against `SRC_SHA256` when one is supplied, but no such
+value from that run was recorded, so the archive check is a control the current
+script offers rather than evidence about the historical one. That is source
+provenance, not container reproducibility, and the subscription it ran under no
+longer accepts writes.
 
 **Cost and scale figures describe one run.** They are measurements of that
 deployment, not a general estimate.

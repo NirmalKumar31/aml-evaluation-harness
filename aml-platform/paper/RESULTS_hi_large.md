@@ -12,9 +12,14 @@ claim and offers no comparison against the smaller rungs.
 ## Method
 
 **Run.** Azure `Standard_E4ds_v7` — 4 vCPU, 31 GB RAM, 216 GB NVMe plus a 1 TB
-managed disk. The container was built on the VM, data read from ADLS Gen2 under
-managed identity, no stored secret. **Cut:** 2022-10-07, chosen by
-`split-sweep`. **Date:** 2026-09-11.
+managed disk. The container was built on the VM. **The transaction CSV and the
+pattern file came straight from Kaggle over HTTPS to VM-local scratch** —
+`run_hi_large.sh` curls them into `/mnt/scratch/raw`, with no credential, and
+they never pass through Azure storage. ADLS Gen2 under managed identity carried
+the *source archive* out to the machine and the *result JSON* back; no stored
+secret. HI-Medium is the run that staged its inputs from blob storage
+(`run_cloud.sh`), and the two should not be read as one path. **Cut:**
+2022-10-07, chosen by `split-sweep`. **Date:** 2026-09-11.
 
 **Lineage.** `results_archive/gold/large_sorted_lgbm_s{0,1,2}` is canonical:
 three seeds fitted with `ORDER BY txn_id`, sharing one `train_matrix_sha256`

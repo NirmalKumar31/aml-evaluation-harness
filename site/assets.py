@@ -111,8 +111,8 @@ ICON_SOURCE = "icons"
 # shown is an unexplained third-party asset in a published artifact.
 ICONS = (
     "actions.svg", "azure-identity.svg", "azure-storage.svg", "azure-vm.svg",
-    "docker.svg", "duckdb.svg", "git.svg", "github.svg", "python.svg",
-    "trivy.svg",
+    "docker.svg", "duckdb.svg", "git.svg", "github.svg", "kaggle.svg",
+    "python.svg", "trivy.svg",
 )
 ICON_DEPLOYED = "assets/icons"
 NOTICES_DEPLOYED = "assets/icon-notices.txt"

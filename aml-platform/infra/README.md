@@ -9,7 +9,7 @@ IP, storage, an identity, and optionally a registry.**
 > buys nothing. See
 > [`../docs/RESULT_LINEAGE.md`](../docs/RESULT_LINEAGE.md) for which image
 > flow is real — GitHub Actions into GHCR, or `docker build` on the VM from a
-> sha256-verified source tarball.
+> source tarball the current script checks against `SRC_SHA256`.
 
 **What actually costs money**, at East US list price, from
 [`../docs/RUNBOOK_cloud.md`](../docs/RUNBOOK_cloud.md) — the one cost table:
@@ -68,8 +68,11 @@ somewhere else. There are exactly two working answers:
    linux/amd64 from a `--require-hashes` lock, runs the whole suite inside the
    built image, then tags *that tested image* and pushes it. This is the one
    that produces the published digest.
-2. **`docker build` on the VM**, from a sha256-verified source archive that
-   `git archive <commit>` produced on the host. See
+2. **`docker build` on the VM**, from a source archive that
+   `git archive <commit>` produced on the host, which `provision_vm.sh` verifies
+   against `SRC_SHA256` when the runbook supplies one. No digest was recorded for
+   the historical HI-Large archive, so this is a current control rather than a
+   fact about that run. See
    [`../docs/RUNBOOK_cloud.md`](../docs/RUNBOOK_cloud.md) §4–5.
 
 > **`az acr build` is not a third option here.** The registry is off by

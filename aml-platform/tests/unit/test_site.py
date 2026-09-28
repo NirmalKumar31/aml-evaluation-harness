@@ -954,6 +954,28 @@ def test_the_home_page_tells_one_story_and_claims_nothing_it_did_not_measure():
             re.sub(r"\s+", " ", _pages()[rel]), (
                 f"{rel} no longer names the gate's own count")
 
+    # COLLECTED IS NOT RUN, AND IT IS CERTAINLY NOT PASSED.
+    #
+    # release_facts records how many tests pytest COLLECTS. On a clone with no
+    # AMLworld data, 32 of them skip -- so "568 automated checks run" claims
+    # 32 checks that did not happen, and "568 passed" would be worse. Wherever
+    # the number appears, the page has to say what it counts.
+    n = d["release"]["tests_collected"]
+    for rel, page_html in _pages().items():
+        flat_p = re.sub(r"\s+", " ", page_html)
+        for bad in (f"{n} automated checks run", f"{n} tests run",
+                    f"{n} tests pass", f"{n} checks pass", f"{n} tests passed"):
+            assert bad not in flat_p, (
+                f"{rel} says {bad!r}; {n} is the COLLECTED count, and tests "
+                f"needing restricted data skip when the data is absent")
+        if str(n) in flat_p and "test" in flat_p.lower():
+            assert re.search(rf"{n}\s+tests collected", flat_p), (
+                f"{rel} shows {n} beside tests without saying it is the "
+                f"collected count")
+    joined = re.sub(r"\s+", " ", "".join(_pages().values()))
+    assert "skip when their inputs are unavailable" in joined, (
+        "no page explains that restricted-data tests skip")
+
     # -- what it may never say --------------------------------------------
     low = "".join(_pages().values()).lower()
     for word in ("production-ready", "cutting-edge", "revolutionary",

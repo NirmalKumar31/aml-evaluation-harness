@@ -1,16 +1,39 @@
 # Runbook: reproducing the cloud runs
 
-Every command here was actually run. Where something failed, the failure is
-recorded rather than edited out — the failures are most of what this document
-is worth.
+The stages below were executed on Azure and recorded as they ran. Where
+something failed, the failure is kept rather than edited out — the failures are
+most of what this document is worth.
 
-**Cost of everything below, at a snapshot taken 245.77 resource-hours in:
-$134.51 at list price — not a total.** `cost.json` records
-`snapshot_is_final: false`. The VM now reports `stopped`, not `deallocated`;
-the subscription reports `Warned` and rejects writes with
-`ReadOnlyDisabledSubscription`; ten resources remain. Those control-plane
-facts do not prove that every billing meter stopped. The consumption API
-returns null and no invoice was retrieved, so final spend is unknown.
+**The commands are not a transcript of that run.** They carry corrections made
+afterwards: the runners no longer accept a file as downloaded because it merely
+exists and is non-empty, `run_hi_large.sh` no longer defaults to `SAMPLE=0.7
+MODEL=gbdt SEEDS=0`, and each seed writes to its own destination instead of
+sharing one. Read the commands as the current procedure and the recorded
+outcomes as what happened at the time; running them today would not reproduce
+the historical run byte for byte, and the stages that failed are marked where
+they failed.
+
+**Cost, from `cost.json` generated 2026-09-20T04:22:54Z: $134.51 at list price
+over 245.77 resource-hours — not a total.** The priced window runs
+2026-09-09T22:36:49Z to 2026-09-20T04:22:52Z and the artifact records
+`snapshot_is_final: false`, because no end time was given: elapsed time kept
+accruing past the moment it was written. It prices the six resources listed in
+that artifact and nothing outside them.
+
+**Infrastructure read 2026-09-14**, read-only `az` queries against the
+subscription: on that date the VM was **running and billing**, and the live
+group diverged from `infra/main.bicep` in four ways. That reading is recorded
+in full under [the live resource group](#the-live-resource-group-is-not-what-this-bicep-deploys).
+
+**Subscription state, observed while `cost.json` was being generated:** `az vm
+list -d` reported `VM stopped` rather than `VM deallocated` — the guest was shut
+down from inside the OS, which holds the allocation — and writes returned
+`ReadOnlyDisabledSubscription` against a subscription reporting `Warned`. Those
+are control-plane readings taken then, not a statement about the state now, and
+they do not prove that every billing meter stopped. The consumption API returns
+null and no invoice was retrieved, so final spend is unknown. Nothing in this
+document should be read as the current resource, billing or subscription state.
+
 See [the one cost table](#cost-one-table-one-scope) — there is exactly one, and
 every other figure in this repository points at it.
 
@@ -177,6 +200,12 @@ Mounts both disks, installs Docker, verifies the source archive against
 `$SRC_SHA`, replaces `/opt/aml` and builds the image as `aml:$GIT_SHA`.
 Idempotent — re-run it to rebuild after a code change.
 
+> **That check is a current control, and no digest from the HI-Large run was
+> recorded.** `SRC_SHA256` appears in this repository only as a parameter name;
+> no archived artifact holds an archive digest for the 2026-09-11 run. What the
+> canonical manifests do hold is a full `code_git_sha`, a `code_tree_sha256`,
+> and one `train_matrix_sha256` shared by all three seeds — and no image digest.
+
 > **All three parameters are required.** `provision_vm.sh` refuses to build
 > without `AML_GIT_SHA`, because an image that cannot name its commit writes
 > manifests recording `code_git_sha: unknown` — seven archived manifests are in
@@ -236,14 +265,12 @@ inbound path, and the rule was flipped by hand. So the live security posture is
 better than it was and still not reproducible from source — redeploying this
 Bicep would produce a *different* network.
 
-**This paragraph ended "and the template has never been deployed end to <!-- historical -->
-end", which the subscription contradicts.** `az deployment group list -g
-aml-rg` records a deployment named `main` in state Succeeded at
-2026-09-09T22:10:19Z, alongside a `vm_deploy_...`. That deployment carried 2
-parameters and 5 outputs against the 6 and 7 the template has at HEAD, so
-what was deployed was an *earlier revision no longer in the repository* —
-which is a sharper statement than "never deployed", and the actual reason a
-redeploy today would diverge.
+**An earlier revision of the template was deployed; the one at HEAD was not.**
+`az deployment group list -g aml-rg` records a deployment named `main` in state
+Succeeded at 2026-09-09T22:10:19Z, alongside a `vm_deploy_...`. That deployment
+carried 2 parameters and 5 outputs against the 6 and 7 the template has at HEAD,
+so what ran was a revision no longer in the repository. That is why a redeploy
+would diverge from the recorded group.
 
 A `$60` monthly budget `aml-guard` exists with an 80% alert. **A budget
 notifies; it does not stop anything.** The VM has been running for
@@ -469,14 +496,13 @@ list reports `Warned`. A failed write is authoritative evidence that writes are
 blocked, but it is not an authoritative billing query. A read-only subscription
 still answers `list` and `show`.
 
-**Why it is NOT an upper bound on compute, though it once said it was.** It
-charges the VM for every elapsed hour, and that is what actually happened: the
-justification for calling it an upper bound was that the VM had been
-deallocated for part of the window, and the subscription activity log for the
-whole window contains **no deallocate or powerOff operation**. The VM was shut
-down from inside the guest OS, which holds the allocation and bills compute in
-full. `az vm list -d` reports `VM stopped`, not `VM deallocated`. The disks and
-the IP are billed either way.
+**It is not an upper bound on compute.** It charges the VM for every elapsed
+hour, which is what the meters would have done: the subscription activity log
+for the whole window contains **no deallocate or powerOff operation**. The VM
+was shut down from inside the guest OS, which holds the allocation and bills
+compute in full, and `az vm list -d` reported `VM stopped` rather than `VM
+deallocated`. The disks and the IP are billed either way. Treating the figure as
+a ceiling would require a deallocation that never happened.
 
 **No charge is expected, and that is an inference rather than an observation.**
 The trial's spending limit was never lifted, and a subscription with the limit
@@ -492,6 +518,6 @@ Four quantities, kept apart on purpose:
 | | value | what it is |
 |---|---|---|
 | list-price estimate | **$134.51** over 245.77 h | elapsed resource time × public retail prices |
-| Azure Cost Management spend | **~$60.61**, read 2026-09-15 02:00 UTC | the portal's own running figure. A DIFFERENT ESTIMAND from the row above — it is not elapsed-time × list price — and it has now passed the $60 `aml-guard` budget, which notifies and does not stop anything <!-- derived: 60.61 = the Azure portal's own running spend figure read at the stated time, and cost_table.py does not produce it --> |
+| Azure Cost Management spend | **~$60.61**, read 2026-09-15 02:00 UTC | the portal's own running figure. A DIFFERENT ESTIMAND from the row above — it is not elapsed-time × list price — and at that reading it had passed the $60 `aml-guard` budget, which notifies and does not stop anything <!-- derived: 60.61 = the Azure portal's own running spend figure read at the stated time, and cost_table.py does not produce it --> |
 | free-trial credit | $200 | the ceiling, and **the first constraint to bind** at the burn rate implied by the two rows above. Formerly described here as "never approached" <!-- historical --> |
 | invoiced charge | **not measured** | no statement retrieved; expected zero under the spending limit |
