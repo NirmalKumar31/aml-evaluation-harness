@@ -105,8 +105,10 @@ resource dataContainer 'Microsoft.Storage/storageAccounts/blobServices/container
 // IT WAS NEVER USED. Trial subscriptions cannot run ACR Tasks; `az acr build`
 // returns TasksOperationsNotAllowed. The image is built two other ways
 // instead: by GitHub Actions into GHCR (the published one), and directly on
-// the VM with `docker build` from a sha256-verified source tarball (how the
-// HI-Large run was actually done). Three registry paths, one of them dead, is
+// the VM with `docker build` from a source tarball (how the HI-Large run was
+// actually done; the current script also checks that tarball against
+// SRC_SHA256, but no digest from that run was recorded). Three registry paths,
+// one of them dead, is
 // exactly the divergence an audit flags -- so it is now off unless asked for,
 // and the reason is here rather than in a commit message.
 //

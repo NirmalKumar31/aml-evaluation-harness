@@ -480,6 +480,46 @@ def test_provision_verifies_the_source_archive_before_extracting_it():
         "extraction still unpacks over whatever /opt/aml already holds, so a "
         "file deleted between two provisions survives into the build context")
 
+    # A CONTROL THE SCRIPT OFFERS IS NOT EVIDENCE ABOUT A RUN THAT PREDATES IT.
+    #
+    # provision_vm.sh will check the archive against SRC_SHA256 when one is
+    # supplied -- but SRC_SHA256 appears in this repository only as a parameter
+    # name. No archived artifact holds a digest for the HI-Large source
+    # archive, so no document may say that archive WAS verified. The same
+    # mistake in the other direction is crediting today's dataset pins and
+    # registry digests to the 2026-09-11 run.
+    digest_record = re.compile(r"SRC_SHA256\s*[:=]\s*['\"]?[0-9a-f]{64}")
+    recorded = [q for q in root.rglob("*")
+                if q.is_file() and q.suffix in {".json", ".md", ".sh", ".txt"}
+                and ".git" not in q.parts
+                and digest_record.search(q.read_text(errors="ignore"))]
+
+    claims = re.compile(
+        r"verified source archive|sha256-verified source|checksummed archive|"
+        r"archive digest was checked|verified by\s*\n?\s*SHA-256|"
+        r"source by commit SHA and archive checksum", re.I)
+    docs = [root / "docs/LIMITATIONS.md", root / "docs/RUNBOOK_cloud.md",
+            root / "../README.md", root / "infra/README.md",
+            root / "infra/main.bicep", root / "docs/architecture/README.md",
+            root / "../site/build_pages.py"]
+    for doc in docs:
+        if not doc.exists():
+            continue
+        hit = claims.search(doc.read_text())
+        assert not hit or recorded, (
+            f"{doc.name} says {hit.group(0)!r}, but no committed artifact "
+            f"records a source-archive digest for that run. Either cite the "
+            f"record or describe it as a control the current script offers.")
+
+    # Today's safeguards must be dated to today, not back-credited.
+    arch = root / "docs/architecture/README.md"
+    if arch.exists():
+        body_a = arch.read_text()
+        if re.search(r"Current provisioning verifies", body_a):
+            assert "not retroactive credit" in body_a, (
+                "the architecture README describes a current safeguard without "
+                "saying it is not retroactive credit to the original experiment")
+
 
 def test_every_committed_json_artifact_parses_strictly():
     """The same guarantee, asserted over what is actually in the tree."""

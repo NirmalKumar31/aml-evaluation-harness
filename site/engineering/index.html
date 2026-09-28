@@ -52,7 +52,7 @@
       single image, tests inside it, scans it, publishes it by digest and
       deploys this website from the exact artifact that passed. The other is
       the historical Azure run that produced the HI-Large result once, from a
-      verified source archive, in a container built on the machine itself. They
+      source archive, in a container built on the machine itself. They
       are kept apart here because conflating them would claim a
       reproducibility the second one does not have.</p>
   </div>
@@ -94,7 +94,7 @@
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
     <span class="step-name">Unit, reproducibility and publication gates</span>
-    <span class="step-note">568 tests on the current tree. The publication gate re-reads 706 published values against the artifacts and must report zero findings.</span>
+    <span class="step-note">568 tests collected on the current tree; tests that need restricted data skip when their inputs are unavailable. The publication gate re-reads 706 published values against the artifacts and must report zero findings.</span>
   </span>
 </li>
 <li class="step">
@@ -190,6 +190,15 @@
   <ol class="lane-steps">
 <li class="step">
   <span class="step-n" aria-hidden="true">1</span>
+  <img class="step-icon" src="../assets/icons/kaggle.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">AMLworld inputs, straight to the machine</span>
+    <span class="step-note">The transaction CSV and pattern file were pulled over HTTPS from Kaggle into VM-local scratch, with no credential. They did not pass through Azure storage. HI-Medium, separately, did stage its inputs from blob storage.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">2</span>
   <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -198,7 +207,7 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">2</span>
+  <span class="step-n" aria-hidden="true">3</span>
   <img class="step-icon" src="../assets/icons/git.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -207,25 +216,25 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">3</span>
+  <span class="step-n" aria-hidden="true">4</span>
   <img class="step-icon" src="../assets/icons/python.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
-    <span class="step-name">SHA-256 verification</span>
-    <span class="step-note">The archive digest was checked after upload and again on the machine.</span>
-  </span>
-</li>
-<li class="step">
-  <span class="step-n" aria-hidden="true">4</span>
-  <img class="step-icon" src="../assets/icons/azure-storage.svg" alt="" width="28"
-       height="28" loading="lazy" decoding="async">
-  <span class="step-body">
-    <span class="step-name">ADLS Gen2</span>
-    <span class="step-note">Shared-key access disabled; the account was reachable by identity only.</span>
+    <span class="step-name">Archive check available, not recorded</span>
+    <span class="step-note">provision_vm.sh verifies the archive against SRC_SHA256 when one is supplied. No digest from this run was written down, so this is a control the current script offers, not evidence about this one.</span>
   </span>
 </li>
 <li class="step">
   <span class="step-n" aria-hidden="true">5</span>
+  <img class="step-icon" src="../assets/icons/azure-storage.svg" alt="" width="28"
+       height="28" loading="lazy" decoding="async">
+  <span class="step-body">
+    <span class="step-name">ADLS Gen2</span>
+    <span class="step-note">Carried the source archive out and the result JSON back — not the raw data. Shared-key access disabled; the account was reachable by identity only.</span>
+  </span>
+</li>
+<li class="step">
+  <span class="step-n" aria-hidden="true">6</span>
   <img class="step-icon" src="../assets/icons/azure-identity.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -234,7 +243,7 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">6</span>
+  <span class="step-n" aria-hidden="true">7</span>
   <img class="step-icon" src="../assets/icons/azure-vm.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -243,16 +252,16 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">7</span>
+  <span class="step-n" aria-hidden="true">8</span>
   <img class="step-icon" src="../assets/icons/docker.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
     <span class="step-name">Container built on the VM</span>
-    <span class="step-note">Built there, from the verified source archive. It was NOT pulled from GHCR, so the exact image cannot be reconstructed by digest.</span>
+    <span class="step-note">Built there, from the source archive. It was NOT pulled from GHCR, so the exact image cannot be reconstructed by digest.</span>
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">8</span>
+  <span class="step-n" aria-hidden="true">9</span>
   <img class="step-icon" src="../assets/icons/duckdb.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -261,7 +270,7 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">9</span>
+  <span class="step-n" aria-hidden="true">10</span>
   <img class="step-icon" src="../assets/icons/python.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -270,7 +279,7 @@
   </span>
 </li>
 <li class="step">
-  <span class="step-n" aria-hidden="true">10</span>
+  <span class="step-n" aria-hidden="true">11</span>
   <img class="step-icon" src="../assets/icons/actions.svg" alt="" width="28"
        height="28" loading="lazy" decoding="async">
   <span class="step-body">
@@ -278,7 +287,7 @@
     <span class="step-note">The same gate the current lane runs; the HI-Large numbers on this site passed it.</span>
   </span>
 </li></ol>
-  <ul class="lane-points"><li>The HI-Large image was <strong>not</strong> pulled from GHCR. It was built on the virtual machine from the verified source archive.</li><li>The Bicep templates in the repository are a current, reviewed deployment — <strong>not</strong> an exact reconstruction of the machine that ran the job.</li><li>What this lane establishes is <em>source</em> provenance: a fixed commit, a checksummed archive, and manifests that name both. It does not establish container reproducibility.</li><li>No service principal was created, no secret was issued, and shared-key access to storage was disabled.</li></ul>
+  <ul class="lane-points"><li>The HI-Large image was <strong>not</strong> pulled from GHCR. It was built on the virtual machine from the source archive.</li><li>The AMLworld inputs came straight from Kaggle over HTTPS to VM-local scratch. Azure storage carried the source archive and the result JSON, not the raw data — HI-Medium is the run that staged its inputs from blob storage.</li><li>The Bicep templates in the repository are a current, reviewed deployment — <strong>not</strong> an exact reconstruction of the machine that ran the job.</li><li>What this lane establishes is <em>source</em> provenance: a full commit id, a recorded code-tree hash, and one training-matrix hash shared by all three seeds. It records no image digest and no archive digest, so it does not establish container reproducibility.</li><li>No service principal was created, no secret was issued, and shared-key access to storage was disabled.</li></ul>
 </section>
     </div>
   </div>
@@ -372,7 +381,7 @@
   <div class="wrap">
     <h2 id="facts-h">Release and verification facts</h2>
     <p class="lede">These counts describe the current main tree, which is where the website is deployed from. v0.2.1 remains the latest signed software release; it collected fewer tests, because the website&#x27;s own tests were added after it. Result-artifact links below are pinned to v0.2.1, and every linked artifact was verified byte-identical between v0.2.1 and current main.</p>
-    <div class="facts"><div class="fact reveal"><dl><dt>Tests collected</dt><dd>568</dd></dl><p>on the current main tree, which is what this website is built from</p></div><div class="fact reveal"><dl><dt>Published values re-checked</dt><dd>706</dd></dl><p>77 exempted by an explicit marker; the gate must report zero findings</p></div><div class="fact reveal"><dl><dt>Result manifests</dt><dd>101</dd></dl><p>across 56 archived result sets</p></div><div class="fact reveal"><dl><dt>Published documents</dt><dd>23</dd></dl><p>of 26 markdown files under the publication gate</p></div><div class="fact reveal"><dl><dt>Retraction patterns</dt><dd>33</dd></dl><p>each one blocks a withdrawn value from reappearing as current</p></div><div class="fact reveal"><dl><dt>Frozen package tree</dt><dd>f8d4a113edb4</dd></dl><p>the git object id of aml-platform/src/aml, recorded by every derived artifact that was produced from it</p></div></div>
+    <div class="facts"><div class="fact reveal"><dl><dt>Tests collected</dt><dd>568</dd></dl><p>on the current main tree, which is what this website is built from; tests needing restricted data skip when their inputs are unavailable</p></div><div class="fact reveal"><dl><dt>Published values re-checked</dt><dd>706</dd></dl><p>77 exempted by an explicit marker; the gate must report zero findings</p></div><div class="fact reveal"><dl><dt>Result manifests</dt><dd>101</dd></dl><p>across 56 archived result sets</p></div><div class="fact reveal"><dl><dt>Published documents</dt><dd>23</dd></dl><p>of 26 markdown files under the publication gate</p></div><div class="fact reveal"><dl><dt>Retraction patterns</dt><dd>33</dd></dl><p>each one blocks a withdrawn value from reappearing as current</p></div><div class="fact reveal"><dl><dt>Frozen package tree</dt><dd>f8d4a113edb4</dd></dl><p>the git object id of aml-platform/src/aml, recorded by every derived artifact that was produced from it</p></div></div>
     <p class="fineprint">Generated from
       <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/release_facts.json" rel="noopener"><code>release_facts.json</code></a> by
       <code>site/build_site_data.py</code>.</p>

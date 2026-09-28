@@ -48,12 +48,15 @@ container **on the VM itself**, tagged `aml:<git-sha>`.
 
 The two give different provenance guarantees. Current CI identifies the
 published container by **registry digest**, and the release tag is the same
-manifest bytes as the tested commit tag. The historical path verified the
-application source by commit SHA and archive checksum and installed Python
-dependencies from hashed wheels, but did not preserve enough to rebuild the
-container bit-for-bit: the canonical `large_sorted_lgbm` manifests record
-`code_git_sha` and a code tree hash and **no image digest**. That is source
-provenance, not container reproducibility.
+manifest bytes as the tested commit tag. The historical path identified the
+application source by commit SHA and installed Python dependencies from hashed
+wheels, but did not preserve enough to rebuild the container bit-for-bit. What
+the canonical `large_sorted_lgbm` manifests actually record is a full
+`code_git_sha`, a `code_tree_sha256`, one `train_matrix_sha256` shared by all
+three seeds — and **no image digest**. They record no digest for the source
+archive either: `provision_vm.sh` will verify one when `SRC_SHA256` is supplied,
+but that is a control the current script offers, and no value from the 2026-09-11
+run was written down. That is source provenance, not container reproducibility.
 
 **The Azure diagram shows what was recorded as deployed, not the template.**
 `aml-platform/infra/` declares more than was created — a NAT gateway and a
