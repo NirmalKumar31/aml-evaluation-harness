@@ -4,16 +4,16 @@
  "serialNumber": "urn:uuid:ff0cdc8c-cfc7-588f-ad77-42a1756a4eb5",
  "version": 1,
  "metadata": {
-  "timestamp": "2026-09-21T00:30:58Z",
+  "timestamp": "2026-10-02T18:20:16Z",
   "component": {
    "type": "application",
    "name": "aml-evaluation-harness",
-   "version": "f43f66ea330f06899261340354db6fc6ec55964f"
+   "version": "62f78a4857cfd0d545243021615be02146eeb7f1"
   },
   "properties": [
    {
     "name": "aml:code_git_sha",
-    "value": "\"f43f66ea330f06899261340354db6fc6ec55964f\""
+    "value": "\"62f78a4857cfd0d545243021615be02146eeb7f1\""
    },
    {
     "name": "aml:code_tree_matches_commit",
@@ -25,11 +25,11 @@
    },
    {
     "name": "aml:env_lock_sha256",
-    "value": "\"d6e4994e6a8fa2d79a7b7e2fe20e4943ec80911b6d8ebaba7aa6d125d8d02e08\""
+    "value": "\"bd59d3fd02d531aa2f443864e4e78b1e63a93358f58b35cad850cc0b3f427a71\""
    },
    {
     "name": "aml:generated_at",
-    "value": "\"2026-09-21T00:30:58Z\""
+    "value": "\"2026-10-02T18:20:16Z\""
    },
    {
     "name": "aml:generator_blob_oid",
@@ -49,7 +49,7 @@
    },
    {
     "name": "aml:inputs",
-    "value": "[{\"path\": \"requirements.linux-amd64.lock\", \"bytes\": 7295, \"kind\": \"file\", \"sha256\": \"7ddd8658c26f30efeca3e7124ed5b80f5ea22cc440268cba8777be82a3c20ec9\"}]"
+    "value": "[{\"path\": \"requirements.linux-amd64.lock\", \"bytes\": 7295, \"kind\": \"file\", \"sha256\": \"7aad82795790df762a85b1dbc0eaedb231bb31e7e360302e1bda1be2f91b8a68\"}]"
    },
    {
     "name": "aml:package_tree_oid",
@@ -97,12 +97,12 @@
   {
    "type": "library",
    "name": "PyJWT",
-   "version": "2.13.0",
-   "purl": "pkg:pypi/pyjwt@2.13.0",
+   "version": "2.15.1",
+   "purl": "pkg:pypi/pyjwt@2.15.1",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "66adcc2aff09b3f1bbd95fc1e1577df8ac8723c978552fd43304c8a290ac5728"
+     "content": "42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193"
     }
    ]
   },
@@ -805,12 +805,12 @@
   {
    "type": "library",
    "name": "urllib3",
-   "version": "2.7.0",
-   "purl": "pkg:pypi/urllib3@2.7.0",
+   "version": "2.8.0",
+   "purl": "pkg:pypi/urllib3@2.8.0",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "9fb4c81ebbb1ce9531cce37674bbc6f1360472bc18ca9a553ede278ef7276897"
+     "content": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
     }
    ]
   },
