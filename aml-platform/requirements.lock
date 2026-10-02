@@ -12,7 +12,7 @@
 #
 # Regenerate with: make lock && make lock-hashes
 
-PyJWT==2.13.0
+PyJWT==2.15.1
 PyYAML==6.0.3
 adlfs==2026.8.0
 aiohappyeyeballs==2.7.1
@@ -72,6 +72,6 @@ threadpoolctl==3.6.0
 tqdm==4.70.0
 traitlets==5.16.1
 typing_extensions==4.16.0
-urllib3==2.7.0
+urllib3==2.8.0
 webencodings==0.5.1
 yarl==1.24.5
