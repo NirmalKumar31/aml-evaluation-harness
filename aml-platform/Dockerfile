@@ -25,7 +25,16 @@ FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc07
 # - git: manifest.py records the commit SHA in every run's provenance. Without
 #   git the manifest silently records "unknown", which is exactly the sort of
 #   quiet degradation this project exists to avoid.
+# ONE PACKAGE, NAMED. The base image is pinned by digest, and the tag still
+# resolves to that same digest -- upstream has not rebuilt it -- so the only
+# place libexpat1 can be patched is here. Trivy blocks on six fixable HIGH
+# findings against 2.5.0-1+deb12u3 (CVE-2024-28757, CVE-2025-59375,
+# CVE-2026-25210, CVE-2026-45186, CVE-2026-66046, CVE-2026-93990), all fixed
+# in deb12u4. `--only-upgrade` with the package named keeps this to that one
+# library: a blanket `apt-get upgrade` would move packages nothing has tested
+# and make the image a different thing from the one the suite ran against.
 RUN apt-get update \
+ && apt-get install -y --no-install-recommends --only-upgrade libexpat1 \
  && apt-get install -y --no-install-recommends \
       build-essential ca-certificates git \
  && rm -rf /var/lib/apt/lists/*
