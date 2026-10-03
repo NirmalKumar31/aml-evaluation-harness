@@ -3,7 +3,7 @@
 Dates are when the work landed on `main`, which is not the date a release was
 published — `CITATION.cff` carries that one.
 
-Releases in this repository: **v0.2.0**, **v0.2.1**. See
+Releases in this repository: **v0.2.0**, **v0.2.1**, **v0.2.2**. See
 <https://github.com/NirmalKumar31/aml-evaluation-harness/releases>.
 
 Errata come first in each entry. Every withdrawn value is also machine-readable
@@ -14,6 +14,54 @@ and every superseded lineage in
 two registries are the scientific record, and they are complete: a value
 withdrawn under any earlier version is still listed there and still refused by
 the gate.
+
+## v0.2.2 — 2026-10-03
+
+A dependency and container security update. **No scientific result, metric,
+archived artifact or methodological claim changes**, and `aml-platform/src/aml`
+is byte-identical to v0.2.1.
+
+- **Two transitive Python packages carried 16 known vulnerabilities.** `PyJWT`
+  2.13.0, reached through `msal`, held twelve (PYSEC-2026-4140 through -4152);
+  `urllib3` 2.7.0, reached through `requests` and the Azure stack, held three
+  (PYSEC-2026-4175 through -4177). Neither is declared in `pyproject.toml`, so
+  both are fixed in the locks: `PyJWT` 2.15.1 and `urllib3` 2.8.0.
+  `requirements.linux-amd64.lock` was regenerated through `make lock-hashes`
+  and both new digests were checked against the wheels PyPI publishes. The two
+  runtime locks remain identical at 63 packages, with no additions, removals or
+  other version change. `pip-audit` goes from 16 findings to none.
+- **The image carried a Debian package the base had not patched.** Trivy
+  blocked on six fixable HIGH findings in `libexpat1` 2.5.0-1+deb12u3
+  (CVE-2024-28757, CVE-2025-59375, CVE-2026-25210, CVE-2026-45186,
+  CVE-2026-66046, CVE-2026-93990). The base image is pinned by digest and its
+  tag still resolves to that digest, so there was no rebuilt base to move to;
+  the package is upgraded in the Dockerfile instead, named explicitly, with no
+  waiver, no ignore file and no blanket upgrade. The published image installs
+  2.5.0-1+deb12u4 from `bookworm-security`.
+- **The SBOM follows the lock; the scientific artifacts do not.**
+  `results_archive/derived/sbom.cdx.json` is built from the hashed lock and
+  names it as its source, so it was regenerated — 62 components before and
+  after, two versions changed. The eleven derived scientific artifacts keep
+  their own `env_lock_sha256`: that field records the environment that produced
+  a measurement, and no measurement moved. `release_facts.json` needed no
+  regeneration, because its freshness check compares environment-independent
+  fields.
+- **A generated artifact names the clean commit that produced it.** Two
+  successive SBOMs recorded commits that resolve nowhere — one predating the
+  clean-root republish, one a branch commit a squash merge discarded, written
+  because the generator ran on top of uncommitted work. The artifact is now
+  generated from a pushed commit and committed afterwards, so the recorded
+  `code_git_sha` stays an ancestor. Its test checks currency rather than
+  ancestry alone: component names, versions and wheel digests must equal the
+  runtime lock, the recorded input digest must equal that lock, and the escape
+  that let an unresolvable commit pass silently is gone.
+  `docs/RELEASE_CHECKLIST.md` states the two-step rule.
+- The README embeds a generated one-minute overview, captioned to mark its
+  opening figure as illustrative: the fifty-alert budget is one of seven
+  between 10 and 1,000, and not a measured property of any review team.
+- A fourth architecture view documents how a change to this repository is
+  proposed, checked and accepted. It describes the development process and is
+  not part of the evaluation pipeline, the container or the website.
 
 ## v0.2.1 — 2026-09-23
 
