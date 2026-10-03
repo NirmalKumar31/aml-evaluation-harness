@@ -4,16 +4,16 @@
  "serialNumber": "urn:uuid:ff0cdc8c-cfc7-588f-ad77-42a1756a4eb5",
  "version": 1,
  "metadata": {
-  "timestamp": "2026-10-02T18:20:16Z",
+  "timestamp": "2026-10-02T20:14:46Z",
   "component": {
    "type": "application",
    "name": "aml-evaluation-harness",
-   "version": "62f78a4857cfd0d545243021615be02146eeb7f1"
+   "version": "6143f035098683a690be2f96be475ad2aa946fdc"
   },
   "properties": [
    {
     "name": "aml:code_git_sha",
-    "value": "\"62f78a4857cfd0d545243021615be02146eeb7f1\""
+    "value": "\"6143f035098683a690be2f96be475ad2aa946fdc\""
    },
    {
     "name": "aml:code_tree_matches_commit",
@@ -29,7 +29,7 @@
    },
    {
     "name": "aml:generated_at",
-    "value": "\"2026-10-02T18:20:16Z\""
+    "value": "\"2026-10-02T20:14:46Z\""
    },
    {
     "name": "aml:generator_blob_oid",

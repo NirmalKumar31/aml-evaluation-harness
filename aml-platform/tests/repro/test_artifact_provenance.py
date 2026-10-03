@@ -1135,30 +1135,117 @@ def test_the_sbom_is_current_and_something_checks_it():
     assert doc.get("components") or doc.get("bomFormat") or doc.get("status"), (
         "the SBOM has no recognisable body")
 
-    # NO SKIP WHEN GIT IS ABSENT. The first version of this test skipped with
-    # "no git dir (running inside the image)", which is not in image.yml's
-    # allowlist -- so it would have turned the required `image` job red and
-    # blocked every merge. That is the second time in one session, and the
-    # fix is the same both times: assert what CAN be asserted everywhere, and
-    # only ADD the git check where git exists.
+    # WHAT "CURRENT" MEANS, CHECKED DIRECTLY.
+    #
+    # The ancestry probe below is a weak proxy: it asks whether the commit the
+    # SBOM names is in this history, not whether the SBOM describes what the
+    # image installs. Both earlier failures were content failures that ancestry
+    # could not have caught -- a four-commit-stale copy, and a copy naming
+    # PyJWT 2.13.0 after the lock moved to 2.15.1. So the component list is
+    # compared against the lock itself, by name, version AND wheel digest.
     root = Path(__file__).resolve().parents[3]
+    plat = root / "aml-platform"
+    lock_path = plat / "requirements.linux-amd64.lock"
+    prov = _provenance(doc)
+
+    if lock_path.exists():
+        lock_bytes = lock_path.read_bytes()
+        # 1. The input the generator recorded must be the lock as it stands.
+        recorded = {i.get("path"): i for i in (prov.get("inputs") or [])}
+        entry = recorded.get("requirements.linux-amd64.lock")
+        assert entry, "the SBOM records no requirements.linux-amd64.lock input"
+        assert entry.get("sha256") == hashlib.sha256(lock_bytes).hexdigest(), (
+            "the SBOM was generated from a different requirements.linux-amd64.lock "
+            "than the one committed here; regenerate it")
+
+        # 2. Names, versions and wheel digests must agree exactly, build-only
+        #    tooling aside. The Dockerfile removes pip, setuptools and wheel
+        #    before runtime, so the component list excludes them by design.
+        build_only = {"pip", "setuptools", "wheel"}
+        want: dict[str, tuple[str, set]] = {}
+        for m in re.finditer(
+                r"^([A-Za-z0-9_.\-]+)==([^\s\\]+)((?:\s*\\\s*\n\s*--hash=sha256:[0-9a-f]{64})+)",
+                lock_bytes.decode(), re.M):
+            name = m.group(1)
+            if name.lower() in build_only:
+                continue
+            want[name.lower()] = (
+                m.group(2),
+                set(re.findall(r"--hash=sha256:([0-9a-f]{64})", m.group(3))))
+
+        got: dict[str, tuple[str, set]] = {}
+        for c in doc.get("components") or []:
+            got[c["name"].lower()] = (
+                c.get("version"),
+                {h["content"] for h in (c.get("hashes") or [])
+                 if h.get("alg") == "SHA-256"})
+
+        missing = sorted(set(want) - set(got))
+        extra = sorted(set(got) - set(want))
+        assert not missing, f"the SBOM omits locked runtime packages: {missing}"
+        assert not extra, (
+            f"the SBOM lists packages the runtime lock does not: {extra}")
+        for name, (ver, digests) in sorted(want.items()):
+            gv, gd = got[name]
+            assert gv == ver, (
+                f"the SBOM says {name} {gv}, the lock says {ver}")
+            assert gd == digests, (
+                f"the SBOM's wheel digest for {name} is not the lock's: "
+                f"{sorted(gd)} vs {sorted(digests)}")
+
+    # 3. The generator and the package it imports must be the ones here now,
+    #    identified by content rather than by the commit string.
+    gen_rel = prov.get("generator_script")
+    if gen_rel:
+        gen = root / gen_rel
+        if gen.exists():
+            assert prov.get("generator_sha256") == hashlib.sha256(
+                gen.read_bytes()).hexdigest(), (
+                f"the SBOM was produced by a different {gen_rel} than the one "
+                f"in this checkout")
+            blob = subprocess.run(
+                ["git", "-C", str(root), "hash-object", gen_rel],
+                capture_output=True, text=True)
+            if blob.returncode == 0 and prov.get("generator_blob_oid"):
+                assert prov["generator_blob_oid"] == blob.stdout.strip(), (
+                    f"{gen_rel} has a different blob id than the SBOM records")
+    pkg = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD:aml-platform/src/aml"],
+        capture_output=True, text=True)
+    if pkg.returncode == 0 and prov.get("package_tree_oid"):
+        assert prov["package_tree_oid"] == pkg.stdout.strip(), (
+            "the SBOM was produced against a different aml package tree")
+
+    # 4. AND the commit it names must be reachable, where git can say.
+    #
+    # A GENERATED ARTIFACT NAMES ITS PARENT, NOT ITSELF. It records the clean
+    # state that produced it, which is the commit it was generated at -- the
+    # commit that then STORES it does not exist yet and never can be named
+    # here. Generate from a reachable commit, commit the result afterwards, and
+    # the recorded sha stays an ancestor through a squash merge. Generating on
+    # top of uncommitted work records a commit the merge discards, which is how
+    # this came to be unresolvable twice.
+    #
+    # There is no early return for an unknown commit any more. The content
+    # checks above hold everywhere, and where git exists the commit must
+    # resolve: "this history has never seen it" was the escape that let an
+    # unresolvable sha sit here unnoticed.
     if not (root / ".git").exists():
         return
     head = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"],
                           capture_output=True, text=True)
     if head.returncode != 0:
         return
-    # ONLY IF THIS HISTORY CONTAINS THE COMMIT. A derived artifact records
-    # the commit it was generated at, and a republished history has never seen
-    # that commit. That is not staleness --
-    # `test_no_derived_artifact_is_stale_against_its_generator` already checks
-    # the generator against HEAD -- so the ancestry check applies where
-    # ancestry is a meaningful question and is skipped, without a skip, where
-    # it is not.
+    shallow = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--is-shallow-repository"],
+        capture_output=True, text=True).stdout.strip()
+    if shallow == "true":
+        return
     known = subprocess.run(["git", "-C", str(root), "cat-file", "-e", sha],
                            capture_output=True)
-    if known.returncode != 0:
-        return
+    assert known.returncode == 0, (
+        f"the SBOM names commit {sha[:12]}, which does not exist in this "
+        f"history. Regenerate it from a clean checkout of a commit that does.")
     reachable = subprocess.run(
         ["git", "-C", str(root), "merge-base", "--is-ancestor", sha, "HEAD"])
     assert reachable.returncode == 0, (

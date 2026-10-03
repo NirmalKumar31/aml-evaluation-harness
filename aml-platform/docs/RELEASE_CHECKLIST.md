@@ -45,6 +45,26 @@ staleness is pinned to one exact artifact/package pair in
 `tests/repro/test_artifact_provenance.py` so the waiver expires if either side
 moves. The HI-Large artifacts need the cloud run.
 
+### A generated artifact names its parent, not itself
+
+A derived artifact records `code_git_sha`: the commit whose tree produced it.
+That is necessarily the commit the generator ran against, never the commit that
+afterwards stores the artifact, which does not exist yet and cannot be named.
+
+So regenerate in two steps, and in this order:
+
+1. Check out a clean, already-pushed commit — no uncommitted work anywhere in
+   the provenance scope.
+2. Run the generator, then commit the result.
+
+The artifact then names a commit that a squash merge keeps as an ancestor, and
+`test_the_sbom_is_current_and_something_checks_it` can require reachability
+without a merge-policy change.
+
+Regenerating on top of uncommitted work records the branch commit instead, and
+a squash merge discards it: the artifact ends up naming a commit nobody can
+resolve. `sbom.cdx.json` did this twice before the rule was written down.
+
 ## 3. Publishing
 
 This repository is the published artifact, so there is no separate build step.
