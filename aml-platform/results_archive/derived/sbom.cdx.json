@@ -4,16 +4,16 @@
  "serialNumber": "urn:uuid:ff0cdc8c-cfc7-588f-ad77-42a1756a4eb5",
  "version": 1,
  "metadata": {
-  "timestamp": "2026-10-02T20:14:46Z",
+  "timestamp": "2026-11-03T01:57:21Z",
   "component": {
    "type": "application",
    "name": "aml-evaluation-harness",
-   "version": "6143f035098683a690be2f96be475ad2aa946fdc"
+   "version": "2400efac6413e3fa0b76ef0ac7ec94002b4c0c1c"
   },
   "properties": [
    {
     "name": "aml:code_git_sha",
-    "value": "\"6143f035098683a690be2f96be475ad2aa946fdc\""
+    "value": "\"2400efac6413e3fa0b76ef0ac7ec94002b4c0c1c\""
    },
    {
     "name": "aml:code_tree_matches_commit",
@@ -25,11 +25,11 @@
    },
    {
     "name": "aml:env_lock_sha256",
-    "value": "\"bd59d3fd02d531aa2f443864e4e78b1e63a93358f58b35cad850cc0b3f427a71\""
+    "value": "\"821d9ac0d3af06ecfb0ca89fed1243703b8fda8e92aa3a1359bbe449a5add3b2\""
    },
    {
     "name": "aml:generated_at",
-    "value": "\"2026-10-02T20:14:46Z\""
+    "value": "\"2026-11-03T01:57:21Z\""
    },
    {
     "name": "aml:generator_blob_oid",
@@ -49,7 +49,7 @@
    },
    {
     "name": "aml:inputs",
-    "value": "[{\"path\": \"requirements.linux-amd64.lock\", \"bytes\": 7295, \"kind\": \"file\", \"sha256\": \"7aad82795790df762a85b1dbc0eaedb231bb31e7e360302e1bda1be2f91b8a68\"}]"
+    "value": "[{\"path\": \"requirements.linux-amd64.lock\", \"bytes\": 7325, \"kind\": \"file\", \"sha256\": \"e2d0b444788cd9c02def68a585c3a1e3555909b5be146155161f64f019282c53\"}]"
    },
    {
     "name": "aml:package_tree_oid",
@@ -61,7 +61,7 @@
    },
    {
     "name": "aml:platform",
-    "value": "\"macOS-26.5.2-arm64-arm-64bit\""
+    "value": "\"Linux-6.18.57-x86_64-with-glibc2.39\""
    },
    {
     "name": "aml:provenance_scope",
@@ -69,7 +69,7 @@
    },
    {
     "name": "aml:python_version",
-    "value": "\"3.12.3\""
+    "value": "\"3.12.14\""
    },
    {
     "name": "aml:scope_clean",
@@ -145,12 +145,12 @@
   {
    "type": "library",
    "name": "aiohttp",
-   "version": "3.14.3",
-   "purl": "pkg:pypi/aiohttp@3.14.3",
+   "version": "3.14.4",
+   "purl": "pkg:pypi/aiohttp@3.14.4",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "543906c127fb1d929b95076db19b83fa2d46751006ff1e23b093aa5ac4d8db42"
+     "content": "c5e93ab6e6330dce40f5b43996f1fc5f2543296d263a5e4b59ff09e73870b7d8"
     }
    ]
   },
@@ -229,12 +229,12 @@
   {
    "type": "library",
    "name": "certifi",
-   "version": "2026.7.22",
-   "purl": "pkg:pypi/certifi@2026.7.22",
+   "version": "2026.10.19",
+   "purl": "pkg:pypi/certifi@2026.10.19",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775"
+     "content": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
     }
    ]
   },
@@ -505,12 +505,12 @@
   {
    "type": "library",
    "name": "multidict",
-   "version": "6.7.1",
-   "purl": "pkg:pypi/multidict@6.7.1",
+   "version": "6.9.1",
+   "purl": "pkg:pypi/multidict@6.9.1",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "bfde23ef6ed9db7eaee6c37dcec08524cb43903c60b285b172b6c094711b3961"
+     "content": "976fd7689d69ec78d67d31d38d396d8adb562f7e8368279f76aed4aa451fa06d"
     }
    ]
   },
@@ -829,12 +829,12 @@
   {
    "type": "library",
    "name": "yarl",
-   "version": "1.24.5",
-   "purl": "pkg:pypi/yarl@1.24.5",
+   "version": "1.25.1",
+   "purl": "pkg:pypi/yarl@1.25.1",
    "hashes": [
     {
      "alg": "SHA-256",
-     "content": "f08c7513ecef5aad65687bfdf6bc601ae9fccd04a42904501f8f7141abad9eb9"
+     "content": "c6f117789d22dce188e5754e8bc65b7e6ebf8cb73963b9fa761f672a5883769d"
     }
    ]
   }
