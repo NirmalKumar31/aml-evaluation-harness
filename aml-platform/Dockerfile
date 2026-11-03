@@ -18,7 +18,7 @@
 # are not normalised. The base layers are identical between builds; divergence
 # begins at the first step after this line. Reproducibility here is source
 # provenance, not a bit-reproducible container -- see the README.
-FROM python:3.12.14-slim-bookworm@sha256:392307d22300de8b5986851a12d9176dfc0fc073e65bf6523ebd7dcbeb23564e
+FROM python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
 
 # - build-essential: some wheels still compile on arm64/musl edge cases
 # - ca-certificates: TLS to ADLS
