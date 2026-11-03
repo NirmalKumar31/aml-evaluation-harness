@@ -29,7 +29,7 @@
 setuptools==84.0.0
 wheel==0.48.0
 build==1.6.1
-certifi==2026.7.22
+certifi==2026.10.19
 charset-normalizer==3.5.1
 docutils==0.23
 id==1.6.1

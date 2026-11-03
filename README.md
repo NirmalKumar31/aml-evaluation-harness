@@ -1,5 +1,78 @@
 # AML evaluation harness
 
+A **Python and DuckDB batch project** for evaluating transaction-monitoring models
+when only a limited number of alerts can be reviewed each day. It uses synthetic
+IBM AMLworld data, not private bank data.
+
+## How I explain this project
+
+> I built a pipeline to prepare transaction data and evaluate how well models
+> prioritise suspicious activity. I used DuckDB SQL to clean and join the records
+> and build features from past transactions. I trained logistic regression and
+> tree-based models, then grouped their scores into account-day alerts and ranked
+> those alerts within each day. I measured what the models found at a fixed daily
+> review budget and compared that with a random ranking and the attainable ceiling.
+> The results are synthetic benchmark evidence, not proof of real-world detection.
+
+## One workflow to learn
+
+| Step | What happens | Main code |
+| --- | --- | --- |
+| Prepare | CSV to typed Parquet; attach synthetic ring labels | `aml-platform/src/aml/ingest/normalize.py`, `patterns/reconcile.py` |
+| Build | Historical features and a time/ring-aware train-test split | `aml-platform/src/aml/features/build.py`, `splits/ring_aware.py` |
+| Score | Train logistic regression or boosted-tree models; save held-out scores | `aml-platform/src/aml/models/train.py` |
+| Evaluate | Group to account-day alerts; rank per day; report budget metrics | `aml-platform/src/aml/eval/metrics.py` |
+
+The paths after the first file in each row are relative to `aml-platform/src/aml/`.
+The existing [`demo.py`](aml-platform/src/aml/demo.py) runs the stages in order;
+[`cli.py`](aml-platform/src/aml/cli.py) exposes the individual commands.
+
+## Run the small demo
+
+Requires Python 3.12. From a checkout:
+
+```bash
+cd aml-platform
+make setup
+make demo
+```
+
+This generates its own tiny dataset and runs the actual pipeline. Its scores
+are a demonstration of execution, not a model-performance result. The historical
+large-scale workload is separate and is not rerun by this command.
+
+## The SQL and database work
+
+DuckDB scans the Parquet data, joins records using stable transaction IDs and
+computes trailing-history features. The source timestamps have minute resolution,
+so the historical windows end before the current minute. The split controls
+future information and overlap among retained ring participants. These choices
+matter more than memorising every model parameter.
+
+The recorded large-scale work used **32 features** and **179,702,229 synthetic
+transactions** on an Azure VM. The detailed evidence and its limits remain below;
+the local demo does not reproduce that scale.
+
+## What the results mean
+
+- **Precision at a daily budget:** the share of selected account-day alerts that
+  are labelled positive in the synthetic benchmark.
+- **Recall at a daily budget:** the share of positive account-days selected.
+- **Random baseline and ceiling:** context for what the daily population and
+  capacity make easy or impossible to find.
+
+An account-day is a benchmark alert proxy, not an observed bank case workflow.
+High accuracy or a high AUC alone does not answer the daily review question.
+
+[Interactive results](https://nirmalkumar31.github.io/aml-evaluation-harness/) ·
+[Package setup](aml-platform/README.md) ·
+[Limitations](aml-platform/docs/LIMITATIONS.md) · [Data licence](DATA_LICENSE.md)
+
+<details>
+<summary>Detailed research findings, architecture and release evidence</summary>
+
+## Detailed project report
+
 **[Interactive website](https://nirmalkumar31.github.io/aml-evaluation-harness/)** — the
 findings, a results explorer over the archived artifacts, and the claim boundaries.
 
@@ -184,8 +257,8 @@ not full content-addressed provenance and is not described as such.
 **Cloud.** The HI-Large rung — 179,702,229 transactions, a 124,992,128 x 32
 training matrix — ran on an Azure VM. The container was **not** pulled from a
 registry: `scripts/provision_vm.sh` builds it on the VM from a `git archive` of
-a fixed commit, uploaded to ADLS Gen2 and checked against a recorded SHA-256
-before the build, and tags it `aml:<git-sha>`. Access used managed identity
+a fixed commit, uploaded to ADLS Gen2. The current script can check a supplied SHA-256
+before the build, but that digest was not preserved for the historical run. It tags the image `aml:<git-sha>`. Access used managed identity
 with no stored secret, ADLS Gen2 with shared-key access disabled, and a DuckDB
 spill disk. This identifies the application source used by the historical run;
 it is not a claim that the complete historical container is bit-reproducible.
@@ -270,3 +343,5 @@ release tag is the same manifest bytes as the tested commit tag.
 
 Code is MIT. AMLworld is CDLA-Sharing-1.0 and is **not** redistributed here;
 see [`DATA_LICENSE.md`](DATA_LICENSE.md) for what each distribution contains.
+
+</details>
