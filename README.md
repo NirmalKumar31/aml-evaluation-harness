@@ -344,5 +344,4 @@ release tag is the same manifest bytes as the tested commit tag.
 Code is MIT. AMLworld is CDLA-Sharing-1.0 and is **not** redistributed here;
 see [`DATA_LICENSE.md`](DATA_LICENSE.md) for what each distribution contains.
 
-
 </details>
