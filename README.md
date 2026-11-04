@@ -61,7 +61,7 @@ with a diagnostic that reads ring counts, so it is label-aware.
 
 ## Full version
 
-This is a simplified tree. The full harness, with 568 tests, the publication gate, replay
+This main-branch tree has 25 tracked files, compared with 367 in the full version. The full harness, with 568 tests, the publication gate, replay
 bundles, provenance registries, experiments and the complete Azure runbook, is preserved
 unchanged at tag **`full-version-v0.2.2`** (branch `full-version`). The archived results were
 produced by that code. The SQL here is the same: on the demo corpus, features (single-threaded),
