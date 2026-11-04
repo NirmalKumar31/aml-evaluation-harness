@@ -1,7 +1,0 @@
-# Render blueprint: a static results page. No server, no dataset.
-services:
-  - type: web
-    name: aml-evaluation-harness
-    runtime: static
-    buildCommand: mkdir -p site/results && cp results/*.json site/results/
-    staticPublishPath: ./site

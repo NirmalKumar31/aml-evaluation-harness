@@ -6,3 +6,5 @@ site/results/
 *.parquet
 *.joblib
 .DS_Store
+pip-*/
+pytest-of-root/

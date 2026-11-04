@@ -17,4 +17,4 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m pytest -q
-      - run: python -m aml demo --dest "$RUNNER_TEMP/demo"
+      - run: python aml_pipeline.py demo --output "$RUNNER_TEMP/demo"
