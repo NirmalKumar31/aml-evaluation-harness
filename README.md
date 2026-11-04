@@ -45,7 +45,7 @@ payment_currency, receiving_currency, payment_format,
 is_laundering
 ```
 
-## What the single script does
+## What the pipeline does
 
 1. DuckDB reads transaction Parquet directly.
 2. `UNION ALL` creates a sender view and receiver view of every transaction.
@@ -70,13 +70,16 @@ is_laundering
 ## Repository
 
 ```text
-aml_pipeline.py          complete runnable pipeline
+aml_pipeline.py          Python orchestration, training and evaluation
+sql/                     DuckDB feature-engineering SQL
 tests/test_pipeline.py   three core checks
 results/                 archived experiment results
 requirements.txt         pinned environment
 ```
 
-The one file to read is [`aml_pipeline.py`](aml_pipeline.py).
+Read [`aml_pipeline.py`](aml_pipeline.py) for the Python flow. The SQL is split
+into three short files in [`sql/`](sql/): event expansion, historical windows
+and final feature selection.
 
 ## Honest scope
 

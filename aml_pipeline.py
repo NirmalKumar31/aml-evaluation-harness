@@ -17,7 +17,7 @@ import pandas as pd
 from lightgbm import LGBMClassifier
 
 
-WINDOWS = {"1d": "1 DAY", "7d": "7 DAY", "30d": "30 DAY"}
+SQL_DIR = Path(__file__).with_name("sql")
 TX_FEATURES = [
     "log_amount_paid", "log_amount_received", "fx_ratio", "currency_mismatch",
     "amount_roundness", "hour", "dayofweek", "is_weekend", "is_self_transfer",
@@ -45,6 +45,11 @@ def connect(memory_limit: str | None = None, temp_directory: str | None = None):
 def parquet(path: str | Path) -> str:
     path = Path(path)
     return f"'{path}/**/*.parquet'" if path.is_dir() else f"'{path}'"
+
+
+def execute_sql_file(con, name: str) -> None:
+    """Execute one readable SQL stage stored in the sql/ directory."""
+    con.execute((SQL_DIR / name).read_text())
 
 
 def make_demo(path: str | Path, rows: int = 12_000) -> Path:
@@ -86,74 +91,14 @@ def build_features(src: str | Path, dest: str | Path,
     """Build 12 transaction and 20 strictly-prior account-history features."""
     con = connect(memory_limit, temp_directory)
     con.execute(f"CREATE VIEW tx AS SELECT * FROM read_parquet({parquet(src)})")
-    con.execute("""
-        CREATE VIEW events AS
-        SELECT txn_id, 's' side, sender_id account_id, receiver_id counterparty,
-               event_time, amount_paid, 1 is_out FROM tx
-        UNION ALL
-        SELECT txn_id, 'r', receiver_id, sender_id,
-               event_time, amount_paid, 0 FROM tx
-    """)
-
-    windows = ",\n".join(
-        f"w{k} AS (PARTITION BY account_id ORDER BY event_time "
-        f"RANGE BETWEEN INTERVAL {value} PRECEDING AND INTERVAL 1 MINUTE PRECEDING)"
-        for k, value in WINDOWS.items()
-    )
-    con.execute(f"""
-        CREATE VIEW history AS
-        WITH prior_counterparty AS (
-            SELECT *,
-                   max(event_time) OVER (
-                       PARTITION BY account_id, counterparty ORDER BY event_time
-                       RANGE BETWEEN UNBOUNDED PRECEDING AND INTERVAL 1 MINUTE PRECEDING
-                   ) AS previous_counterparty_time
-            FROM events
-        )
-        SELECT txn_id, side,
-               count(*) OVER w1d AS n_1d,
-               count(*) OVER w7d AS n_7d,
-               count(*) OVER w30d AS n_30d,
-               avg(amount_paid) OVER w7d AS mean_amt_7d,
-               stddev_pop(amount_paid) OVER w7d AS std_amt_7d,
-               max(amount_paid) OVER w30d AS max_amt_30d,
-               coalesce(sum(is_out) OVER w7d, 0) AS n_out_7d,
-               epoch(event_time - max(event_time) OVER w30d) AS secs_since_prev,
-               epoch(event_time - previous_counterparty_time) AS secs_since_prev_cp
-        FROM prior_counterparty
-        WINDOW {windows}
-    """)
-
-    hist = [name for name in HISTORY if name != "amt_vs_hist"]
-    sender = ", ".join(f"hs.{name} AS s_{name}" for name in hist)
-    receiver = ", ".join(f"hr.{name} AS r_{name}" for name in hist)
+    execute_sql_file(con, "create_events.sql")
+    execute_sql_file(con, "create_history.sql")
+    execute_sql_file(con, "build_features.sql")
     dest = Path(dest)
     dest.mkdir(parents=True, exist_ok=True)
     con.execute(f"""
-        COPY (
-            SELECT tx.txn_id, tx.event_time, tx.event_date,
-                   tx.sender_id, tx.receiver_id, tx.is_laundering,
-                   ln(1 + tx.amount_paid) AS log_amount_paid,
-                   ln(1 + tx.amount_received) AS log_amount_received,
-                   tx.amount_received / nullif(tx.amount_paid, 0) AS fx_ratio,
-                   CAST(tx.payment_currency <> tx.receiving_currency AS TINYINT) AS currency_mismatch,
-                   CASE WHEN tx.amount_paid = round(tx.amount_paid, -3) THEN 3
-                        WHEN tx.amount_paid = round(tx.amount_paid, -2) THEN 2
-                        WHEN tx.amount_paid = round(tx.amount_paid, 0) THEN 1 ELSE 0 END AS amount_roundness,
-                   hour(tx.event_time) AS hour,
-                   dayofweek(tx.event_time) AS dayofweek,
-                   CAST(dayofweek(tx.event_time) IN (0, 6) AS TINYINT) AS is_weekend,
-                   CAST(tx.sender_id = tx.receiver_id AS TINYINT) AS is_self_transfer,
-                   CAST(tx.sender_bank <> tx.receiver_bank AS TINYINT) AS is_cross_bank,
-                   hash(tx.payment_format) % 1000 AS payment_format_code,
-                   hash(tx.payment_currency) % 1000 AS payment_currency_code,
-                   {sender}, {receiver},
-                   tx.amount_paid / nullif(hs.mean_amt_7d, 0) AS s_amt_vs_hist,
-                   tx.amount_paid / nullif(hr.mean_amt_7d, 0) AS r_amt_vs_hist
-            FROM tx
-            LEFT JOIN history hs ON hs.txn_id = tx.txn_id AND hs.side = 's'
-            LEFT JOIN history hr ON hr.txn_id = tx.txn_id AND hr.side = 'r'
-        ) TO '{dest}' (FORMAT PARQUET, PARTITION_BY (event_date), OVERWRITE_OR_IGNORE)
+        COPY feature_table TO '{dest}'
+        (FORMAT PARQUET, PARTITION_BY (event_date), OVERWRITE_OR_IGNORE)
     """)
     con.close()
     return dest
