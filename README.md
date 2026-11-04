@@ -59,16 +59,4 @@ Synthetic data from one generator. The account-day unit is a proxy. Ring disjoin
 ring-labelled accounts only (about a third of laundering has no ring). The cut date was chosen
 with a diagnostic that reads ring counts, so it is label-aware.
 
-## Full version
-
-This main-branch tree has 25 tracked files, compared with 367 in the full version. The full harness, with 568 tests, the publication gate, replay
-bundles, provenance registries, experiments and the complete Azure runbook, is preserved
-unchanged at tag **`full-version-v0.2.2`** (branch `full-version`). The archived results were
-produced by that code. The SQL here is the same: on the demo corpus, features (single-threaded),
-labels, split, training matrix, scores and all budget metrics match it exactly.
-
-```bash
-git checkout full-version-v0.2.2      # browse or run the full version
-```
-
 Code: MIT. Data: CDLA-Sharing-1.0, not redistributed ([`DATA_LICENSE.md`](DATA_LICENSE.md)).
