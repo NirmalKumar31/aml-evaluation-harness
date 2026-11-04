@@ -1,0 +1,544 @@
+{
+ "_about": "HI-Medium (31.9M transactions), cut 2022-09-10. Values copied from the full harness archive; see `source`.",
+ "source": {
+  "tag": "full-version-v0.2.2",
+  "commit": "653120a42d224364a26d778d43f2969e2cb7c4cd",
+  "files": [
+   "aml-platform/results_archive/gold/splits_Medium/manifest.json",
+   "aml-platform/results_archive/gold/eval_Medium/baseline/baseline_metrics.json",
+   "aml-platform/results_archive/gold/eval_Medium/seed{0..7}/gbdt_metrics.json",
+   "aml-platform/results_archive/derived/budget_null.json",
+   "aml-platform/results_archive/derived/window_decomposition.json",
+   "aml-platform/results_archive/gold/reconcile_Medium/manifest.json"
+  ]
+ },
+ "reconcile": {
+  "rows": 31898238,
+  "flagged_txns": 35230,
+  "ring_txns_in_patterns_file": 22743,
+  "flagged_with_ring": 22743,
+  "flagged_without_ring": 12487,
+  "typology_coverage_pct": 64.56,
+  "unflagged_but_in_a_ring": 0,
+  "ring_txns_not_found_in_trans": 0,
+  "ambiguous_content_keys": 0
+ },
+ "split": {
+  "cut_time": "2022-09-10",
+  "train_rows": 19487126,
+  "train_positives": 15713,
+  "test_rows": 12402530,
+  "test_positives": 10935,
+  "test_rings_before_drop": 1265,
+  "dropped_rings": 736,
+  "test_rings_kept": 529,
+  "dropped_pct": 58.18,
+  "test_positive_account_days": 18130,
+  "test_total_account_days": 6204374,
+  "assertions_passed": [
+   "accounts_disjoint",
+   "rings_disjoint",
+   "no_temporal_bleed",
+   "no_train_ring_tails_in_test"
+  ]
+ },
+ "logistic_baseline": {
+  "roc_auc_footnote_only": 0.9152022399607048,
+  "budget_metrics": {
+   "@10": {
+    "precision": 0.5978260869565217,
+    "recall": 0.006067291781577496,
+    "recall_ceiling": 0.010148924434638721
+   },
+   "@25": {
+    "precision": 0.5640449438202247,
+    "recall": 0.01384445670159956,
+    "recall_ceiling": 0.024379481522338667
+   },
+   "@50": {
+    "precision": 0.5706018518518519,
+    "recall": 0.02719249862107005,
+    "recall_ceiling": 0.04732487589630447
+   },
+   "@100": {
+    "precision": 0.5264483627204031,
+    "recall": 0.04611141753998897,
+    "recall_ceiling": 0.08532818532818533
+   },
+   "@200": {
+    "precision": 0.48422876949740035,
+    "recall": 0.0770546056260342,
+    "recall_ceiling": 0.15488141202426917
+   },
+   "@500": {
+    "precision": 0.41872153290403646,
+    "recall": 0.14704908990623278,
+    "recall_ceiling": 0.3375620518477661
+   },
+   "@1000": {
+    "precision": 0.3300831916987208,
+    "recall": 0.20353006067291782,
+    "recall_ceiling": 0.5726420297848869
+   }
+  }
+ },
+ "gbdt_8_seeds": [
+  {
+   "seed": 0,
+   "precision@50": 0.7939814814814815,
+   "recall@50": 0.03783783783783784,
+   "roc_auc_footnote_only": 0.9822411132848986,
+   "average_precision": 0.282400339714525
+  },
+  {
+   "seed": 1,
+   "precision@50": 0.8981481481481481,
+   "recall@50": 0.042801985659128516,
+   "roc_auc_footnote_only": 0.9826881659311542,
+   "average_precision": 0.3006116570325478
+  },
+  {
+   "seed": 2,
+   "precision@50": 0.8946759259259259,
+   "recall@50": 0.04263651406508549,
+   "roc_auc_footnote_only": 0.982678542260499,
+   "average_precision": 0.3038621341556846
+  },
+  {
+   "seed": 3,
+   "precision@50": 0.8958333333333334,
+   "recall@50": 0.042691671263099834,
+   "roc_auc_footnote_only": 0.9827849022056414,
+   "average_precision": 0.29650150840375705
+  },
+  {
+   "seed": 4,
+   "precision@50": 0.5914351851851852,
+   "recall@50": 0.028185328185328186,
+   "roc_auc_footnote_only": 0.9826662432510616,
+   "average_precision": 0.2546722855512772
+  },
+  {
+   "seed": 5,
+   "precision@50": 0.8298611111111112,
+   "recall@50": 0.0395477109762824,
+   "roc_auc_footnote_only": 0.9827765162317506,
+   "average_precision": 0.30146382791155607
+  },
+  {
+   "seed": 6,
+   "precision@50": 0.84375,
+   "recall@50": 0.040209597352454496,
+   "roc_auc_footnote_only": 0.9821937873806466,
+   "average_precision": 0.29190127096975477
+  },
+  {
+   "seed": 7,
+   "precision@50": 0.8506944444444444,
+   "recall@50": 0.04054054054054054,
+   "roc_auc_footnote_only": 0.9825527523606286,
+   "average_precision": 0.2935416995657309
+  }
+ ],
+ "random_ranker_null": {
+  "alert_unit": "account-day",
+  "estimand": "the precision@k a UNIFORMLY RANDOM ranker attains on the evaluated ring-aware test split -- the slot-weighted mean of daily account-day prevalence, bracketed because a truncated day bounds its population rather than fixing it. It is a property of the SPLIT, not of any model.",
+  "days": 19,
+  "head_days": 7,
+  "tail_days": 12,
+  "thin_from": "2022-09-17",
+  "n_positive_total": 18130,
+  "null_precision_high@50": 0.49147,
+  "null_precision_high@50_head": 0.00244,
+  "null_precision_high@50_tail": 0.82447,
+  "null_precision_high_sd@50": 0.008194,
+  "null_precision_high_sd_is_a_lower_bound@50": true,
+  "null_precision_low@50": 0.45392,
+  "null_precision_low@50_head": 0.00243,
+  "null_precision_low@50_tail": 0.76135,
+  "null_precision_low_sd@50": 0.009078,
+  "null_precision_low_sd_is_a_lower_bound@50": true,
+  "alert_slots@50": 864,
+  "ceiling_count@50": 858,
+  "ceiling_budget_limited@50": 800,
+  "ceiling_positive_limited@50": 58,
+  "nonbinding_days@50": 3,
+  "nonbinding_day_list@50": [
+   "2022-09-26",
+   "2022-09-27",
+   "2022-09-28"
+  ],
+  "null_precision_high@200": 0.4167,
+  "null_precision_high@200_head": 0.00244,
+  "null_precision_high@200_tail": 0.80725,
+  "null_precision_high_sd@200": 0.003688,
+  "null_precision_high_sd_is_a_lower_bound@200": true,
+  "null_precision_low@200": 0.37171,
+  "null_precision_low@200_head": 0.00243,
+  "null_precision_low@200_tail": 0.71985,
+  "null_precision_low_sd@200": 0.004353,
+  "null_precision_low_sd_is_a_lower_bound@200": true,
+  "alert_slots@200": 2885,
+  "ceiling_count@200": 2808,
+  "ceiling_budget_limited@200": 2400,
+  "ceiling_positive_limited@200": 408,
+  "nonbinding_days@200": 7,
+  "nonbinding_day_list@200": [
+   "2022-09-22",
+   "2022-09-23",
+   "2022-09-24",
+   "2022-09-25",
+   "2022-09-26",
+   "2022-09-27",
+   "2022-09-28"
+  ],
+  "per_day": [
+   {
+    "day": "2022-09-10",
+    "n_positive": 1431,
+    "n_d_low": 587394,
+    "n_d_high": 591468,
+    "n_d_source": "bounded (raw 591468, highest rank 129661, window removal 4074)"
+   },
+   {
+    "day": "2022-09-11",
+    "n_positive": 1543,
+    "n_d_low": 585736,
+    "n_d_high": 589810,
+    "n_d_source": "bounded (raw 589810, highest rank 108006, window removal 4074)"
+   },
+   {
+    "day": "2022-09-12",
+    "n_positive": 1938,
+    "n_d_low": 895963,
+    "n_d_high": 900037,
+    "n_d_source": "bounded (raw 900037, highest rank 268388, window removal 4074)"
+   },
+   {
+    "day": "2022-09-13",
+    "n_positive": 2220,
+    "n_d_low": 894549,
+    "n_d_high": 898623,
+    "n_d_source": "bounded (raw 898623, highest rank 302637, window removal 4074)"
+   },
+   {
+    "day": "2022-09-14",
+    "n_positive": 2331,
+    "n_d_low": 896620,
+    "n_d_high": 900694,
+    "n_d_source": "bounded (raw 900694, highest rank 220980, window removal 4074)"
+   },
+   {
+    "day": "2022-09-15",
+    "n_positive": 2548,
+    "n_d_low": 895982,
+    "n_d_high": 900056,
+    "n_d_source": "bounded (raw 900056, highest rank 363769, window removal 4074)"
+   },
+   {
+    "day": "2022-09-16",
+    "n_positive": 2737,
+    "n_d_low": 1417295,
+    "n_d_high": 1421369,
+    "n_d_source": "bounded (raw 1421369, highest rank 440735, window removal 4074)"
+   },
+   {
+    "day": "2022-09-17",
+    "n_positive": 940,
+    "n_d_low": 1026,
+    "n_d_high": 1873,
+    "n_d_source": "bounded (raw 1873, highest rank 1026, window removal 4074)"
+   },
+   {
+    "day": "2022-09-18",
+    "n_positive": 738,
+    "n_d_low": 1000,
+    "n_d_high": 1466,
+    "n_d_source": "bounded (raw 1466, highest rank 1000, window removal 4074)"
+   },
+   {
+    "day": "2022-09-19",
+    "n_positive": 584,
+    "n_d_low": 769,
+    "n_d_high": 769,
+    "n_d_source": "exact (highest rank 769 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-20",
+    "n_positive": 417,
+    "n_d_low": 543,
+    "n_d_high": 543,
+    "n_d_source": "exact (highest rank 543 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-21",
+    "n_positive": 295,
+    "n_d_low": 382,
+    "n_d_high": 382,
+    "n_d_source": "exact (highest rank 382 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-22",
+    "n_positive": 161,
+    "n_d_low": 197,
+    "n_d_high": 197,
+    "n_d_source": "exact (highest rank 197 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-23",
+    "n_positive": 69,
+    "n_d_low": 87,
+    "n_d_high": 87,
+    "n_d_source": "exact (highest rank 87 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-24",
+    "n_positive": 62,
+    "n_d_low": 70,
+    "n_d_high": 70,
+    "n_d_source": "exact (highest rank 70 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-25",
+    "n_positive": 58,
+    "n_d_low": 67,
+    "n_d_high": 67,
+    "n_d_source": "exact (highest rank 67 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-26",
+    "n_positive": 41,
+    "n_d_low": 44,
+    "n_d_high": 44,
+    "n_d_source": "exact (highest rank 44 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-27",
+    "n_positive": 13,
+    "n_d_low": 16,
+    "n_d_high": 16,
+    "n_d_source": "exact (highest rank 16 is below the cap of 1000, so the day was written in full)"
+   },
+   {
+    "day": "2022-09-28",
+    "n_positive": 4,
+    "n_d_low": 4,
+    "n_d_high": 4,
+    "n_d_source": "exact (highest rank 4 is below the cap of 1000, so the day was written in full)"
+   }
+  ]
+ },
+ "window": {
+  "volume_profile": {
+   "days": 28,
+   "transactions_total": 31898238,
+   "laundering_total": 35230,
+   "median_transactions_per_day": 830375.0,
+   "collapse_fraction": 0.01,
+   "first_thin_day": "2022-09-17 00:00:00",
+   "per_day": [
+    {
+     "day": "2022-09-01 00:00:00",
+     "transactions": 4465985,
+     "laundering": 1056,
+     "prevalence": 0.000236
+    },
+    {
+     "day": "2022-09-02 00:00:00",
+     "transactions": 3021258,
+     "laundering": 1331,
+     "prevalence": 0.000441
+    },
+    {
+     "day": "2022-09-03 00:00:00",
+     "transactions": 828958,
+     "laundering": 1373,
+     "prevalence": 0.001656
+    },
+    {
+     "day": "2022-09-04 00:00:00",
+     "transactions": 830607,
+     "laundering": 1549,
+     "prevalence": 0.001865
+    },
+    {
+     "day": "2022-09-05 00:00:00",
+     "transactions": 1928599,
+     "laundering": 1863,
+     "prevalence": 0.000966
+    },
+    {
+     "day": "2022-09-06 00:00:00",
+     "transactions": 1929090,
+     "laundering": 2041,
+     "prevalence": 0.001058
+    },
+    {
+     "day": "2022-09-07 00:00:00",
+     "transactions": 1931015,
+     "laundering": 2147,
+     "prevalence": 0.001112
+    },
+    {
+     "day": "2022-09-08 00:00:00",
+     "transactions": 1930610,
+     "laundering": 2154,
+     "prevalence": 0.001116
+    },
+    {
+     "day": "2022-09-09 00:00:00",
+     "transactions": 2621004,
+     "laundering": 2199,
+     "prevalence": 0.000839
+    },
+    {
+     "day": "2022-09-10 00:00:00",
+     "transactions": 831874,
+     "laundering": 2081,
+     "prevalence": 0.002502
+    },
+    {
+     "day": "2022-09-11 00:00:00",
+     "transactions": 830143,
+     "laundering": 1966,
+     "prevalence": 0.002368
+    },
+    {
+     "day": "2022-09-12 00:00:00",
+     "transactions": 1930240,
+     "laundering": 2179,
+     "prevalence": 0.001129
+    },
+    {
+     "day": "2022-09-13 00:00:00",
+     "transactions": 1928626,
+     "laundering": 2275,
+     "prevalence": 0.00118
+    },
+    {
+     "day": "2022-09-14 00:00:00",
+     "transactions": 1930957,
+     "laundering": 2263,
+     "prevalence": 0.001172
+    },
+    {
+     "day": "2022-09-15 00:00:00",
+     "transactions": 1930419,
+     "laundering": 2253,
+     "prevalence": 0.001167
+    },
+    {
+     "day": "2022-09-16 00:00:00",
+     "transactions": 3021866,
+     "laundering": 2416,
+     "prevalence": 0.0008
+    },
+    {
+     "day": "2022-09-17 00:00:00",
+     "transactions": 2020,
+     "laundering": 1199,
+     "prevalence": 0.593564
+    },
+    {
+     "day": "2022-09-18 00:00:00",
+     "transactions": 1591,
+     "laundering": 916,
+     "prevalence": 0.575739
+    },
+    {
+     "day": "2022-09-19 00:00:00",
+     "transactions": 1195,
+     "laundering": 695,
+     "prevalence": 0.58159
+    },
+    {
+     "day": "2022-09-20 00:00:00",
+     "transactions": 855,
+     "laundering": 492,
+     "prevalence": 0.575439
+    },
+    {
+     "day": "2022-09-21 00:00:00",
+     "transactions": 586,
+     "laundering": 336,
+     "prevalence": 0.573379
+    },
+    {
+     "day": "2022-09-22 00:00:00",
+     "transactions": 309,
+     "laundering": 184,
+     "prevalence": 0.595469
+    },
+    {
+     "day": "2022-09-23 00:00:00",
+     "transactions": 134,
+     "laundering": 84,
+     "prevalence": 0.626866
+    },
+    {
+     "day": "2022-09-24 00:00:00",
+     "transactions": 104,
+     "laundering": 65,
+     "prevalence": 0.625
+    },
+    {
+     "day": "2022-09-25 00:00:00",
+     "transactions": 102,
+     "laundering": 59,
+     "prevalence": 0.578431
+    },
+    {
+     "day": "2022-09-26 00:00:00",
+     "transactions": 59,
+     "laundering": 37,
+     "prevalence": 0.627119
+    },
+    {
+     "day": "2022-09-27 00:00:00",
+     "transactions": 25,
+     "laundering": 14,
+     "prevalence": 0.56
+    },
+    {
+     "day": "2022-09-28 00:00:00",
+     "transactions": 7,
+     "laundering": 3,
+     "prevalence": 0.428571
+    }
+   ]
+  },
+  "logistic_by_segment": {
+   "alert_unit": "account-day",
+   "estimand": "how each published budget metric divides between the volume-regime days and the generator's wind-down, per archived bundle. A decomposition of an observed number, not an estimate of anything about a population.",
+   "segment_boundary_index": 7,
+   "segment_boundary_day": "2022-09-17",
+   "segment_boundary_source": "HI-Medium transaction-volume collapse",
+   "head_days": 7,
+   "tail_days": 12,
+   "positive_account_days_head": 14748,
+   "positive_account_days_tail": 3382,
+   "alerts_head@50": 350,
+   "alerts_tail@50": 514,
+   "true_positives_head@50": 15,
+   "true_positives_tail@50": 478,
+   "true_positive_share_tail@50": 0.96957,
+   "ceiling_count_head@50": 350,
+   "ceiling_count_tail@50": 508,
+   "ceiling_share_tail@50": 0.59207,
+   "precision_head@50": 0.04286,
+   "precision_tail@50": 0.92996,
+   "precision_pooled@50": 0.5706,
+   "alerts_head@200": 1400,
+   "alerts_tail@200": 1485,
+   "true_positives_head@200": 67,
+   "true_positives_tail@200": 1330,
+   "true_positive_share_tail@200": 0.95204,
+   "ceiling_count_head@200": 1400,
+   "ceiling_count_tail@200": 1408,
+   "ceiling_share_tail@200": 0.50142,
+   "precision_head@200": 0.04786,
+   "precision_tail@200": 0.89562,
+   "precision_pooled@200": 0.48423
+  }
+ }
+}

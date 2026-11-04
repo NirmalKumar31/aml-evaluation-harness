@@ -3,402 +3,103 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="referrer" content="strict-origin-when-cross-origin">
-<title>Measuring a transaction-monitoring ranker under a daily review budget</title>
-<meta name="description" content="An evaluation-methodology harness for anti-money-laundering transaction monitoring: account-day alert units, daily review budgets, random-ranker nulls, seed stability and signed provenance, on the synthetic IBM AMLworld data.">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#0b1b2b">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Measuring a transaction-monitoring ranker under a daily review budget">
-<meta property="og:description" content="An evaluation-methodology harness for anti-money-laundering transaction monitoring: account-day alert units, daily review budgets, random-ranker nulls, seed stability and signed provenance, on the synthetic IBM AMLworld data.">
-<meta property="og:url" content="https://nirmalkumar31.github.io/aml-evaluation-harness/">
-<link rel="canonical" href="https://nirmalkumar31.github.io/aml-evaluation-harness/">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 32 32&#x27;%3E%3Crect width=&#x27;32&#x27; height=&#x27;32&#x27; rx=&#x27;7&#x27; fill=&#x27;%230b1b2b&#x27;/%3E%3Ccircle cx=&#x27;10&#x27; cy=&#x27;11&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Ccircle cx=&#x27;22&#x27; cy=&#x27;9&#x27; r=&#x27;2.2&#x27; fill=&#x27;%23e2e8f0&#x27;/%3E%3Ccircle cx=&#x27;21&#x27; cy=&#x27;22&#x27; r=&#x27;3&#x27; fill=&#x27;%2338bdf8&#x27;/%3E%3Cpath d=&#x27;M10 11 L22 9 M10 11 L21 22&#x27; stroke=&#x27;%23e2e8f0&#x27; stroke-width=&#x27;1.4&#x27; fill=&#x27;none&#x27;/%3E%3C/svg%3E">
-<link rel="stylesheet" href="styles.css">
-<noscript><link rel="stylesheet" href="noscript.css"></noscript>
+<title>AML Evaluation Harness</title>
+<style>
+  :root { --bg:#fbfbfa; --card:#ffffff; --ink:#1f2a37; --muted:#5b6470; --line:#e3e6ea; --accent:#2a78d6; --soft:#eef4fc; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151617; --card:#1d1f21; --ink:#eceae6; --muted:#a6a9ad; --line:#303337; --accent:#5a9ee8; --soft:#1f2a38; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; letter-spacing: -.3px; }
+  h2 { font-size: 18px; margin: 34px 0 8px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; max-width: 760px; }
+  .tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:10px; }
+  .tile { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+  .tile b { display:block; font-size:22px; font-variant-numeric: tabular-nums; }
+  .tile span { color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; overflow-x:auto; }
+  table { border-collapse: collapse; width:100%; font-variant-numeric: tabular-nums; font-size:14px; }
+  th, td { text-align:right; padding:6px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { color:var(--muted); font-weight:600; }
+  ol { padding-left: 20px; } li { margin: 4px 0; }
+  code { background:var(--soft); padding:1px 5px; border-radius:4px; font-size:13px; }
+  .note { color:var(--muted); font-size:13px; margin-top:8px; }
+  a { color: var(--accent); }
+</style>
 </head>
-<body class="route-home" data-route="home">
+<body>
+<main>
+  <h1>AML evaluation harness</h1>
+  <p class="lead">A Python and DuckDB pipeline over 179.7M synthetic transactions (IBM AMLworld) on a single Azure VM:
+  32 point-in-time SQL features, account-day alerts ranked within each day, and precision/recall at a daily review budget
+  reported next to a random-ranker baseline and the attainable ceiling. Evaluation methodology on synthetic data, not a production detector.</p>
 
-<a class="skip" href="#main">Skip to content</a>
-<header class="site-header">
-  <div class="wrap header-inner">
-    <a class="brand" href="./">
-      <img class="brand-mark" src="assets/icons/github.svg" alt="" width="22" height="22">
-      <span class="brand-text"><strong>AML evaluation harness</strong>
-      <span class="brand-sub">alert-budget evaluation methodology</span></span>
-    </a>
-    <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false"
-            aria-controls="site-nav">
-      <span class="nav-toggle-bars" aria-hidden="true"></span>
-      <span class="nav-toggle-text">Menu</span>
-    </button>
-    <nav id="site-nav" class="site-nav" aria-label="Primary">
-      <ul><li><a href="./" aria-current="page">Home</a></li><li><a href="explorer/">Results explorer</a></li><li><a href="engineering/">Engineering &amp; MLOps</a></li>
-        <li class="nav-sep"><a class="nav-repo" href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">
-          Repository<span class="sr-only"> on GitHub</span></a></li>
-      </ul>
-    </nav>
-  </div>
-</header>
-<main id="main">
+  <div class="tiles" id="tiles"></div>
 
-<section class="hero" aria-labelledby="hero-h">
-<svg class="hero-net" viewBox="0 0 1200 520" aria-hidden="true" focusable="false" preserveAspectRatio="xMidYMid slice"><g class="net-edges"><line class="edge edge-flow" x1="536.4" y1="503.5" x2="606.9" y2="471.0"/><line class="edge" x1="928.7" y1="325.5" x2="1011.0" y2="325.3"/><line class="edge" x1="379.1" y1="376.3" x2="356.1" y2="456.2"/><line class="edge" x1="259.0" y1="196.3" x2="347.2" y2="197.4"/><line class="edge" x1="258.7" y1="378.8" x2="250.1" y2="472.5"/><line class="edge" x1="1134.5" y1="124.9" x2="1170.8" y2="214.8"/><line class="edge edge-flow" x1="361.4" y1="101.3" x2="347.2" y2="197.4"/><line class="edge" x1="1014.8" y1="111.7" x2="1061.1" y2="201.0"/><line class="edge" x1="932.4" y1="222.8" x2="928.7" y2="325.5"/><line class="edge" x1="749.7" y1="223.3" x2="733.8" y2="325.1"/><line class="edge" x1="527.7" y1="197.9" x2="630.8" y2="207.9"/><line class="edge" x1="1134.5" y1="124.9" x2="1061.1" y2="201.0"/><line class="edge edge-flow" x1="361.4" y1="101.3" x2="466.8" y2="90.6"/><line class="edge" x1="250.1" y1="472.5" x2="356.1" y2="456.2"/><line class="edge" x1="245.0" y1="89.8" x2="259.0" y2="196.3"/><line class="edge" x1="1061.1" y1="201.0" x2="1170.8" y2="214.8"/><line class="edge" x1="99.7" y1="236.6" x2="110.1" y2="349.5"/><line class="edge" x1="901.7" y1="91.0" x2="1014.8" y2="111.7"/><line class="edge edge-flow" x1="630.8" y1="207.9" x2="614.6" y2="322.2"/><line class="edge" x1="660.1" y1="73.0" x2="775.9" y2="85.0"/><line class="edge" x1="245.0" y1="89.8" x2="361.4" y2="101.3"/><line class="edge" x1="110.1" y1="349.5" x2="97.3" y2="466.3"/><line class="edge" x1="614.6" y1="322.2" x2="733.8" y2="325.1"/><line class="edge" x1="495.6" y1="330.0" x2="614.6" y2="322.2"/><line class="edge edge-flow" x1="630.8" y1="207.9" x2="749.7" y2="223.3"/><line class="edge" x1="1014.8" y1="111.7" x2="1134.5" y2="124.9"/><line class="edge" x1="258.7" y1="378.8" x2="379.1" y2="376.3"/><line class="edge" x1="466.8" y1="90.6" x2="527.7" y2="197.9"/><line class="edge" x1="258.7" y1="378.8" x2="356.1" y2="456.2"/><line class="edge" x1="379.1" y1="376.3" x2="495.6" y2="330.0"/><line class="edge edge-flow" x1="775.9" y1="85.0" x2="901.7" y2="91.0"/><line class="edge" x1="932.4" y1="222.8" x2="1011.0" y2="325.3"/><line class="edge" x1="932.4" y1="222.8" x2="1061.1" y2="201.0"/><line class="edge" x1="606.9" y1="471.0" x2="735.6" y2="502.1"/><line class="edge" x1="1061.1" y1="201.0" x2="1011.0" y2="325.3"/><line class="edge" x1="901.7" y1="91.0" x2="932.4" y2="222.8"/><line class="edge edge-flow" x1="527.7" y1="197.9" x2="495.6" y2="330.0"/><line class="edge" x1="660.1" y1="73.0" x2="630.8" y2="207.9"/><line class="edge" x1="1014.8" y1="111.7" x2="932.4" y2="222.8"/><line class="edge" x1="361.4" y1="101.3" x2="259.0" y2="196.3"/><line class="edge" x1="775.9" y1="85.0" x2="749.7" y2="223.3"/><line class="edge" x1="928.7" y1="325.5" x2="882.0" y2="464.0"/><line class="edge edge-flow" x1="245.0" y1="89.8" x2="347.2" y2="197.4"/><line class="edge" x1="614.6" y1="322.2" x2="606.9" y2="471.0"/><line class="edge" x1="735.6" y1="502.1" x2="882.0" y2="464.0"/><line class="edge" x1="110.1" y1="349.5" x2="258.7" y2="378.8"/></g><g class="net-nodes"><circle class="node" data-i="0" cx="85.6" cy="71.0" r="5.1"/><circle class="node" data-i="1" cx="245.0" cy="89.8" r="8.3"/><circle class="node" data-i="2" cx="361.4" cy="101.3" r="7.1"/><circle class="node node-ring" data-i="3" cx="466.8" cy="90.6" r="7.9"/><circle class="node" data-i="4" cx="660.1" cy="73.0" r="5.5"/><circle class="node" data-i="5" cx="775.9" cy="85.0" r="6.5"/><circle class="node" data-i="6" cx="901.7" cy="91.0" r="7.3"/><circle class="node" data-i="7" cx="1014.8" cy="111.7" r="4.8"/><circle class="node" data-i="8" cx="1134.5" cy="124.9" r="5.4"/><circle class="node" data-i="9" cx="99.7" cy="236.6" r="7.5"/><circle class="node node-ring" data-i="10" cx="259.0" cy="196.3" r="4.7"/><circle class="node" data-i="11" cx="347.2" cy="197.4" r="7.1"/><circle class="node" data-i="12" cx="527.7" cy="197.9" r="8.9"/><circle class="node" data-i="13" cx="630.8" cy="207.9" r="5.4"/><circle class="node" data-i="14" cx="749.7" cy="223.3" r="8.2"/><circle class="node" data-i="15" cx="932.4" cy="222.8" r="7.1"/><circle class="node" data-i="16" cx="1061.1" cy="201.0" r="4.6"/><circle class="node node-ring" data-i="17" cx="1170.8" cy="214.8" r="4.3"/><circle class="node" data-i="18" cx="110.1" cy="349.5" r="5.5"/><circle class="node" data-i="19" cx="258.7" cy="378.8" r="4.2"/><circle class="node" data-i="20" cx="379.1" cy="376.3" r="5.2"/><circle class="node" data-i="21" cx="495.6" cy="330.0" r="6.3"/><circle class="node" data-i="22" cx="614.6" cy="322.2" r="7.0"/><circle class="node" data-i="23" cx="733.8" cy="325.1" r="6.2"/><circle class="node node-ring" data-i="24" cx="928.7" cy="325.5" r="5.7"/><circle class="node" data-i="25" cx="1011.0" cy="325.3" r="6.4"/><circle class="node" data-i="26" cx="1177.1" cy="372.0" r="5.7"/><circle class="node" data-i="27" cx="97.3" cy="466.3" r="4.6"/><circle class="node" data-i="28" cx="250.1" cy="472.5" r="5.0"/><circle class="node" data-i="29" cx="356.1" cy="456.2" r="8.6"/><circle class="node" data-i="30" cx="536.4" cy="503.5" r="6.8"/><circle class="node node-ring" data-i="31" cx="606.9" cy="471.0" r="8.1"/><circle class="node" data-i="32" cx="735.6" cy="502.1" r="6.3"/><circle class="node" data-i="33" cx="882.0" cy="464.0" r="6.4"/></g></svg>
-  <div class="wrap hero-inner">
-    <p class="eyebrow">AML model evaluation under real review limits</p>
-    <h1 id="hero-h">A model can rank millions of transactions. Investigators
-      can review only a few alerts.</h1>
-    <p class="hero-lede">This project evaluates transaction-monitoring models
-      under that constraint. It measures which suspicious account-days reach a
-      fixed daily review queue, how much the answer moves across data windows
-      and random seeds, and whether apparent performance survives leakage and
-      provenance checks.</p>
-    <p class="hero-actions">
-      <a class="btn btn-primary" href="explorer/">Explore the findings</a>
-      <a class="btn" href="engineering/">See how it was engineered</a>
-    </p>
-    <p class="hero-tertiary"><a href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">Repository on
-      GitHub</a></p>
-    <dl class="hero-facts hero-proof"><div><dt>179.7M transactions</dt><dd>at the largest evaluated rung, HI-Large</dd></div><div><dt>3 dataset rungs</dt><dd>HI-Small, HI-Medium and HI-Large</dd></div><div><dt>3 model families</dt><dd>where each was actually measured</dd></div><div><dt>452 evaluation rows</dt><dd>each linked to a committed artifact</dd></div></dl>
-  </div>
-</section>
+  <h2>Pipeline</h2>
+  <div class="card"><ol>
+    <li><b>Ingest</b>: CSV to Parquet with a positional schema and a <code>txn_id</code> checked to be 1..N.</li>
+    <li><b>Labels</b>: ring file parsed and LEFT JOINed back on a de-duplicated content key.</li>
+    <li><b>Split</b>: temporal cut, whole rings assigned by start date, test rings sharing an account with training dropped, four assertions.</li>
+    <li><b>Features</b>: 32 DuckDB window features over a two-sided event stream, every frame ending <code>1 MINUTE PRECEDING</code>.</li>
+    <li><b>Train</b>: logistic regression, HistGradientBoosting, LightGBM; matrix streamed from DuckDB, <code>ORDER BY txn_id</code>.</li>
+    <li><b>Evaluate</b>: (account, day) grain, score = max, label = max, top-k per day at k = 10 to 1,000.</li>
+  </ol></div>
 
-<section class="band band-light" aria-labelledby="problem-h">
-  <div class="wrap">
-    <h2 id="problem-h">Why ordinary model scores are not enough</h2>
-    <div class="split-cols">
-      <div>
-        <p class="lede">A bank can score millions of transactions. An
-          investigation team can open only a fixed number of alerts a day, so a
-          model can look strong on an aggregate metric and add little inside
-          the queue people actually work.</p>
-        <p>The unit is what most summaries skip. This project scores an
-          <strong>account-day</strong> — one account on one calendar day —
-          because that is what a reviewer opens. Rank them, take the day's top
-          k, and the question is concrete: of the alerts someone actually
-          reads, how many were worth reading?</p>
-        <p>Three things then move the headline without the model changing at
-          all: how many suspicious account-days the day holds, where the split
-          is drawn, and which seed the run used.</p>
-      </div>
-      <div>
-        
-<figure class="chart" id="funnel">
-  <h3 class="chart-title" id="funnel-t">From scored transactions to a reviewed queue</h3>
-  <p class="chart-desc" id="funnel-d">Four stages, each narrower than the last. The third is the constraint everything here is measured against.</p>
-  
-  <div class="chart-surface">
-    <svg id="funnel-svg" viewBox="0 0 740 345" role="img"
-         aria-labelledby="funnel-t" aria-describedby="funnel-d"
-         preserveAspectRatio="xMidYMid meet"><rect class="funnel-band funnel-0" x="20.0" y="14" width="700.0" height="46" rx="6"/><text class="funnel-name" x="370" y="35" text-anchor="middle">Transactions scored</text><text class="funnel-note" x="370" y="51" text-anchor="middle">millions per day, every account touched</text><path class="funnel-arrow" d="M370 64 l 0 16 m -6 -6 l 6 6 l 6 -6"/><rect class="funnel-band funnel-1" x="90.0" y="88" width="560.0" height="46" rx="6"/><text class="funnel-name" x="370" y="109" text-anchor="middle">Ranked account-days</text><text class="funnel-note" x="370" y="125" text-anchor="middle">one score per account per calendar day</text><path class="funnel-arrow" d="M370 138 l 0 16 m -6 -6 l 6 6 l 6 -6"/><rect class="funnel-band funnel-2" x="160.0" y="162" width="420.0" height="46" rx="6"/><text class="funnel-name" x="370" y="183" text-anchor="middle">Top 50 selected for review</text><text class="funnel-note" x="370" y="199" text-anchor="middle">the queue an investigation team can actually open</text><path class="funnel-arrow" d="M370 212 l 0 16 m -6 -6 l 6 6 l 6 -6"/><rect class="funnel-band funnel-3" x="200.0" y="236" width="340.0" height="46" rx="6"/><text class="funnel-name funnel-on-fill" x="370" y="257" text-anchor="middle">Synthetic positives reached</text><text class="funnel-note funnel-on-fill" x="370" y="273" text-anchor="middle">labelled laundering activity inside the review queue</text><text class="funnel-foot" x="370" y="320" text-anchor="middle">On the evaluated HI-Medium window, 12 of 19 days are thin enough that</text><text class="funnel-foot" x="370" y="335" text-anchor="middle">filling the queue at random already scores 0.45392–0.49147 precision</text></svg>
-  </div>
-  <figcaption>Window structure read from <a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/budget_null.json" rel="noopener"><code>budget_null.json</code></a>.</figcaption>
-</figure>
-      </div>
-    </div>
-  </div>
-</section>
+  <h2>HI-Large on Azure: LightGBM, 3 seeds</h2>
+  <div class="card"><table id="large"></table>
+  <p class="note" id="largenote"></p></div>
 
-<section class="band band-tint" aria-labelledby="solution-h">
-  <div class="wrap">
-    <h2 id="solution-h">An evaluation harness built around the decision that
-      matters</h2>
-    <p class="lede">The deliverable is not a detector. It is a reproducible
-      evaluation system that measures a ranker the way a review team would
-      meet it, and refuses to publish a number it cannot trace.</p>
-    <ol class="pipeline"><li class="stage"><span class="stage-n" aria-hidden="true">1</span><span class="stage-body"><span class="stage-name">Data and temporal split</span><span class="stage-note">account-days, a cut date, rings kept whole</span></span></li><li class="stage"><span class="stage-n" aria-hidden="true">2</span><span class="stage-body"><span class="stage-name">Model training</span><span class="stage-note">the families that fit, at a fixed row order</span></span></li><li class="stage"><span class="stage-n" aria-hidden="true">3</span><span class="stage-body"><span class="stage-name">Daily top-k evaluation</span><span class="stage-note">rank the day, score the k alerts</span></span></li><li class="stage"><span class="stage-n" aria-hidden="true">4</span><span class="stage-body"><span class="stage-name">Seed and leakage stress tests</span><span class="stage-note">rerun, permute, re-split</span></span></li><li class="stage"><span class="stage-n" aria-hidden="true">5</span><span class="stage-body"><span class="stage-name">Verified artifact and publication</span><span class="stage-note">every value linked, gate-checked</span></span></li></ol>
-    <ul class="solution-list">
-      <li>Time-aware splits that keep laundering rings whole across the cut.</li>
-      <li>A linear baseline beside tree models, so the gain over something
-        simple stays visible.</li>
-      <li>Precision, recall and attainable recall at daily budgets, each
-        compared with what a random ranker scores on the same window.</li>
-      <li>Reruns across seeds, with leakage controls injected and permuted
-        rather than assumed away.</li>
-      <li>Every published value linked to its artifact and generator.</li>
-    </ul>
-  </div>
-</section>
+  <h2>HI-Medium: why the baseline matters</h2>
+  <div class="card"><table id="medium"></table>
+  <p class="note">After the cut, the generator winds down: daily volume falls from 3,021,866 transactions to 7, so the last days are mostly positives
+  and a random ranker already scores high on the pooled window. The 7 volume days are the fair comparison.</p></div>
 
-<section class="band band-light" aria-labelledby="findings-h">
-  <div class="wrap">
-    <h2 id="findings-h">What the evaluation changed</h2>
-    <p class="lede">Three results, each with its number and its boundary.</p>
-    
-<noscript>
-  <p class="callout callout-note"><strong>JavaScript is switched off.</strong>
-     Every figure, table and number on this page was written into the HTML when
-     the site was built, so all of it is readable as it stands. </p>
-</noscript>
-    
-<article class="story reveal" id="story-split-sensitivity">
-  <div class="story-text">
-    <p class="eyebrow">Finding 1</p>
-    <h3>Change how the test set is drawn and the metrics disagree</h3>
-    <p class="finding-says">“Performance improved” is not a statement this data supports on its own; it depends which metric you read.</p>
-    <p class="lede">Two temporal protocols on HI-Small, same cut date, 5 seeds each. The naive one readmits 966 positive transactions whose rings were already seen in training. Average precision then reads 40.0% higher, recall at a 50-alert budget 4.1% lower.</p>
-    <p class="reads reads-no"><strong>Boundary.</strong> A preregistered sensitivity analysis on HI-Small, not evidence of leakage: part of the move comes from the naive split&#x27;s higher prevalence, and nothing here claims the effect holds on another dataset.</p>
-    <p class="more"><a class="btn btn-quiet" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_split_inflation.md">Read the split-sensitivity report</a></p>
-  </div>
-  <div class="story-figure">
-<figure class="chart" id="split-sensitivity">
-  <h4 class="chart-title" id="split-sensitivity-t">The same runs under two temporal protocols</h4>
-  <p class="chart-desc" id="split-sensitivity-d">Each metric against its own maximum; bars are means across 5 seeds.</p>
-  
-  <div class="chart-surface">
-    <svg id="split-sensitivity-svg" viewBox="0 0 760 250" role="img"
-         aria-labelledby="split-sensitivity-t" aria-describedby="split-sensitivity-d"
-         preserveAspectRatio="xMidYMid meet"><text class="bar-label" x="20" y="30">average precision <tspan class="row-unit">(transaction unit)</tspan></text><rect class="bar bar-0" x="20.0" y="40" width="335.69" height="20" rx="3"><title>ring-aware split: average precision 0.19192, mean of 5 seeds</title></rect><text class="bar-inline" x="28.0" y="54">ring-aware split</text><text class="bar-value" x="363.69" y="54">0.19192</text><rect class="bar bar-1" x="20.0" y="70" width="469.57" height="20" rx="3"><title>naive split: average precision 0.26846, mean of 5 seeds</title></rect><text class="bar-inline" x="28.0" y="84">naive split</text><text class="bar-value" x="497.57" y="84">0.26846</text><text class="ratio-note" x="20" y="114">naive reads 40% higher (ratio 1.3999, 1.3634–1.4363 across 5 seeds)</text><text class="bar-label" x="20" y="142">recall@50 <tspan class="row-unit">(account-day unit)</tspan></text><rect class="bar bar-0" x="20.0" y="152" width="469.57" height="20" rx="3"><title>ring-aware split: recall@50 0.09452, mean of 5 seeds</title></rect><text class="bar-inline" x="28.0" y="166">ring-aware split</text><text class="bar-value" x="497.57" y="166">0.09452</text><rect class="bar bar-1" x="20.0" y="182" width="450.09" height="20" rx="3"><title>naive split: recall@50 0.0906, mean of 5 seeds</title></rect><text class="bar-inline" x="28.0" y="196">naive split</text><text class="bar-value" x="478.09" y="196">0.0906</text><text class="ratio-note" x="20" y="226">naive reads 4.1% lower (ratio 0.9587, 0.928–0.9894 across 5 seeds)</text></svg>
-  </div>
-  
-</figure><details class="prov"><summary class="prov-h">Read from 3 artifacts</summary><ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/derived/split_inflation.json" rel="noopener"><code>split_inflation.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_split_inflation.md" rel="noopener"><code>RESULTS_split_inflation.md</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/PREREGISTRATION_split_inflation.md" rel="noopener"><code>PREREGISTRATION_split_inflation.md</code></a></li></ul></details></div>
-</article>
-    
-<article class="story reveal" id="story-seed-spread">
-  <div class="story-text">
-    <p class="eyebrow">Finding 2</p>
-    <h3>One seed is not a result: precision@50 spans 37.19% of its own mean</h3>
-    <p class="finding-says">A decision taken from one run could rest mostly on which seed that run used.</p>
-    <p class="lede">8 seeds of one GBDT configuration on HI-Medium, changing nothing but the seed. precision@50 runs 0.59144 to 0.89815, a span worth 37.19% of the mean.</p>
-    <p class="reads reads-no"><strong>Boundary.</strong> Eight seeds bound what was observed rather than estimate a distribution, so the range is not a confidence interval.</p>
-    <p class="more"><a class="btn btn-quiet" href="explorer/">Open the seed sweep in the explorer</a></p>
-  </div>
-  <div class="story-figure">
-<figure class="chart" id="seed-spread">
-  <h4 class="chart-title" id="seed-spread-t">precision@50 for each of the eight seeds</h4>
-  <p class="chart-desc" id="seed-spread-d">One dot per seed, with the mean marked and the range bracketed. The numeral in each dot is its seed.</p>
-  
-  <div class="chart-surface">
-    <svg id="seed-spread-svg" viewBox="0 0 760 190" role="img"
-         aria-labelledby="seed-spread-t" aria-describedby="seed-spread-d"
-         preserveAspectRatio="xMidYMid meet"><line class="range-line" x1="130.0" y1="74.0" x2="630.0" y2="74.0"/><line class="range-cap" x1="130.0" y1="48.0" x2="130.0" y2="100.0"/><line class="range-cap" x1="630.0" y1="48.0" x2="630.0" y2="100.0"/><line class="mean-line" x1="510.42" y1="40.0" x2="510.42" y2="108.0"/><text class="mean-label" x="510.42" y="32.0" text-anchor="middle">mean 0.8248</text><text class="end-label" x="130.0" y="122.0" text-anchor="middle">0.59144</text><text class="end-label" x="630.0" y="122.0" text-anchor="middle">0.89815</text><g class="seed-dot"><circle cx="130.0" cy="74.0" r="13.0"><title>seed 4: precision@50 0.59144</title></circle><text x="130.0" y="78.0" text-anchor="middle">4</text></g><g class="seed-dot"><circle cx="460.18" cy="74.0" r="13.0"><title>seed 0: precision@50 0.79398</title></circle><text x="460.18" y="78.0" text-anchor="middle">0</text></g><g class="seed-dot"><circle cx="518.67" cy="74.0" r="13.0"><title>seed 5: precision@50 0.82986</title></circle><text x="518.67" y="78.0" text-anchor="middle">5</text></g><g class="seed-dot"><circle cx="541.32" cy="42.8" r="13.0"><title>seed 6: precision@50 0.84375</title></circle><text x="541.32" y="46.8" text-anchor="middle">6</text></g><g class="seed-dot"><circle cx="552.63" cy="74.0" r="13.0"><title>seed 7: precision@50 0.85069</title></circle><text x="552.63" y="78.0" text-anchor="middle">7</text></g><g class="seed-dot"><circle cx="624.34" cy="74.0" r="13.0"><title>seed 2: precision@50 0.89468</title></circle><text x="624.34" y="78.0" text-anchor="middle">2</text></g><g class="seed-dot"><circle cx="626.22" cy="42.8" r="13.0"><title>seed 3: precision@50 0.89583</title></circle><text x="626.22" y="46.8" text-anchor="middle">3</text></g><g class="seed-dot"><circle cx="630.0" cy="105.2" r="13.0"><title>seed 1: precision@50 0.89815</title></circle><text x="630.0" y="109.2" text-anchor="middle">1</text></g><line class="ax" x1="40.0" y1="138" x2="720.0" y2="138"/><line class="tick" x1="40.0" y1="138" x2="40.0" y2="143"/><text class="tick-label" x="40.0" y="155" text-anchor="middle">0.54</text><line class="tick" x1="380.01" y1="138" x2="380.01" y2="143"/><text class="tick-label" x="380.01" y="155" text-anchor="middle">0.74</text><line class="tick" x1="720.0" y1="138" x2="720.0" y2="143"/><text class="tick-label" x="720.0" y="155" text-anchor="middle">0.95</text><text class="axis-title" x="380.0" y="178" text-anchor="middle">precision@50 (the numeral in each dot is its seed)</text></svg>
-  </div>
-  
-</figure><details class="prov"><summary class="prov-h">Read from 2 artifacts</summary><ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/stability_Medium/stability.json" rel="noopener"><code>stability.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_metric_stability.md" rel="noopener"><code>RESULTS_metric_stability.md</code></a></li></ul></details></div>
-</article>
-    
-<article class="story reveal" id="story-scaling">
-  <div class="story-text">
-    <p class="eyebrow">Finding 3</p>
-    <h3>The same protocol ran at 179.7M transactions</h3>
-    <p class="finding-says">Scale did not need a different method, which is what makes the smaller rungs comparable to this one.</p>
-    <p class="lede">The top rung of AMLworld is 179,702,229 transactions. The evaluation ran there on one 31 GB machine, three seeds, at a fixed training row order, under the same units, budgets and publication gate as the smaller rungs.</p>
-    <p class="reads reads-no"><strong>Boundary.</strong> Not a comparison of learners: scikit-learn gradient boosting needed a 33.5 GB training matrix against LightGBM&#x27;s 14.9 GB on the roughly 31 GB machine and did not complete, which is a memory measurement and says nothing about how either learner would have scored.</p>
-    <p class="more"><a class="btn btn-quiet" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md">Read the HI-Large report</a></p>
-  </div>
-  <div class="story-figure">
-<figure class="chart" id="scaling">
-  <h4 class="chart-title" id="scaling-t">recall@200 for each HI-Large seed</h4>
-  <p class="chart-desc" id="scaling-d">Three seeds at one budget on the largest rung.</p>
-  
-  <div class="chart-surface">
-    <svg id="scaling-svg" viewBox="0 0 760 190" role="img"
-         aria-labelledby="scaling-t" aria-describedby="scaling-d"
-         preserveAspectRatio="xMidYMid meet"><text class="row-label" x="20" y="32.0">HI-Large · LightGBM · 3 seeds</text><line class="row-rule" x1="40.0" y1="66.0" x2="720.0" y2="66.0"/><g class="scale-dot scale-1"><circle cx="395.91" cy="66.0" r="13.0"><title>LightGBM · cloud run · seed 1: recall@200 0.07851</title></circle><text x="395.91" y="45.0" text-anchor="middle">0.07851</text></g><g class="scale-dot scale-1"><circle cx="447.18" cy="66.0" r="13.0"><title>LightGBM · cloud run · seed 2: recall@200 0.08982</title></circle><text x="447.18" y="95.0" text-anchor="middle">0.08982</text></g><g class="scale-dot scale-1"><circle cx="471.62" cy="34.8" r="13.0"><title>LightGBM · cloud run · seed 0: recall@200 0.09521</title></circle><text x="471.62" y="13.8" text-anchor="middle">0.09521</text></g><line class="ax" x1="40.0" y1="130" x2="720.0" y2="130"/><line class="tick" x1="40.0" y1="130" x2="40.0" y2="135"/><text class="tick-label" x="40.0" y="147" text-anchor="middle">0</text><line class="tick" x1="212.27" y1="130" x2="212.27" y2="135"/><text class="tick-label" x="212.27" y="147" text-anchor="middle">0.04</text><line class="tick" x1="380.0" y1="130" x2="380.0" y2="135"/><text class="tick-label" x="380.0" y="147" text-anchor="middle">0.07</text><line class="tick" x1="552.27" y1="130" x2="552.27" y2="135"/><text class="tick-label" x="552.27" y="147" text-anchor="middle">0.11</text><line class="tick" x1="720.0" y1="130" x2="720.0" y2="135"/><text class="tick-label" x="720.0" y="147" text-anchor="middle">0.15</text><text class="axis-title" x="380.0" y="170" text-anchor="middle">recall@200 (account-day)</text></svg>
-  </div>
-  
-</figure><details class="prov"><summary class="prov-h">Read from 5 artifacts</summary><ul class="prov-list plain"><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s0/manifest.json" rel="noopener"><code>large_sorted_lgbm_s0/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s1/manifest.json" rel="noopener"><code>large_sorted_lgbm_s1/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/gold/large_sorted_lgbm_s2/manifest.json" rel="noopener"><code>large_sorted_lgbm_s2/manifest.json</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/paper/RESULTS_hi_large.md" rel="noopener"><code>RESULTS_hi_large.md</code></a></li><li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></li></ul></details></div>
-</article>
-    
-<div class="rungs">
-  <h3 id="rungs-h">What was actually run, by rung</h3>
-  <ul class="rung-list plain"><li><span class="rung-name">HI-Small</span><span class="rung-what">GBDT · seed sweep; Window / null diagnostics (diagnostic only)</span></li><li><span class="rung-name">HI-Medium</span><span class="rung-what">Logistic baseline, GBDT · canonical + rerun, GBDT · seed sweep; Window / null diagnostics (diagnostic only)</span></li><li><span class="rung-name">HI-Large</span><span class="rung-what">LightGBM · cloud run</span></li></ul>
-  <p class="fineprint">Not every model was run at every scale, and a gap is
-     not a loss. The full matrix — including why each empty cell is empty, with
-     a link to the record — is on the
-     <a href="explorer/#coverage">results explorer</a>.</p>
-</div>
-  </div>
-</section>
+  <h2>HI-Medium: seed variance (HistGradientBoosting, 8 seeds)</h2>
+  <div class="card"><table id="seeds"></table></div>
 
-<section class="band band-tint" aria-labelledby="useful-h">
-  <div class="wrap">
-    <h2 id="useful-h">What this is useful for</h2>
-    <p class="lede">It is aimed at decisions a team makes before anything
-      ships.</p>
-    <ul class="solution-list">
-      <li>Choosing a model against the review capacity a team really has.</li>
-      <li>Separating model signal from prevalence, seed and split effects.</li>
-      <li>Finding evaluation leakage while it is still cheap to find.</li>
-      <li>Comparing runs whose inputs, code and artifacts are traceable.</li>
-      <li>Reporting uncertainty openly instead of behind one number.</li>
-    </ul>
-    <p class="fineprint">Nothing here was measured against real customers,
-      investigator outcomes or losses, so no claim about detecting financial
-      crime in production follows from it.</p>
-  </div>
-</section>
-
-<section class="band band-light" aria-labelledby="who-h">
-  <div class="wrap">
-    <h2 id="who-h">Who it is for, where it fits, how to use it</h2>
-    <div class="cards">
-      <article class="card reveal"><h3>Who</h3>
-        <p>Data scientists, ML engineers, analysts and model-risk reviewers
-          working on ranked-alert systems.</p></article>
-      <article class="card reveal"><h3>Where it fits</h3>
-        <p>Pre-deployment benchmarking, evaluation design, reproducibility
-          review and model governance.</p></article>
-      <article class="card reveal"><h3>How to use it</h3>
-        <p>Start with the findings above, then the
-          <a href="explorer/">results explorer</a>, then
-          <a href="engineering/">engineering &amp; MLOps</a> for the cloud
-          run, CI and release controls.</p></article>
-    </div>
-    <div class="callout callout-warn">
-      <h3 class="callout-h">Where this does not fit</h3>
-      <p>An evaluation and research harness on the synthetic IBM AMLworld
-        dataset — not a live monitoring service, an investigation interface
-        or a validated banking model. The review queue is modelled; no
-        investigator ever worked one of these alerts.</p>
-    </div>
-  </div>
-</section>
-
-<section class="band band-tint" aria-labelledby="methods-h">
-  <div class="wrap">
-    <h2 id="methods-h">How the evidence was produced</h2>
-    <div class="split-cols">
-      <div>
-        <ol class="methods">
-          <li>Build temporal, ring-aware evaluation windows.</li>
-          <li>Train the families supported at each scale: a
-            logistic-regression baseline and scikit-learn gradient boosting on
-            HI-Medium, LightGBM on HI-Large.</li>
-          <li>Rank account-days and evaluate the top k alerts per day.</li>
-          <li>Repeat across seeds and compare against the null for that
-            window.</li>
-          <li>Run leakage, split and provenance checks.</li>
-          <li>Publish only artifact-backed values, through automated gates.</li>
-        </ol>
-        <p class="fineprint">568 tests collected on the
-          current tree; tests that need restricted data skip when their inputs
-          are unavailable. The gate re-reads
-          706 published values against the
-          artifacts on every run.</p>
-      </div>
-      <div>
-        
-<h3 id="architecture">The complete flow, end to end</h3>
-<p class="fineprint">Select it to open full size.</p>
-<ul class="arch-grid arch-grid-one plain">
-<li class="arch-card reveal">
-  <button class="arch-open" type="button" data-diagram="pipeline"
-          aria-haspopup="dialog">
-    <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
-         width="1800" height="1290">
-    <span class="arch-meta">
-      <span class="arch-n">Diagram 1</span>
-      <span class="arch-title">From synthetic transactions to published evidence</span>
-      <span class="arch-cue">Open full size</span>
-    </span>
-  </button>
-  
-</li></ul><p class="more"><a class="btn" href="engineering/">See the cloud-execution and delivery diagrams</a></p>
-<p class="fineprint">Diagrams are generated from
-   <code>aml-platform/docs/architecture/</code> and copied into this site at
-   build time; there is no second copy to fall out of date. Technology icons
-   are used under the licences recorded in
-   <a href="assets/icon-notices.txt">NOTICES.txt</a>.</p>
-<dialog class="arch-dialog" id="arch-dialog" aria-labelledby="arch-dialog-h">
-  <div class="arch-dialog-bar">
-    <h2 class="arch-dialog-h" id="arch-dialog-h">Architecture diagram</h2>
-    <button class="arch-close" type="button" id="arch-close">Close
-      <span class="sr-only">the diagram dialog</span></button>
-  </div>
-  <div class="arch-dialog-body" id="arch-dialog-body">
-<figure class="arch-panel" id="arch-panel-pipeline" hidden>
-  <img src="assets/01-evaluation-pipeline.svg" alt="Flow diagram in ten stages. Across the top: the synthetic AMLworld files are normalised and parsed into typed Parquet, pattern labels are reconciled onto transactions, a temporal split is drawn that excludes test rings sharing training participants, and 32 features are built over one, seven and thirty-day windows. Back along the lower row: models are fitted and scored per seed, daily top-k metrics are evaluated at both endpoints, metrics and stage manifests are archived with code and matrix hashes, publication checks run over the public aggregate artifacts, and the site is generated, tested and deployed to GitHub Pages. Two panels beneath name the execution paths: the recorded HI-Large run on one Azure virtual machine, and current delivery through GitHub Actions to GHCR." loading="lazy" decoding="async"
-       width="1800" height="1290">
-  <figcaption><strong>Diagram 1. From synthetic transactions to published evidence</strong>
-    The complete flow: Kaggle download, DuckDB feature construction, the ring-aware split, per-seed fits, the account-day evaluation, the archived evidence and the website you are reading.
-    <a class="arch-full" href="assets/01-evaluation-pipeline.svg">Open the full-size diagram<span
-      class="sr-only"> for From synthetic transactions to published evidence, 1800 by 1290
-      pixels, in this tab</span></a></figcaption>
-</figure></div>
-</dialog>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="band band-light" aria-labelledby="lim-h">
-  <div class="wrap narrow">
-    <h2 id="lim-h">Four limitations that bound everything above</h2>
-    <ol class="lim-list">
-      <li><h3>One synthetic generator</h3>
-        <p>AMLworld's laundering patterns are produced by rules, so a model can
-          learn the generator rather than the behaviour.</p></li>
-      <li><h3>No bank, customer or case validation</h3>
-        <p>No investigator outcome and no false-positive cost exists here;
-          precision means the share of alerted account-days carrying a
-          synthetic label.</p></li>
-      <li><h3>The split is label-aware</h3>
-        <p>Test days are chosen knowing ring membership, which removes one leak
-          and introduces a selection effect that Finding 1 measures.</p></li>
-      <li><h3>Provenance verifies lineage, not correctness</h3>
-        <p>The gates prove a number came from the artifact and code it names,
-          not that the quantity was the right one to measure.</p></li>
-    </ol>
-    <p class="more">The full list, the lineage registry and the register of
-      withdrawn values are on the
-      <a href="engineering/">engineering page</a>.</p>
-  </div>
-</section>
-
-<section class="band band-dark" aria-labelledby="next-h">
-  <div class="wrap">
-    <h2 id="next-h">Where to go next</h2>
-    <ul class="next-fork plain">
-      <li><p class="next-q">Want the evidence?</p>
-        <a class="btn btn-on-dark" href="explorer/">Open the results
-          explorer</a></li>
-      <li><p class="next-q">Want the system design?</p>
-        <a class="btn" href="engineering/">Open engineering &amp; MLOps</a></li>
-      <li><p class="next-q">Want the implementation?</p>
-        <a class="btn" href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">Open the repository</a></li>
-    </ul>
-  </div>
-</section>
+  <p class="note">Every number on this page is read from <code>results/*.json</code>, which records the archive file each value came from.
+  Source: <a href="https://github.com/NirmalKumar31/aml-evaluation-harness">github.com/NirmalKumar31/aml-evaluation-harness</a>.</p>
 </main>
-
-<footer class="site-footer">
-  <div class="wrap footer-grid">
-    <div>
-      <h2 class="footer-h">This site</h2>
-      <p>Static files only. No backend, no database, no cookies, no analytics,
-         no third-party scripts, and no request to any service at runtime.</p>
-      <p>Every figure is generated from committed artifacts by
-         <code>site/build_site_data.py</code> and rendered by
-         <code>site/build_pages.py</code>. Nothing on these pages is typed in
-         by hand.</p>
-    </div>
-    <div>
-      <h2 class="footer-h">Go deeper</h2>
-      <ul class="plain">
-        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness" rel="noopener">Repository</a></li>
-        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/tree/v0.2.1/aml-platform/paper" rel="noopener">Result reports</a></li>
-        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/CANONICAL.json" rel="noopener"><code>CANONICAL.json</code></a></li>
-        <li><a class="artifact" href="https://github.com/NirmalKumar31/aml-evaluation-harness/blob/v0.2.1/aml-platform/results_archive/RETRACTED.json" rel="noopener"><code>RETRACTED.json</code></a></li>
-        <li><a href="https://github.com/NirmalKumar31/aml-evaluation-harness/pkgs/container/aml-evaluation-harness" rel="noopener">Container package</a></li>
-      </ul>
-    </div>
-    <div>
-      <h2 class="footer-h">Provenance</h2>
-      <p>Latest signed software release <strong>v0.2.1</strong>.
-         Result-artifact links point at that tag.</p>
-      <p>Source data: the synthetic IBM AMLworld benchmark. No raw data, no
-         replay bundle and no private material is published here.</p>
-      <p><a href="assets/icon-notices.txt">Technology icon licences and notices</a></p>
-    </div>
-  </div>
-  <div class="wrap footer-base">
-    <p>Nirmal Kumar Thirupallikrishnan Kesavan · code under the repository’s
-       licence · technology names and logos remain the property of their
-       owners.</p>
-  </div>
-</footer>
-<script type="module" src="js/page-home.js"></script>
+<script>
+const f = (x, d = 5) => x == null ? "–" : Number(x).toFixed(d);
+const n = x => Number(x).toLocaleString("en-US");
+function rows(el, head, body) {
+  document.getElementById(el).innerHTML =
+    "<thead><tr>" + head.map(h => `<th>${h}</th>`).join("") + "</tr></thead><tbody>" +
+    body.map(r => "<tr>" + r.map(c => `<td>${c}</td>`).join("") + "</tr>").join("") + "</tbody>";
+}
+Promise.all(["results/hi_large_azure.json", "results/hi_medium.json"].map(u => fetch(u).then(r => r.json())))
+.then(([L, M]) => {
+  const s0 = L.seeds[0];
+  document.getElementById("tiles").innerHTML = [
+    [n(L.dataset.transactions), "HI-Large transactions"],
+    [`${n(s0.train_rows)} × ${L.n_features}`, "training matrix"],
+    [n(s0.n_account_days), "test account-days"],
+    [L.same_training_matrix_all_seeds ? "identical" : "differs", "training-matrix hash, 3 seeds"],
+  ].map(([v, l]) => `<div class="tile"><b>${v}</b><span>${l}</span></div>`).join("");
+  const ks = ["@50", "@200", "@1000"];
+  rows("large", ["seed", ...ks.map(k => "precision" + k), ...ks.map(k => "recall" + k), "recall ceiling@200"],
+    L.seeds.map(s => [s.seed, ...ks.map(k => f(s.budget_metrics[k].precision)), ...ks.map(k => f(s.budget_metrics[k].recall)),
+                      f(s.budget_metrics["@200"].recall_ceiling)]));
+  document.getElementById("largenote").textContent =
+    `Cut ${L.split.cut_time}; ${n(L.split.test_positive_account_days)} positive of ${n(L.split.test_total_account_days)} test account-days. ` +
+    `${n(L.split.dropped_rings)} of ${n(L.split.test_rings_before_drop)} test rings dropped for sharing accounts with training rings.`;
+  const nl = M.random_ranker_null, seg = M.window.logistic_by_segment, lg = M.logistic_baseline.budget_metrics["@50"];
+  rows("medium", ["precision@50", "random ranker", "logistic regression", "lift"], [
+    ["pooled 19 days", `${f(nl["null_precision_low@50"])} – ${f(nl["null_precision_high@50"])}`, f(lg.precision),
+     `${(lg.precision / nl["null_precision_high@50"]).toFixed(2)}× – ${(lg.precision / nl["null_precision_low@50"]).toFixed(2)}×`],
+    ["7 volume days", `${f(nl["null_precision_low@50_head"])} – ${f(nl["null_precision_high@50_head"])}`,
+     `${f(seg["precision_head@50"])} (${seg["true_positives_head@50"]} / ${seg["alerts_head@50"]})`,
+     `${(seg["precision_head@50"] / nl["null_precision_high@50_head"]).toFixed(1)}×`],
+  ]);
+  const p = M.gbdt_8_seeds.map(s => s["precision@50"]), mean = p.reduce((a, b) => a + b) / p.length;
+  rows("seeds", ["seed", "precision@50", "recall@50", "ROC-AUC (footnote)"],
+    [...M.gbdt_8_seeds.map(s => [s.seed, f(s["precision@50"]), f(s["recall@50"]), f(s.roc_auc_footnote_only)]),
+     ["range / mean", `${((Math.max(...p) - Math.min(...p)) / mean * 100).toFixed(1)}%`, "", ""]]);
+})
+.catch(() => { document.getElementById("tiles").innerHTML = '<p class="note">Results could not be loaded. Serve this folder over HTTP with results/ copied in.</p>'; });
+</script>
 </body>
 </html>

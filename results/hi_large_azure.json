@@ -1,0 +1,273 @@
+{
+ "_about": "HI-Large run on a single Azure VM (Standard_E4ds_v7). Values copied from the full harness archive; see `source`.",
+ "source": {
+  "tag": "full-version-v0.2.2",
+  "commit": "653120a42d224364a26d778d43f2969e2cb7c4cd",
+  "files": [
+   "aml-platform/results_archive/gold/large_splits/manifest.json",
+   "aml-platform/results_archive/gold/large_sorted_lgbm_s0/manifest.json",
+   "aml-platform/results_archive/gold/large_sorted_lgbm_s1/manifest.json",
+   "aml-platform/results_archive/gold/large_sorted_lgbm_s2/manifest.json",
+   "aml-platform/results_archive/derived/dataset_pin.json",
+   "aml-platform/results_archive/derived/budget_null.json"
+  ]
+ },
+ "dataset": {
+  "file": "HI-Large_Trans.csv",
+  "sha256": "d13635e297c64673826217631fb88d635c4f506052e1bde833895eda2a65c3f2",
+  "bytes": 17052760651,
+  "transactions": 179702229,
+  "transactions_note": "from paper/RESULTS_hi_large.md (normalize stage); no HI-Large normalize manifest was archived. Split rows: train + test = 179,639,250; the rest were removed by the ring filter."
+ },
+ "model": "lightgbm",
+ "model_params": {
+  "learning_rate": 0.1,
+  "n_estimators": 300,
+  "max_depth": 8,
+  "min_child_samples": 40,
+  "num_leaves": 31,
+  "min_child_weight": 0.001,
+  "class_weight": "balanced",
+  "deterministic": true,
+  "force_row_wise": true,
+  "verbosity": -1,
+  "random_state": 0,
+  "n_jobs": -1
+ },
+ "n_features": 32,
+ "features": [
+  "log_amount_paid",
+  "log_amount_received",
+  "fx_ratio",
+  "currency_mismatch",
+  "amount_roundness",
+  "hour",
+  "dayofweek",
+  "is_weekend",
+  "is_self_transfer",
+  "is_cross_bank",
+  "payment_format_code",
+  "payment_currency_code",
+  "s_n_1d",
+  "s_n_7d",
+  "s_n_30d",
+  "s_mean_amt_7d",
+  "s_std_amt_7d",
+  "s_max_amt_30d",
+  "s_n_out_7d",
+  "s_secs_since_prev",
+  "s_secs_since_prev_cp",
+  "s_amt_vs_hist",
+  "r_n_1d",
+  "r_n_7d",
+  "r_n_30d",
+  "r_mean_amt_7d",
+  "r_std_amt_7d",
+  "r_max_amt_30d",
+  "r_n_out_7d",
+  "r_secs_since_prev",
+  "r_secs_since_prev_cp",
+  "r_amt_vs_hist"
+ ],
+ "split": {
+  "cut_time": "2022-10-07",
+  "train_rows": 124992128,
+  "train_positives": 127615,
+  "test_rows": 54647122,
+  "test_positives": 34952,
+  "test_rings_before_drop": 5323,
+  "dropped_rings": 4655,
+  "test_rings_kept": 668,
+  "dropped_pct": 87.45,
+  "test_positive_account_days": 61698,
+  "test_total_account_days": 27809331,
+  "assertions_passed": [
+   "accounts_disjoint",
+   "rings_disjoint",
+   "no_temporal_bleed",
+   "no_train_ring_tails_in_test"
+  ]
+ },
+ "seeds": [
+  {
+   "seed": 0,
+   "code_git_sha": "b48ed9ff2b4a3d7da5f8440890eebba4114514fe",
+   "code_tree_sha256": "e14bf3ad820c46d1314c2cce9022e6615cc21791ca61592eedc2925c33c60221",
+   "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.36",
+   "wall_clock_sec": 1550.773,
+   "train_rows": 124992128,
+   "train_positives": 127615,
+   "test_rows": 54647122,
+   "n_account_days": 27809331,
+   "n_positive_account_days": 61698,
+   "train_matrix_sha256": "9b13f64d5677166bcfd9b35e5235be3270c7c50e7196e431ae55a16e9c128ad5",
+   "predictions_sha256": "d852fc52f50ae93a1c7860d48239bad6ab0abef749a83bb6f5623d5e9786490e",
+   "average_precision__txn": 0.09228793796303333,
+   "roc_auc_footnote_only__txn": 0.9775717904985415,
+   "budget_metrics": {
+    "@10": {
+     "precision": 0.4355697550585729,
+     "recall": 0.006629064151188045,
+     "recall_ceiling": 0.012301857434600797
+    },
+    "@25": {
+     "precision": 0.44175627240143367,
+     "recall": 0.01598106907841421,
+     "recall_ceiling": 0.027521151414956726
+    },
+    "@50": {
+     "precision": 0.4853048336167112,
+     "recall": 0.03238354565788194,
+     "recall_ceiling": 0.05168725080229505
+    },
+    "@100": {
+     "precision": 0.5104166666666666,
+     "recall": 0.06115271159518947,
+     "recall_ceiling": 0.09497876754513923
+    },
+    "@200": {
+     "precision": 0.4337936636880585,
+     "recall": 0.09520567927647573,
+     "recall_ceiling": 0.16042659405491264
+    },
+    "@500": {
+     "precision": 0.27040364849227416,
+     "recall": 0.12877240753346947,
+     "recall_ceiling": 0.30759505980744917
+    },
+    "@1000": {
+     "precision": 0.1896675338509126,
+     "recall": 0.15006969431748193,
+     "recall_ceiling": 0.55071477195371
+    }
+   }
+  },
+  {
+   "seed": 1,
+   "code_git_sha": "b48ed9ff2b4a3d7da5f8440890eebba4114514fe",
+   "code_tree_sha256": "e14bf3ad820c46d1314c2cce9022e6615cc21791ca61592eedc2925c33c60221",
+   "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.36",
+   "wall_clock_sec": 1530.174,
+   "train_rows": 124992128,
+   "train_positives": 127615,
+   "test_rows": 54647122,
+   "n_account_days": 27809331,
+   "n_positive_account_days": 61698,
+   "train_matrix_sha256": "9b13f64d5677166bcfd9b35e5235be3270c7c50e7196e431ae55a16e9c128ad5",
+   "predictions_sha256": "8c56f02cdbf9039db60aca6976a0891b03c186e86124d3d179be194ca17fa122",
+   "average_precision__txn": 0.07052263691176051,
+   "roc_auc_footnote_only__txn": 0.9774053527527998,
+   "budget_metrics": {
+    "@10": {
+     "precision": 0.44089456869009586,
+     "recall": 0.006710104055236798,
+     "recall_ceiling": 0.012301857434600797
+    },
+    "@25": {
+     "precision": 0.36917562724014336,
+     "recall": 0.013355376187234595,
+     "recall_ceiling": 0.027521151414956726
+    },
+    "@50": {
+     "precision": 0.35584163225649745,
+     "recall": 0.023744691886284808,
+     "recall_ceiling": 0.05168725080229505
+    },
+    "@100": {
+     "precision": 0.38555194805194803,
+     "recall": 0.04619274530778956,
+     "recall_ceiling": 0.09497876754513923
+    },
+    "@200": {
+     "precision": 0.35772838047411565,
+     "recall": 0.0785114590424325,
+     "recall_ceiling": 0.16042659405491264
+    },
+    "@500": {
+     "precision": 0.253794840378463,
+     "recall": 0.12086291289831112,
+     "recall_ceiling": 0.30759505980744917
+    },
+    "@1000": {
+     "precision": 0.18393182702746994,
+     "recall": 0.14553145969075174,
+     "recall_ceiling": 0.55071477195371
+    }
+   }
+  },
+  {
+   "seed": 2,
+   "code_git_sha": "b48ed9ff2b4a3d7da5f8440890eebba4114514fe",
+   "code_tree_sha256": "e14bf3ad820c46d1314c2cce9022e6615cc21791ca61592eedc2925c33c60221",
+   "platform": "Linux-6.8.0-1064-azure-x86_64-with-glibc2.36",
+   "wall_clock_sec": 1505.616,
+   "train_rows": 124992128,
+   "train_positives": 127615,
+   "test_rows": 54647122,
+   "n_account_days": 27809331,
+   "n_positive_account_days": 61698,
+   "train_matrix_sha256": "9b13f64d5677166bcfd9b35e5235be3270c7c50e7196e431ae55a16e9c128ad5",
+   "predictions_sha256": "062546dd52949733420c3fe450a39ec7afc0146276068d82d912124e6bb8a010",
+   "average_precision__txn": 0.08257369431030871,
+   "roc_auc_footnote_only__txn": 0.9774527155633347,
+   "budget_metrics": {
+    "@10": {
+     "precision": 0.4440894568690096,
+     "recall": 0.00675872799766605,
+     "recall_ceiling": 0.012301857434600797
+    },
+    "@25": {
+     "precision": 0.4166666666666667,
+     "recall": 0.01507342215306817,
+     "recall_ceiling": 0.027521151414956726
+    },
+    "@50": {
+     "precision": 0.4454700024289531,
+     "recall": 0.029725436805082824,
+     "recall_ceiling": 0.05168725080229505
+    },
+    "@100": {
+     "precision": 0.4744318181818182,
+     "recall": 0.056841388699795777,
+     "recall_ceiling": 0.09497876754513923
+    },
+    "@200": {
+     "precision": 0.40927553356472934,
+     "recall": 0.0898246296476385,
+     "recall_ceiling": 0.16042659405491264
+    },
+    "@500": {
+     "precision": 0.26424341433530735,
+     "recall": 0.1258387630069046,
+     "recall_ceiling": 0.30759505980744917
+    },
+    "@1000": {
+     "precision": 0.18774197513161398,
+     "recall": 0.14854614412136535,
+     "recall_ceiling": 0.55071477195371
+    }
+   }
+  }
+ ],
+ "same_training_matrix_all_seeds": true,
+ "nonbinding_days": {
+  "alert_unit": "account-day",
+  "n_days": 97,
+  "max_budget": 1000,
+  "days_provably_written_in_full": 66,
+  "days_truncated_at_the_cap": 31,
+  "rule": "a day is non-binding at k when N_d <= k; N_d is known only for days whose highest rank is strictly below max_budget, so budgets at or above the cap are not reported",
+  "nonbinding_days@10": 6,
+  "nonbinding_day_share@10": 0.06186,
+  "nonbinding_alert_share@10": 0.03088,
+  "nonbinding_positive_share@10": 6e-05,
+  "nonbinding_days@50": 28,
+  "nonbinding_day_share@50": 0.28866,
+  "nonbinding_alert_share@50": 0.16201,
+  "nonbinding_positive_share@50": 0.00157,
+  "nonbinding_days@200": 38,
+  "nonbinding_day_share@200": 0.39175,
+  "nonbinding_alert_share@200": 0.12857,
+  "nonbinding_positive_share@200": 0.00405
+ }
+}

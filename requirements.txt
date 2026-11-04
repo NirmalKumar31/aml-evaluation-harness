@@ -1,0 +1,10 @@
+# Pinned to the versions the published results were produced with.
+duckdb==1.5.5
+numpy==2.5.2
+pandas==3.0.5
+pyarrow==25.0.1
+scikit-learn==1.9.0
+scipy==1.18.0
+lightgbm==4.7.0
+joblib==1.5.3
+pytest==9.1.1
